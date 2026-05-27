@@ -89,8 +89,10 @@ def _get_apply_info(context_factory, job_id: str) -> tuple[Optional[str], Option
         page.wait_for_timeout(1500)
 
         # Si redirige al login, la sesión expiró
-        if "/login" in page.url or "ingresar" in page.url.lower():
-            print("[FindJobIT] ⚠️  Sesión de FindJobIT expirada — capturar de nuevo con setup_session.py findjobit")
+        # FindJobIT puede redirigir a /login, /auth/signin, /auth/login, etc.
+        if any(kw in page.url.lower() for kw in ["/login", "ingresar", "/auth/", "/signin"]):
+            print(f"[FindJobIT] ⚠️  Sesión expirada — redirigido a {page.url}")
+            print("[FindJobIT]    Capturar de nuevo con: python3 setup/setup_session.py findjobit")
             page.close(); ctx.close()
             return None, None, False
 
