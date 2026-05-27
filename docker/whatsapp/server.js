@@ -7,32 +7,80 @@ const PORT = process.env.PORT || 3001;
 const AUTH_DIR = process.env.AUTH_DIR || "/app/auth";
 const DEFAULT_PHONE = (process.env.DEFAULT_PHONE || "56962075019").replace(/[^0-9]/g, "");
 
+const RECONNECT_DELAY_MS = 15000;   // esperar 15s antes de reconectar
+const MAX_RECONNECT_RETRIES = 5;    // máximo reintentos antes de rendirse
+
 // ── Estado ────────────────────────────────────────────────────────────────────
 let isConnected = false;
 let connectionStatus = "initializing";
 let waClient = null;
+let reconnectAttempts = 0;
+let reconnectTimer = null;
 
-// ── Cliente WhatsApp ──────────────────────────────────────────────────────────
-function createClient() {
+// ── Puppeteer args (sin sandbox, bajo uso de memoria) ─────────────────────────
+const PUPPETEER_OPTS = {
+  headless: true,
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-accelerated-2d-canvas",
+    "--no-first-run",
+    "--no-zygote",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--safebrowsing-disable-auto-update",
+    "--single-process",   // reduce memory footprint en contenedores
+  ],
+  timeout: 60000,  // 60s para que Chromium arranque (puede ser lento con poca RAM)
+};
+
+// ── Función de reconexión con backoff ─────────────────────────────────────────
+function scheduleReconnect(reason) {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  reconnectAttempts++;
+  if (reconnectAttempts > MAX_RECONNECT_RETRIES) {
+    console.error(`[WhatsApp] ❌ Se alcanzó el máximo de ${MAX_RECONNECT_RETRIES} reintentos. El contenedor se reiniciará.`);
+    process.exit(1);  // Docker reinicia el contenedor → empieza desde cero
+  }
+
+  const delay = RECONNECT_DELAY_MS * reconnectAttempts;
+  console.log(`[WhatsApp] Reintento ${reconnectAttempts}/${MAX_RECONNECT_RETRIES} en ${delay / 1000}s (motivo: ${reason})`);
+
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    if (waClient) {
+      try {
+        await waClient.destroy();
+      } catch (_) {}
+      waClient = null;
+    }
+    startClient();
+  }, delay);
+}
+
+// ── Crear e inicializar el cliente ────────────────────────────────────────────
+async function startClient() {
+  console.log("[WhatsApp] Iniciando cliente...");
+  connectionStatus = "initializing";
+
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: AUTH_DIR }),
-    puppeteer: {
-      headless: true,
-      executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--disable-gpu",
-      ],
-    },
+    puppeteer: PUPPETEER_OPTS,
   });
 
   client.on("qr", (qr) => {
     connectionStatus = "waiting_qr";
+    reconnectAttempts = 0;  // reset: el QR es señal de vida del browser
     console.log("\n╔══════════════════════════════════════════════════════╗");
     console.log("║         ESCANEA EL QR CON WHATSAPP                  ║");
     console.log("║  WhatsApp → ⋮ → Dispositivos vinculados → Vincular  ║");
@@ -44,45 +92,55 @@ function createClient() {
   client.on("authenticated", () => {
     console.log("[WhatsApp] ✅ Autenticado — guardando sesión...");
     connectionStatus = "authenticated";
+    reconnectAttempts = 0;
   });
 
   client.on("ready", () => {
     console.log("[WhatsApp] ✅ ¡Listo y conectado!");
     isConnected = true;
     connectionStatus = "connected";
+    reconnectAttempts = 0;
   });
 
   client.on("auth_failure", (msg) => {
     console.error("[WhatsApp] ❌ Fallo de autenticación:", msg);
     connectionStatus = "auth_failed";
     isConnected = false;
-    // Reintentar en 10 segundos
-    setTimeout(() => {
-      console.log("[WhatsApp] Reiniciando cliente...");
-      waClient = createClient();
-      waClient.initialize();
-    }, 10000);
+    scheduleReconnect("auth_failure");
   });
 
   client.on("disconnected", (reason) => {
     console.log("[WhatsApp] Desconectado:", reason);
     isConnected = false;
     connectionStatus = "disconnected";
-    // Reintentar en 5 segundos
-    setTimeout(() => {
-      console.log("[WhatsApp] Reconectando...");
-      waClient = createClient();
-      waClient.initialize();
-    }, 5000);
+    scheduleReconnect(reason);
   });
 
-  return client;
+  waClient = client;
+
+  try {
+    await client.initialize();
+  } catch (err) {
+    console.error("[WhatsApp] ❌ Error al inicializar:", err.message || err);
+    isConnected = false;
+    waClient = null;
+    scheduleReconnect(err.message || "init_error");
+  }
 }
 
-// ── Arrancar cliente ──────────────────────────────────────────────────────────
+// ── Capturar errores no manejados para evitar crash del proceso ───────────────
+process.on("unhandledRejection", (reason) => {
+  console.error("[WhatsApp] Unhandled rejection:", reason?.message || reason);
+  // No terminar el proceso — dejar que el ciclo de reconexión maneje
+});
+process.on("uncaughtException", (err) => {
+  console.error("[WhatsApp] Uncaught exception:", err.message);
+  // No terminar el proceso — dejar que el ciclo de reconexión maneje
+});
+
+// ── Arrancar ──────────────────────────────────────────────────────────────────
 console.log("[WhatsApp] Iniciando whatsapp-web.js...");
-waClient = createClient();
-waClient.initialize();
+startClient();
 
 // ── API HTTP ──────────────────────────────────────────────────────────────────
 const app = express();
@@ -92,6 +150,7 @@ app.get("/health", (_req, res) => {
   res.json({
     status: isConnected ? "ok" : "unavailable",
     connection: connectionStatus,
+    reconnect_attempts: reconnectAttempts,
     service: "whatsapp",
   });
 });

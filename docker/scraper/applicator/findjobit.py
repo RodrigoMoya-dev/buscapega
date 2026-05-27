@@ -155,11 +155,14 @@ def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> App
             page.wait_for_timeout(2000)
 
             # Verificar que la sesión sea válida
-            if "/login" in page.url or "ingresar" in page.url.lower():
+            # FindJobIT puede redirigir a /login, /auth/signin, /auth/login, etc.
+            current_url = page.url.lower()
+            print(f"[FindJobIT] URL tras navegar al formulario: {page.url}")
+            if any(kw in current_url for kw in ["/login", "ingresar", "/auth/", "/signin"]):
                 browser.close()
                 return ApplyResult(
                     status="fallido", requiere_humano=True,
-                    motivo="Sesión de FindJobIT expirada. Ejecutar: python3 setup/setup_session.py findjobit",
+                    motivo=f"Sesión de FindJobIT expirada (redirigido a {page.url}). Ejecutar: python3 setup/setup_session.py findjobit",
                     paso_alcanzado="Verificación de sesión", url_continuar=url,
                 )
 
