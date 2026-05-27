@@ -1,64 +1,69 @@
-# Tareas Pendientes — Sesión 26/05/2026
+# Tareas Pendientes — Sesión 27/05/2026
 
-## Estado final ✅ COMPLETADO
+## En curso — Sesión actual
 
-### ✅ TAREA 1 — Configurar http://wunen.presto (nginx en Presto)
-- [x] `wunen.presto` → puerto 3020 (frontend)
-- [x] `api.wunen.presto` → puerto 8020 (backend API)
-- [x] Nginx recargado → **FUNCIONANDO** ✅
+### 🔧 Fix 1 — Detección /auth/signin en FindJobIT ✅ COMPLETADO
+- [x] `scrapers/findjobit.py`: `_get_apply_info` ahora detecta `/auth/`, `/signin`
+- [x] `applicator/findjobit.py`: `_apply_via_form` ídem con URL real en mensaje de error
+- [x] Causa raíz: FindJobIT redirige a `/auth/signin` (no `/login`) → sesión expirada no se detectaba
+- [x] Efecto: antes el sistema creía que `form_accessible=True` cuando en realidad no había sesión
+- [x] Código subido a Presto vía rsync ✅
 
----
+### 🔧 Fix 2 — WhatsApp server.js robusto ✅ COMPLETADO
+- [x] Manejo de errores con try/catch en `startClient()`
+- [x] `scheduleReconnect()` con backoff exponencial
+- [x] `process.on('unhandledRejection')` para no crashear
+- [x] `--single-process` en Chromium para menos uso de memoria
+- [x] Endpoint `/qr` con imagen PNG para escaneo desde browser
+- [x] Añadido `qrcode` a dependencias
+- [x] Reconstruyendo imagen Docker en Presto...
+- [ ] Verificar que WhatsApp conecta (escanear QR si es necesario)
 
-### ✅ TAREA 2 — WhatsApp Service (whatsapp-web.js)
-- [x] Migrado de Baileys a `whatsapp-web.js` (compatible con WA Business)
-- [x] `docker/whatsapp/server.js` con `LocalAuth` + Puppeteer Chromium
-- [x] Contenedor `wunen_whatsapp` corriendo en presto (puerto 3002)
-- [x] QR generado por consola → teléfono vinculado ✅
-- [x] Estado: **CONECTADO** ✅
+### 🔧 Fix 3 — WhatsApp Chromium: perfil corrupto (SingletonLock) ✅ RESUELTO
+- [x] Eliminado `SingletonLock` y `SingletonSocket` del volume
+- [x] Sesión WhatsApp borrada y recreada (se usaron credenciales guardadas)
 
----
+### ⏳ Fix 4 — Sesión FindJobIT expirada / inválida
+- [ ] Confirmar con próximo pipeline si la sesión capturada es válida desde Presto
+- [ ] Si sigue fallando → investigar si FindJobIT usa IP-binding de sesiones
+- [ ] Posible solución: generar un tunnel temporal o capturar sesión desde Presto
 
-### ✅ TAREA 3 — Portal FindJobIT: scraper + notificación WhatsApp
-- [x] `docker/scraper/scrapers/findjobit.py` (Playwright, country/chile, h4 titles, dedup)
-- [x] `docker/scraper/applicator/findjobit.py` (Gmail SMTP + WhatsApp notify)
-- [x] Ruta `POST /run/findjobit` en `scraper/main.py`
-- [x] Gmail App Password configurado en `.env`
-- [x] Workflow n8n `TcDb0BaQJuuJRiKo` — cron horario → **ACTIVO** ✅
-- [x] Prueba exitosa: 10 ofertas únicas extraídas con títulos correctos
-- [x] Notificaciones WhatsApp enviadas para score ≥ 50:
-  - "Dev Assistant" (score 51) → 👀 alerta enviada ✅
-  - "Fullstack Java React Sr" (score 60) → 👀 alerta enviada ✅
-- [x] Documentado en `obsidian/tecnico/portales/findjobit.md`
-
-**Nota:** FindJobIT no expone emails sin login → apply se hace manualmente desde la UI.  
-El flujo para offers con score ≥ 50 es: WhatsApp alert → revisar en wunen.presto → postular manualmente.
-
----
-
-### ✅ TAREA 4 — Git: Gitea + deploy Presto
-- [x] Repo `claude/wunen` en `http://gitea.presto/claude/wunen`
-- [x] Rama `feature_wunen_presto_whatsapp_findjobit_26052026`
-- [x] Deploy en presto completado ✅
+### ⏳ Fix 5 — CV faltante en Presto
+- [ ] Subir `cv_es.pdf` y/o `cv_en.pdf` a `rodrigo@presto:~/docker/wunen/data/`
+- [ ] Sin CV, las postulaciones vía email van sin adjunto ⚠️
 
 ---
 
-## Estado final de servicios en Presto
+## Estado de servicios
 
 | Servicio | Puerto | Estado |
 |----------|--------|--------|
 | Frontend (wunen.presto) | 3020 | ✅ UP |
 | Backend (api.wunen.presto) | 8020 | ✅ UP |
 | Scraper + FindJobIT | 8021 | ✅ UP |
-| WhatsApp (whatsapp-web.js) | 3002 | ✅ CONECTADO |
+| WhatsApp | 3002 | 🔄 Reconstruyendo imagen |
 | PostgreSQL | 5433 | ✅ UP |
 | n8n workflow FindJobIT | — | ✅ Activo (cada 1h) |
 
 ---
 
-## Tareas originales completadas
+## Sesión anterior — 26/05/2026 ✅ COMPLETADO
 
-* ~~Lo primero es armar http://wunen.presto para poder utilizar la aplicación ahí.~~ ✅
-* ~~Necesito que configures Baileys para el envío de mensajes de whatsapp desde la aplicación hacia un telefono personal.~~ ✅ (whatsapp-web.js, conectado)
-* ~~Necesito que me ayudes a automatizar el proceso de postulación a trabajos a través del portal findjobit.com.~~ ✅ (scraper + n8n + WhatsApp alerts)
-* ~~Configura la aplicación para el envío por gmail. La key de gmail para la app Wunen es : crcv hcvc iajm cvkw~~ ✅
-* ~~No entra el código de whatsapp. ¿Puedes generar el código QR via consola?~~ ✅
+### ✅ TAREA 1 — Configurar http://wunen.presto (nginx en Presto)
+- [x] `wunen.presto` → puerto 3020 (frontend)
+- [x] `api.wunen.presto` → puerto 8020 (backend API)
+
+### ✅ TAREA 2 — WhatsApp Service (whatsapp-web.js)
+- [x] Migrado de Baileys a `whatsapp-web.js`
+- [x] `docker/whatsapp/server.js` con `LocalAuth` + Puppeteer Chromium
+- [x] QR generado por consola → teléfono vinculado ✅
+
+### ✅ TAREA 3 — Portal FindJobIT: scraper + auto-apply
+- [x] `scrapers/findjobit.py` (Playwright, country/chile, h4 titles, dedup)
+- [x] `applicator/findjobit.py` (Gmail SMTP + WhatsApp notify)
+- [x] Sesión Playwright → `form_accessible` mode
+- [x] Pipeline completo corriendo via n8n (cada 1h)
+
+### ✅ TAREA 4 — Git: Gitea + deploy Presto
+- [x] Repo `claude/wunen` en `http://gitea.presto/claude/wunen`
+- [x] Rama `feature_wunen_presto_whatsapp_findjobit_26052026`
