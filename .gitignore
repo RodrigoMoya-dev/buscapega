@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.pyc
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Docker
+docker/.env
+docker/data/
+
+# Next.js
+.next/
+out/
+dist/
+
+# Cookies / sesiones (datos sensibles)
+setup/cookies/
+docker/scraper/cookies/
+
+# Perfiles de Chrome (Playwright)
+setup/profiles/
+
+# WhatsApp auth state
+docker/whatsapp/auth/
+
+# Archivos de pycache
+docker/backend/app/__pycache__/
+docker/backend/app/routers/__pycache__/
+docker/scraper/__pycache__/
+docker/scraper/scrapers/__pycache__/
+docker/scraper/applicator/__pycache__/
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Perfiles de navegadores adicionales
+setup/profiles/brave/
+setup/profiles/vivaldi/
+obsidian/.obsidian/
