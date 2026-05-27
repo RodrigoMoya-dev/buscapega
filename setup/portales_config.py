@@ -1,4 +1,11 @@
 PORTALES = {
+    "findjobit": {
+        "nombre": "FindJobIT",
+        "login_url": "https://www.findjobit.com/job-seekers/login",
+        "home_url": "https://www.findjobit.com",
+        "login_exitoso_url": "/job-seekers",          # redirige al dashboard tras login
+        "login_exitoso_selector": "a[href*='logout'], a[href*='profile'], .user-menu, [href*='/job-seekers/profile']",
+    },
     "getonbrd": {
         "nombre": "GetOnBrd",
         "login_url": "https://www.getonbrd.com/sessions/new",
