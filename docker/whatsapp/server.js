@@ -1,5 +1,6 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
+const QRCode = require("qrcode");
 const express = require("express");
 
 // ── Configuración ─────────────────────────────────────────────────────────────
@@ -16,6 +17,7 @@ let connectionStatus = "initializing";
 let waClient = null;
 let reconnectAttempts = 0;
 let reconnectTimer = null;
+let lastQrData = null;  // QR data para endpoint /qr
 
 // ── Puppeteer args (sin sandbox, bajo uso de memoria) ─────────────────────────
 const PUPPETEER_OPTS = {
@@ -81,8 +83,10 @@ async function startClient() {
   client.on("qr", (qr) => {
     connectionStatus = "waiting_qr";
     reconnectAttempts = 0;  // reset: el QR es señal de vida del browser
+    lastQrData = qr;
     console.log("\n╔══════════════════════════════════════════════════════╗");
     console.log("║         ESCANEA EL QR CON WHATSAPP                  ║");
+    console.log(`║  Abre http://presto.local:3002/qr en el navegador   ║`);
     console.log("║  WhatsApp → ⋮ → Dispositivos vinculados → Vincular  ║");
     console.log("╚══════════════════════════════════════════════════════╝\n");
     qrcode.generate(qr, { small: true });
@@ -100,6 +104,7 @@ async function startClient() {
     isConnected = true;
     connectionStatus = "connected";
     reconnectAttempts = 0;
+    lastQrData = null;  // ya no necesitamos el QR
   });
 
   client.on("auth_failure", (msg) => {
@@ -153,6 +158,43 @@ app.get("/health", (_req, res) => {
     reconnect_attempts: reconnectAttempts,
     service: "whatsapp",
   });
+});
+
+/**
+ * GET /qr
+ * Devuelve el QR actual como imagen PNG o página HTML con auto-refresh.
+ * Útil para escanear desde el navegador cuando el terminal no es suficiente.
+ */
+app.get("/qr", async (_req, res) => {
+  if (isConnected) {
+    return res.send(`<html><body style="font-family:sans-serif;text-align:center;padding:40px">
+      <h2>✅ WhatsApp ya está conectado</h2>
+      <p>No es necesario escanear el QR.</p>
+    </body></html>`);
+  }
+  if (!lastQrData) {
+    return res.send(`<html><meta http-equiv="refresh" content="3"><body style="font-family:sans-serif;text-align:center;padding:40px">
+      <h2>⏳ Esperando QR...</h2>
+      <p>Estado: ${connectionStatus}. Esta página se recarga sola.</p>
+    </body></html>`);
+  }
+  try {
+    const qrDataUrl = await QRCode.toDataURL(lastQrData, { width: 300, margin: 2 });
+    res.send(`<html>
+    <head>
+      <meta http-equiv="refresh" content="20">
+      <style>body{font-family:sans-serif;text-align:center;padding:40px;background:#fff}</style>
+    </head>
+    <body>
+      <h2>📱 Escanea con WhatsApp</h2>
+      <p>WhatsApp → ⋮ → <strong>Dispositivos vinculados</strong> → Vincular dispositivo</p>
+      <img src="${qrDataUrl}" style="border:2px solid #25D366;border-radius:8px;padding:10px" />
+      <p style="color:#666;font-size:12px">El QR expira en ~20 segundos. Esta página se recarga automáticamente.</p>
+    </body>
+    </html>`);
+  } catch (err) {
+    res.status(500).send("Error generando QR: " + err.message);
+  }
 });
 
 /**
