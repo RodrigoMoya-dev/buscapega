@@ -5,148 +5,159 @@ Usa Playwright para renderizar el sitio (Next.js/SPA).
 """
 import re
 import time
-from typing import List, Dict
+from typing import List, Dict, Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 BASE_URL = "https://www.findjobit.com"
 CHILE_JOBS_URL = f"{BASE_URL}/jobs/country/chile"
 
-# Modalidades aceptadas (en findjobit aparece "Remoto")
-REMOTE_KEYWORDS = {"remoto", "remote", "remotamente"}
+# Selectores de título en orden de preferencia
+TITLE_SELECTORS = ["h1", "h2", "h3", "h4", "h5", "[class*='title']", "[class*='titulo']"]
 
 
-def _clean_text(text: str) -> str:
-    """Limpia espacios extra de un texto."""
+def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", text or "").strip()
 
 
-def _is_remote(text: str) -> bool:
-    """Verifica si el texto menciona modalidad remota."""
-    return any(k in text.lower() for k in REMOTE_KEYWORDS)
+def _extract_emails(text: str) -> List[str]:
+    """Extrae emails del texto de una página."""
+    return re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", text)
 
 
-def _scrape_listing_page(page, url: str) -> List[Dict]:
-    """Extrae los links de ofertas desde una página de listado."""
-    offers_links = []
+def _scrape_listing_page(page, url: str, seen_urls: set) -> List[str]:
+    """Extrae links únicos de ofertas desde una página de listado."""
+    new_links = []
     try:
         page.goto(url, wait_until="networkidle", timeout=30_000)
-        page.wait_for_timeout(2000)  # dar tiempo al JS
+        page.wait_for_timeout(2000)
 
-        # Buscar todos los links a ofertas individuales
-        # Los links tienen el patrón /jobs/{id}
         links = page.eval_on_selector_all(
             "a[href^='/jobs/']",
-            "els => els.map(e => ({href: e.getAttribute('href'), text: e.innerText}))"
+            "els => els.map(e => e.getAttribute('href'))"
         )
 
-        seen = set()
-        for link in links:
-            href = link.get("href", "")
-            # Filtrar: /jobs/{id} donde id no es country, role, etc.
-            if re.match(r"^/jobs/[a-f0-9]{24}$", href) and href not in seen:
-                seen.add(href)
-                offers_links.append(BASE_URL + href)
+        for href in links:
+            if re.match(r"^/jobs/[a-f0-9]{24}$", href):
+                full_url = BASE_URL + href
+                if full_url not in seen_urls:
+                    seen_urls.add(full_url)
+                    new_links.append(full_url)
 
     except PlaywrightTimeout:
-        print(f"[FindJobIT] Timeout en {url}")
+        print(f"[FindJobIT] Timeout en listado {url}")
     except Exception as e:
         print(f"[FindJobIT] Error en listado: {e}")
 
-    return offers_links
+    return new_links
 
 
-def _extract_offer_detail(page, url: str) -> Dict | None:
+def _get_apply_email(page, job_url: str, job_id: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Intenta extraer el email y asunto de la página de aplicación.
+    Retorna (email, asunto) o (None, None).
+    """
+    apply_url = f"{BASE_URL}/job-seekers/job/apply/{job_id}"
+    try:
+        page.goto(apply_url, wait_until="domcontentloaded", timeout=20_000)
+        page.wait_for_timeout(1500)
+
+        # Si redirige al login, no hay email disponible sin sesión
+        if "/login" in page.url or "ingresar" in page.url.lower():
+            return None, None
+
+        body_text = page.inner_text("body")
+        emails = _extract_emails(body_text)
+
+        # Buscar campo email con valor
+        email_val = None
+        for sel in ["input[type='email']", "input[name*='email']", "input[placeholder*='email' i]"]:
+            el = page.query_selector(sel)
+            if el:
+                val = el.get_attribute("value") or el.input_value()
+                if val and "@" in val:
+                    email_val = val
+                    break
+
+        if not email_val and emails:
+            email_val = emails[0]
+
+        # Buscar asunto
+        subject_val = None
+        for sel in ["input[name*='subject']", "input[name*='asunto']",
+                    "input[placeholder*='asunto' i]", "input[placeholder*='subject' i]"]:
+            el = page.query_selector(sel)
+            if el:
+                val = el.get_attribute("value") or el.input_value()
+                if val:
+                    subject_val = val
+                    break
+
+        return email_val, subject_val
+
+    except Exception:
+        return None, None
+
+
+def _extract_offer_detail(page, url: str) -> Optional[Dict]:
     """Extrae el detalle completo de una oferta individual."""
     try:
         page.goto(url, wait_until="networkidle", timeout=30_000)
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2000)
 
-        # Título del cargo
+        # ── Título: findjobit usa h4 ──────────────────────────────────────
         title = ""
-        title_el = page.query_selector("h1")
-        if title_el:
-            title = _clean_text(title_el.inner_text())
-
-        # Empresa
-        company = ""
-        company_el = page.query_selector("h2, [class*='company'], [class*='empresa']")
-        if company_el:
-            company = _clean_text(company_el.inner_text())
-
-        # Descripción completa (main content)
-        description = ""
-        desc_el = page.query_selector("main, article, [class*='description'], [class*='descripcion'], [class*='content']")
-        if desc_el:
-            description = _clean_text(desc_el.inner_text())[:4000]
-        else:
-            # Fallback: todo el body
-            description = _clean_text(page.inner_text("body"))[:4000]
-
-        # Verificar que la oferta sea remota
-        page_text_lower = description.lower() + title.lower()
-        if not _is_remote(page_text_lower):
-            # Permitir incluso si no dice explícitamente remoto
-            # (ya filtramos desde country/chile que tiende a ser remoto)
-            pass
-
-        # Verificar que Chile esté en los países aceptados
-        chile_keywords = {"chile", "🇨🇱"}
-        has_chile = any(k in page_text_lower for k in chile_keywords)
-        if not has_chile:
-            # El URL ya viene de /jobs/country/chile — asumir Chile incluido
-            pass
-
-        # Intentar extraer el email de aplicación (aparece en el formulario de apply)
-        apply_email = None
-        apply_subject = None
-
-        # Buscar botón "Aplicar" y hacer clic para ver el formulario
-        apply_btn = page.query_selector(
-            "button:has-text('Aplicar'), a:has-text('Aplicar'), "
-            "button:has-text('Apply'), a:has-text('Apply')"
-        )
-        if apply_btn:
-            try:
-                apply_btn.click()
-                page.wait_for_timeout(2000)
-
-                # Buscar campo email
-                email_input = page.query_selector(
-                    "input[type='email'], input[name*='email'], input[placeholder*='email' i], "
-                    "input[placeholder*='correo' i]"
-                )
-                if email_input:
-                    apply_email = email_input.get_attribute("value") or email_input.input_value()
-
-                # Buscar campo asunto
-                subject_input = page.query_selector(
-                    "input[name*='subject'], input[name*='asunto'], "
-                    "input[placeholder*='asunto' i], input[placeholder*='subject' i]"
-                )
-                if subject_input:
-                    apply_subject = subject_input.get_attribute("value") or subject_input.input_value()
-
-                # Si no hay inputs, buscar texto con email en la página
-                if not apply_email:
-                    # Buscar patrón de email en el DOM visible
-                    body_text = page.inner_text("body")
-                    email_match = re.search(
-                        r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Z|a-z]{2,}\b",
-                        body_text
-                    )
-                    if email_match:
-                        apply_email = email_match.group(0)
-
-                # Si no hay asunto, buscar texto que parezca el asunto esperado
-                if not apply_subject and title:
-                    apply_subject = f"Aplicar a vacante {title} - Findjobit"
-
-            except Exception as e:
-                print(f"[FindJobIT] No se pudo extraer formulario apply de {url}: {e}")
+        for sel in TITLE_SELECTORS:
+            el = page.query_selector(sel)
+            if el:
+                t = _clean(el.inner_text())
+                # Ignorar títulos muy cortos o de navegación
+                if len(t) > 5 and not any(x in t.lower() for x in ["menú", "menu", "inicio", "home"]):
+                    title = t
+                    break
 
         if not title:
-            print(f"[FindJobIT] Oferta sin título en {url}, omitiendo")
+            # Último recurso: primera línea con contenido razonable
+            body = _clean(page.inner_text("body"))
+            for line in body.split("\n"):
+                line = line.strip()
+                if 8 < len(line) < 120:
+                    title = line
+                    break
+
+        if not title:
+            print(f"[FindJobIT] Sin título en {url}")
             return None
+
+        # ── Empresa ───────────────────────────────────────────────────────
+        company = ""
+        body_text = page.inner_text("body")
+
+        # findjobit muestra "Empresa: NombreEmpresa" en el detalle
+        m = re.search(r"Empresa[:\s]+([^\n]{2,60})", body_text, re.IGNORECASE)
+        if m:
+            company = _clean(m.group(1))
+        else:
+            # Buscar h4 o h5 que siga al título
+            headings = page.query_selector_all("h4, h5, h6")
+            if len(headings) > 1:
+                company = _clean(headings[1].inner_text())
+
+        # ── Descripción ───────────────────────────────────────────────────
+        description = _clean(body_text)[:4000]
+
+        # ── Job ID ────────────────────────────────────────────────────────
+        job_id = url.split("/")[-1]
+
+        # ── Email de aplicación ───────────────────────────────────────────
+        apply_email, apply_subject = _get_apply_email(page, url, job_id)
+
+        # Si no hay email en el formulario, buscar en el cuerpo del aviso
+        if not apply_email:
+            emails_in_body = _extract_emails(description)
+            if emails_in_body:
+                apply_email = emails_in_body[0]
+
+        print(f"[FindJobIT] ✓ '{title}' — {company} | email: {apply_email or 'no encontrado'}")
 
         return {
             "portal": "FindJobIT",
@@ -155,13 +166,13 @@ def _extract_offer_detail(page, url: str) -> Dict | None:
             "url": url,
             "description": description,
             "salary_raw": None,
-            # Metadatos extra para el aplicador
             "_apply_email": apply_email,
             "_apply_subject": apply_subject,
+            "_job_id": job_id,
         }
 
     except PlaywrightTimeout:
-        print(f"[FindJobIT] Timeout extrayendo detalle de {url}")
+        print(f"[FindJobIT] Timeout en {url}")
         return None
     except Exception as e:
         print(f"[FindJobIT] Error extrayendo {url}: {e}")
@@ -174,6 +185,7 @@ def fetch_offers() -> List[Dict]:
     Retorna lista de ofertas remotas que incluyen Chile.
     """
     all_offers = []
+    seen_urls: set = set()
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -190,22 +202,22 @@ def fetch_offers() -> List[Dict]:
         )
         page = context.new_page()
 
-        # Recolectar links de múltiples páginas
+        # Recolectar links únicos de múltiples páginas
         offer_urls = []
-        for page_num in range(1, 4):  # páginas 1, 2, 3
+        for page_num in range(1, 4):
             url = f"{CHILE_JOBS_URL}?page={page_num}"
-            print(f"[FindJobIT] Scrapeando listado página {page_num}...")
-            links = _scrape_listing_page(page, url)
-            if not links:
+            print(f"[FindJobIT] Listado página {page_num}...")
+            new = _scrape_listing_page(page, url, seen_urls)
+            if not new:
+                print(f"[FindJobIT] Página {page_num} sin ofertas nuevas, deteniendo")
                 break
-            offer_urls.extend(links)
-            time.sleep(1)  # pausa entre páginas
+            offer_urls.extend(new)
+            print(f"[FindJobIT] +{len(new)} nuevas (total: {len(offer_urls)})")
+            time.sleep(1)
 
-        print(f"[FindJobIT] {len(offer_urls)} ofertas encontradas en listados")
+        print(f"[FindJobIT] {len(offer_urls)} ofertas únicas a procesar")
 
-        # Extraer detalle de cada oferta
         for offer_url in offer_urls:
-            print(f"[FindJobIT] Extrayendo: {offer_url}")
             offer = _extract_offer_detail(page, offer_url)
             if offer:
                 all_offers.append(offer)
@@ -213,5 +225,5 @@ def fetch_offers() -> List[Dict]:
 
         browser.close()
 
-    print(f"[FindJobIT] Total ofertas válidas: {len(all_offers)}")
+    print(f"[FindJobIT] Total válidas: {len(all_offers)}")
     return all_offers
