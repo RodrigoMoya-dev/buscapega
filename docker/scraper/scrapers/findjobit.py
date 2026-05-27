@@ -2,14 +2,19 @@
 Scraper para findjobit.com
 Busca ofertas de trabajo remotas que incluyan Chile.
 Usa Playwright para renderizar el sitio (Next.js/SPA).
+
+Sesión: si existe /app/cookies/findjobit_session.json (capturada con setup_session.py),
+se usa para autenticar y acceder al formulario de postulación completo.
 """
 import re
 import time
+from pathlib import Path
 from typing import List, Dict, Optional
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 BASE_URL = "https://www.findjobit.com"
 CHILE_JOBS_URL = f"{BASE_URL}/jobs/country/chile"
+SESSION_FILE = Path("/app/cookies/findjobit_session.json")
 
 # Selectores de título en orden de preferencia
 TITLE_SELECTORS = ["h1", "h2", "h3", "h4", "h5", "[class*='title']", "[class*='titulo']"]
@@ -51,29 +56,58 @@ def _scrape_listing_page(page, url: str, seen_urls: set) -> List[str]:
     return new_links
 
 
-def _get_apply_email(page, job_url: str, job_id: str) -> tuple[Optional[str], Optional[str]]:
+def _has_session() -> bool:
+    """Verifica si existe un archivo de sesión válido para FindJobIT."""
+    return SESSION_FILE.exists() and SESSION_FILE.stat().st_size > 100
+
+
+def _get_apply_info(context_factory, job_id: str) -> tuple[Optional[str], Optional[str], bool]:
     """
     Intenta extraer el email y asunto de la página de aplicación.
-    Retorna (email, asunto) o (None, None).
+    Usa sesión autenticada si está disponible.
+
+    Retorna (email, asunto, form_accessible).
+    - email: email del empleador si está expuesto en el formulario
+    - asunto: asunto sugerido si aparece en el formulario
+    - form_accessible: True si el formulario está accesible (con sesión), False si requiere login
     """
     apply_url = f"{BASE_URL}/job-seekers/job/apply/{job_id}"
+
+    # Crear contexto con sesión si está disponible
+    if _has_session():
+        try:
+            ctx = context_factory(storage_state=str(SESSION_FILE))
+            page = ctx.new_page()
+        except Exception:
+            return None, None, False
+    else:
+        # Usar la página anónima existente (fallback)
+        return None, None, False
+
     try:
         page.goto(apply_url, wait_until="domcontentloaded", timeout=20_000)
         page.wait_for_timeout(1500)
 
-        # Si redirige al login, no hay email disponible sin sesión
+        # Si redirige al login, la sesión expiró
         if "/login" in page.url or "ingresar" in page.url.lower():
-            return None, None
+            print("[FindJobIT] ⚠️  Sesión de FindJobIT expirada — capturar de nuevo con setup_session.py findjobit")
+            page.close(); ctx.close()
+            return None, None, False
 
         body_text = page.inner_text("body")
         emails = _extract_emails(body_text)
 
-        # Buscar campo email con valor
+        # Buscar email del empleador en campos del formulario
         email_val = None
-        for sel in ["input[type='email']", "input[name*='email']", "input[placeholder*='email' i]"]:
+        for sel in ["input[type='email']", "input[name*='email']", "input[placeholder*='email' i]",
+                    "input[name*='to']", "input[name*='recipient']"]:
             el = page.query_selector(sel)
             if el:
-                val = el.get_attribute("value") or el.input_value()
+                val = el.get_attribute("value") or ""
+                try:
+                    val = val or el.input_value()
+                except Exception:
+                    pass
                 if val and "@" in val:
                     email_val = val
                     break
@@ -81,21 +115,32 @@ def _get_apply_email(page, job_url: str, job_id: str) -> tuple[Optional[str], Op
         if not email_val and emails:
             email_val = emails[0]
 
-        # Buscar asunto
+        # Buscar asunto sugerido
         subject_val = None
         for sel in ["input[name*='subject']", "input[name*='asunto']",
                     "input[placeholder*='asunto' i]", "input[placeholder*='subject' i]"]:
             el = page.query_selector(sel)
             if el:
-                val = el.get_attribute("value") or el.input_value()
+                val = el.get_attribute("value") or ""
+                try:
+                    val = val or el.input_value()
+                except Exception:
+                    pass
                 if val:
                     subject_val = val
                     break
 
-        return email_val, subject_val
+        page.close()
+        ctx.close()
+        return email_val, subject_val, True
 
-    except Exception:
-        return None, None
+    except Exception as e:
+        print(f"[FindJobIT] Error extrayendo apply info: {e}")
+        try:
+            page.close(); ctx.close()
+        except Exception:
+            pass
+        return None, None, False
 
 
 def _extract_offer_detail(page, url: str) -> Optional[Dict]:
@@ -148,16 +193,25 @@ def _extract_offer_detail(page, url: str) -> Optional[Dict]:
         # ── Job ID ────────────────────────────────────────────────────────
         job_id = url.split("/")[-1]
 
-        # ── Email de aplicación ───────────────────────────────────────────
-        apply_email, apply_subject = _get_apply_email(page, url, job_id)
+        # ── Email de aplicación (requiere sesión autenticada) ─────────────
+        # _get_apply_info crea su propio contexto con cookies de sesión
+        apply_email = None
+        apply_subject = None
+        form_accessible = False
 
-        # Si no hay email en el formulario, buscar en el cuerpo del aviso
+        # Intentar con sesión guardada
+        if _has_session():
+            context_factory = page.context.browser.new_context
+            apply_email, apply_subject, form_accessible = _get_apply_info(context_factory, job_id)
+
+        # Fallback: buscar email en el cuerpo del aviso (raro, pero por si acaso)
         if not apply_email:
             emails_in_body = _extract_emails(description)
             if emails_in_body:
                 apply_email = emails_in_body[0]
 
-        print(f"[FindJobIT] ✓ '{title}' — {company} | email: {apply_email or 'no encontrado'}")
+        session_status = "con sesión" if _has_session() else "sin sesión"
+        print(f"[FindJobIT] ✓ '{title}' — {company} | email: {apply_email or 'no encontrado'} ({session_status})")
 
         return {
             "portal": "FindJobIT",
@@ -169,6 +223,7 @@ def _extract_offer_detail(page, url: str) -> Optional[Dict]:
             "_apply_email": apply_email,
             "_apply_subject": apply_subject,
             "_job_id": job_id,
+            "_form_accessible": form_accessible,   # True si la sesión es válida y el form cargó
         }
 
     except PlaywrightTimeout:

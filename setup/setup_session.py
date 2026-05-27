@@ -7,7 +7,7 @@ Uso:
     python3 setup_session.py <portal> --browser brave|chrome
     python3 setup_session.py --lista
 
-Portales disponibles: getonbrd, tecnoempleo, remotelatinos, chiletrabajos, chumiit
+Portales disponibles: findjobit, getonbrd, tecnoempleo, remotelatinos, chiletrabajos, chumiit
 
 El script abre el navegador elegido con un perfil persistente real, navegas al
 portal, haces login con Google, y las cookies quedan guardadas y sincronizadas
