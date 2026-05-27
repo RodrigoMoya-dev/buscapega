@@ -2,6 +2,7 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 const QRCode = require("qrcode");
 const express = require("express");
+const { execSync } = require("child_process");
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
@@ -37,7 +38,7 @@ const PUPPETEER_OPTS = {
     "--metrics-recording-only",
     "--mute-audio",
     "--safebrowsing-disable-auto-update",
-    "--single-process",   // reduce memory footprint en contenedores
+    "--js-flags=--max-old-space-size=512",
   ],
   timeout: 60000,  // 60s para que Chromium arranque (puede ser lento con poca RAM)
 };
@@ -70,8 +71,22 @@ function scheduleReconnect(reason) {
   }, delay);
 }
 
+// ── Limpiar locks de Chromium (persisten en el volumen entre reinicios) ───────
+function clearChromiumLocks() {
+  try {
+    execSync(
+      `find "${AUTH_DIR}" -name "SingletonLock" -delete 2>/dev/null; ` +
+      `find "${AUTH_DIR}" -name "SingletonSocket" -delete 2>/dev/null; ` +
+      `find "${AUTH_DIR}" -name "lockfile" -delete 2>/dev/null`,
+      { stdio: "ignore" }
+    );
+    console.log("[WhatsApp] Locks de Chromium limpiados");
+  } catch (_) {}
+}
+
 // ── Crear e inicializar el cliente ────────────────────────────────────────────
 async function startClient() {
+  clearChromiumLocks();
   console.log("[WhatsApp] Iniciando cliente...");
   connectionStatus = "initializing";
 
