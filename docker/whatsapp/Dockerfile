@@ -7,6 +7,7 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
+    git \
     libc6-compat
 
 # Instalar dependencias primero (cache)
