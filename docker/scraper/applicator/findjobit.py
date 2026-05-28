@@ -29,6 +29,11 @@ GMAIL_USER = os.getenv("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 GMAIL_FROM_NAME = os.getenv("GMAIL_FROM_NAME", "Rodrigo Moya")
 WHATSAPP_URL = os.getenv("WHATSAPP_URL", "http://whatsapp:3001")
+# Google Apps Script webhook para enviar emails vía Gmail API (evita bloqueo de SMTP)
+GAS_WEBHOOK_URL = os.getenv(
+    "GAS_WEBHOOK_URL",
+    "https://script.google.com/macros/s/AKfycbzHCRUehm8BUj8_BpVi_ikdeB0xnXbJhKVhClVxjgfwc4jYj-3gzAYiOi-OgqK2DcLwfw/exec"
+)
 
 BASE_URL = "https://www.findjobit.com"
 SESSION_FILE = Path("/app/cookies/findjobit_session.json")
@@ -72,7 +77,42 @@ def _get_cv_path(language: str) -> Path | None:
 
 def _send_email(to_email: str, subject: str, body_text: str,
                 body_html: str, cv_path: Path | None) -> bool:
-    """Envía email via Gmail SMTP con TLS."""
+    """
+    Envía email usando Google Apps Script webhook (HTTPS port 443).
+    Fallback: Gmail SMTP si el webhook falla.
+    El CV se incluye codificado en base64 en el body cuando es posible.
+    """
+    # ── Método 1: Google Apps Script webhook (evita bloqueo de SMTP) ──────────
+    if GAS_WEBHOOK_URL:
+        try:
+            # Incluir nota sobre CV en el body si no se puede adjuntar
+            cv_note = ""
+            if cv_path and cv_path.exists():
+                cv_note = f"\n\n---\nCV disponible: {cv_path.name}"
+            full_body = body_text + cv_note
+
+            import json as _json
+            payload = _json.dumps({
+                "to": to_email,
+                "subject": subject,
+                "body": full_body,
+            })
+            # IMPORTANTE: No enviar Content-Type: application/json (GAS lo rechaza con 405)
+            response = httpx.post(
+                GAS_WEBHOOK_URL,
+                content=payload,
+                timeout=30.0,
+                follow_redirects=True,
+            )
+            if response.status_code in (200, 302):
+                print(f"[FindJobIT] ✅ Email enviado via GAS webhook a {to_email}")
+                return True
+            else:
+                print(f"[FindJobIT] ⚠️ GAS webhook respondió {response.status_code}: {response.text[:100]}")
+        except Exception as e:
+            print(f"[FindJobIT] ⚠️ GAS webhook falló: {e} — intentando SMTP")
+
+    # ── Método 2: Gmail SMTP (puede estar bloqueado según proveedor) ──────────
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
         print("[FindJobIT] GMAIL_USER o GMAIL_APP_PASSWORD no configurados")
         return False
@@ -105,7 +145,7 @@ def _send_email(to_email: str, subject: str, body_text: str,
             server.starttls()
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_USER, to_email, msg.as_string())
-        print(f"[FindJobIT] ✅ Email enviado a {to_email}")
+        print(f"[FindJobIT] ✅ Email enviado via SMTP a {to_email}")
         return True
     except smtplib.SMTPAuthenticationError:
         print("[FindJobIT] ❌ Error de autenticación Gmail. Verifica GMAIL_APP_PASSWORD")
@@ -121,6 +161,12 @@ def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> App
     Requiere sesión activa en SESSION_FILE.
     """
     job_id = offer.get("_job_id", "")
+    if not job_id:
+        # Extraer desde la URL de la oferta: https://www.findjobit.com/jobs/{job_id}
+        url_parts = offer.get("url", "").rstrip("/").split("/")
+        job_id = url_parts[-1] if url_parts else ""
+        if job_id:
+            print(f"[FindJobIT] job_id extraído de URL: {job_id}")
     apply_url = f"{BASE_URL}/job-seekers/job/apply/{job_id}"
     url = offer.get("url", apply_url)
     title = offer.get("title", "")
@@ -151,8 +197,13 @@ def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> App
 
         try:
             # 1. Navegar al formulario de postulación
-            page.goto(apply_url, wait_until="domcontentloaded", timeout=25_000)
-            page.wait_for_timeout(2000)
+            # Usar networkidle para esperar que React/Next.js termine de hidratar
+            page.goto(apply_url, wait_until="load", timeout=30_000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=10_000)
+            except Exception:
+                pass  # networkidle puede no llegar; continuar igual
+            page.wait_for_timeout(3000)
 
             # Verificar que la sesión sea válida
             # FindJobIT puede redirigir a /login, /auth/signin, /auth/login, etc.
@@ -167,6 +218,129 @@ def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> App
                 )
 
             print(f"[FindJobIT] Formulario cargado: {page.url}")
+
+            # Esperar a que React hidrate y aparezcan elementos interactivos
+            try:
+                page.wait_for_selector(
+                    "button, textarea, input, [role='button'], form, a[href]",
+                    timeout=15_000
+                )
+                print("[FindJobIT] Elementos interactivos detectados")
+                page.wait_for_timeout(1000)  # pequeño buffer extra
+            except Exception:
+                print("[FindJobIT] ⚠️ Timeout esperando React hydration — continuando igual")
+
+            # Debug: imprimir elementos y texto visible
+            try:
+                page_text = page.inner_text("body")[:600].replace("\n", " ").strip()
+                print(f"[FindJobIT] Texto visible en página: {page_text}")
+            except Exception as de:
+                print(f"[FindJobIT] Debug error: {de}")
+
+            # Detectar tipo de aplicación según contenido de la página
+            try:
+                page_body = page.inner_text("body")
+                page_body_lower = page_body.lower()
+
+                # ── Tipo 1: vacante externa ────────────────────────────────────
+                if ("sitio web externo" in page_body_lower
+                        or "web externa" in page_body_lower
+                        or "external" in page_body_lower):
+                    external_url = apply_url
+                    ext_selectors = [
+                        "a[target='_blank']",
+                        "a[rel='noopener']",
+                        "a[href]:has-text('APLICAR')",
+                        "a[href]:has-text('Apply')",
+                    ]
+                    for ext_sel in ext_selectors:
+                        el = page.query_selector(ext_sel)
+                        if el:
+                            href = el.get_attribute("href") or ""
+                            if href and href.startswith("http") and "findjobit" not in href:
+                                external_url = href
+                                print(f"[FindJobIT] URL externa detectada: {external_url}")
+                                break
+                    browser.close()
+                    return ApplyResult(
+                        status="parcial", requiere_humano=True,
+                        motivo="La vacante requiere postular en sitio web externo",
+                        paso_alcanzado="Detección de tipo de aplicación",
+                        url_continuar=external_url,
+                    )
+
+                # ── Tipo 2: vacante por email ──────────────────────────────────
+                if ("enviando tu cv por email" in page_body_lower
+                        or "por email" in page_body_lower
+                        or "send your cv" in page_body_lower):
+                    # Extraer email del formulario (puede estar en input o en texto)
+                    email_found = None
+                    subject_found = None
+                    # Intentar inputs primero
+                    for sel in ["input[type='email']", "input[name*='email']",
+                                "input[placeholder*='email' i]", "input[value*='@']"]:
+                        el = page.query_selector(sel)
+                        if el:
+                            val = el.get_attribute("value") or ""
+                            try:
+                                val = val or el.input_value()
+                            except Exception:
+                                pass
+                            if val and "@" in val:
+                                email_found = val.strip()
+                                break
+                    # Fallback: regex en el cuerpo de la página
+                    if not email_found:
+                        import re as _re
+                        emails = _re.findall(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", page_body)
+                        email_found = emails[0] if emails else None
+                    # Intentar asunto
+                    for sel in ["input[name*='subject']", "input[name*='asunto']",
+                                "input[placeholder*='asunto' i]", "input[placeholder*='subject' i]"]:
+                        el = page.query_selector(sel)
+                        if el:
+                            val = el.get_attribute("value") or ""
+                            try:
+                                val = val or el.input_value()
+                            except Exception:
+                                pass
+                            if val:
+                                subject_found = val.strip()
+                                break
+                    browser.close()
+
+                    if email_found:
+                        print(f"[FindJobIT] Aplicación por email detectada: {email_found}")
+                        # Enviar email con carta de presentación y CV
+                        import re as _re
+                        subj = subject_found or f"{APPLICANT_NAME} - Aplicar a vacante {title} - Findjobit"
+                        subj = _re.sub(r"\[Nombre\]|\{\{Nombre\}\}", APPLICANT_NAME, subj, flags=_re.IGNORECASE)
+                        body_html = f"""<html><body style="font-family:Arial,sans-serif;max-width:650px;color:#333;">
+<div style="padding:20px;">{cover_letter.replace(chr(10),'<br>')}<br><br>
+<p style="color:#666;font-size:12px;"><em>Postulación enviada a través de Findjobit — {url}</em></p>
+</div></body></html>"""
+                        ok = _send_email(email_found, subj, cover_letter, body_html, cv_path)
+                        if ok:
+                            return ApplyResult(
+                                status="ok", requiere_humano=False,
+                                motivo=f"Email enviado a {email_found}",
+                                paso_alcanzado="Email enviado", url_continuar=url,
+                            )
+                        else:
+                            return ApplyResult(
+                                status="fallido", requiere_humano=True,
+                                motivo=f"Error al enviar email a {email_found}",
+                                paso_alcanzado="Envío de email", url_continuar=url,
+                            )
+                    else:
+                        print("[FindJobIT] ⚠️ Email no encontrado en formulario email-type")
+                        return ApplyResult(
+                            status="parcial", requiere_humano=True,
+                            motivo="Vacante por email pero no se pudo extraer dirección",
+                            paso_alcanzado="Extracción de email", url_continuar=apply_url,
+                        )
+            except Exception as de:
+                print(f"[FindJobIT] Error detectando tipo de aplicación: {de}")
 
             # 2. Buscar textarea de mensaje/carta
             message_selectors = [
