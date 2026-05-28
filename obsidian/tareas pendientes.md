@@ -23,14 +23,25 @@
 - [x] Eliminado `SingletonLock` y `SingletonSocket` del volume
 - [x] Sesión WhatsApp borrada y recreada (se usaron credenciales guardadas)
 
-### ⏳ Fix 4 — Sesión FindJobIT expirada / inválida
-- [ ] Confirmar con próximo pipeline si la sesión capturada es válida desde Presto
-- [ ] Si sigue fallando → investigar si FindJobIT usa IP-binding de sesiones
-- [ ] Posible solución: generar un tunnel temporal o capturar sesión desde Presto
+### ✅ Fix 4 — Sesión FindJobIT (skip_strategy_1) COMPLETADO
+- [x] Causa: `/job-seekers/login` redirige a `/job-seekers` sin auth → falso positivo
+- [x] `portales_config.py`: `skip_strategy_1: True` para FindJobIT
+- [x] `setup_session.py`: no infiere login desde redirect cuando `skip_strategy_1=True`
+- [x] Sesión re-capturada con 6 cookies válidas incl. `__Secure-next-auth.session-token` ✅
 
-### ⏳ Fix 5 — CV faltante en Presto
-- [ ] Subir `cv_es.pdf` y/o `cv_en.pdf` a `rodrigo@presto:~/docker/wunen/data/`
-- [ ] Sin CV, las postulaciones vía email van sin adjunto ⚠️
+### ✅ Fix 5 — CV disponible en Presto COMPLETADO
+- [x] `cv_es.pdf` copiado a `~/docker/wunen/data/cv_es.pdf`
+- [x] `cv_en.pdf` generado (traducción al inglés vía reportlab)
+- [x] `docker-compose.yml` con `./data:/wunen:ro` → accesible en `/wunen/cv_es.pdf` ✅
+
+### ✅ Fix 6 — Auto-aplicación FindJobIT funcional COMPLETADO (27/05/2026)
+- [x] `_job_id` extraído desde URL de la oferta cuando no viene en payload
+- [x] Detección de vacantes externas → retorna URL destino (ej: newcombin.com)
+- [x] Detección de vacantes por email → extrae email del formulario con regex
+- [x] SMTP bloqueado en Presto (puerto 587 timeout) → usa Google Apps Script webhook HTTPS
+- [x] GAS webhook: mismo script que usa Trafkin backup → envío exitoso confirmado
+- [x] Probado con 5 ofertas: 4 emails enviados OK, 1 externa (URL devuelta)
+- [x] FindJobITApplicator registrado en `registry.py`
 
 ---
 
@@ -41,9 +52,14 @@
 | Frontend (wunen.presto) | 3020 | ✅ UP |
 | Backend (api.wunen.presto) | 8020 | ✅ UP |
 | Scraper + FindJobIT | 8021 | ✅ UP |
-| WhatsApp | 3002 | 🔄 Reconstruyendo imagen |
+| WhatsApp | 3002 | ✅ UP (conectado) |
 | PostgreSQL | 5433 | ✅ UP |
 | n8n workflow FindJobIT | — | ✅ Activo (cada 1h) |
+
+### ⚠️ Nota: Créditos Anthropic API agotados
+- La carta de presentación usa `_fallback_letter()` en lugar de Claude
+- Las evaluaciones de nuevas ofertas tampoco funcionan
+- Recargar créditos en console.anthropic.com para restaurar
 
 ---
 
