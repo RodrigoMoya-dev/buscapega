@@ -134,12 +134,17 @@ Tienes 5 minutos para completar el proceso.
 
         login_detectado = False
         login_url_base = config["login_url"].rstrip("/")
+        skip_strategy_1 = config.get("skip_strategy_1", False)
 
         # Estrategia 1: ya logueado — la página redirigió fuera del login de inmediato
+        # (desactivada para portales donde el redirect ocurre sin auth real)
         page.wait_for_load_state("domcontentloaded")
-        if not page.url.rstrip("/").startswith(login_url_base):
+        if not skip_strategy_1 and not page.url.rstrip("/").startswith(login_url_base):
             print(f"ℹ️  Ya había sesión activa (redirigido a {page.url})")
             login_detectado = True
+        elif skip_strategy_1 and not page.url.rstrip("/").startswith(login_url_base):
+            print(f"ℹ️  Redirigido a {page.url} — verificando si el login es real...")
+            # No confiar solo en el redirect; continúa a Strategy 3 para confirmar
 
         if not login_detectado:
             try:
@@ -180,9 +185,17 @@ Tienes 5 minutos para completar el proceso.
 
         with open(session_file) as f:
             data = json.load(f)
-        n_cookies = len(data.get("cookies", []))
+        cookies = data.get("cookies", [])
+        portal_cookies = [c for c in cookies if portal.lower() in c.get("domain", "").lower()
+                          or config.get("home_url", "").replace("https://www.", "").split("/")[0]
+                          in c.get("domain", "").lower()]
+        n_cookies = len(cookies)
         print(f"\n✅ Sesión guardada: {session_file.name}")
-        print(f"   {n_cookies} cookies almacenadas")
+        print(f"   {n_cookies} cookies totales, {len(portal_cookies)} del portal")
+        if len(portal_cookies) == 0:
+            print(f"\n⚠️  ADVERTENCIA: No se encontraron cookies del portal {config['nombre']}.")
+            print(f"   Es posible que el login no se haya completado correctamente.")
+            print(f"   Vuelve a ejecutar el setup y asegúrate de hacer login con tu cuenta.")
 
         sincronizar_con_presto(portal)
 
