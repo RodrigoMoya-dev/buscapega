@@ -11,21 +11,33 @@ from app.models import Offer
 router = APIRouter(prefix="/api/portals", tags=["portals"])
 
 COOKIES_DIR = os.getenv("COOKIES_DIR", "/app/cookies")
+WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
+PORTALES_PATH = os.path.join(WUNEN_DIR, "documentos", "portales.json")
 
-PORTAL_LIST = [
-    {"name": "Tecnoempleo", "url": "https://www.tecnoempleo.com", "auto_apply": True, "market": "España", "session_key": "tecnoempleo"},
-    {"name": "ChileTrabajos", "url": "https://www.chiletrabajos.cl", "auto_apply": True, "market": "Chile", "session_key": "chiletrabajos"},
-    {"name": "Chumi-IT", "url": "https://chumi-it.com", "auto_apply": True, "market": "LATAM/España", "session_key": "chumiit"},
-    {"name": "RemoteLatinos", "url": "https://www.remotelatinos.com", "auto_apply": True, "market": "LATAM/EEUU", "session_key": "remotelatinos"},
-    {"name": "GetOnBrd", "url": "https://www.getonbrd.com", "auto_apply": True, "market": "LATAM/Chile", "session_key": "getonbrd"},
-    {"name": "Torre.ai", "url": "https://torre.ai", "auto_apply": False, "market": "LATAM/EEUU", "session_key": None},
-    {"name": "InfoJobs", "url": "https://www.infojobs.net", "auto_apply": False, "market": "España", "session_key": None},
-    {"name": "FindJobIT", "url": "https://findjobit.com", "auto_apply": True, "market": "Internacional", "session_key": "findjobit"},
-    {"name": "LaraJobs", "url": "https://larajobs.com", "auto_apply": False, "market": "Internacional", "session_key": None},
-    {"name": "FlexJobs", "url": "https://www.flexjobs.com", "auto_apply": False, "market": "Internacional", "session_key": None},
-    {"name": "Remotive", "url": "https://remotive.com", "auto_apply": False, "market": "Internacional", "session_key": None},
-    {"name": "RemoteOK", "url": "https://remoteok.com", "auto_apply": False, "market": "Internacional", "session_key": None},
+DEFAULT_PORTAL_LIST = [
+    {"name": "Tecnoempleo",   "url": "https://www.tecnoempleo.com",   "auto_apply": True,  "market": "España",        "session_key": "tecnoempleo"},
+    {"name": "ChileTrabajos", "url": "https://www.chiletrabajos.cl",  "auto_apply": True,  "market": "Chile",         "session_key": "chiletrabajos"},
+    {"name": "Chumi-IT",      "url": "https://chumi-it.com",          "auto_apply": True,  "market": "LATAM/España",  "session_key": "chumiit"},
+    {"name": "RemoteLatinos", "url": "https://www.remotelatinos.com", "auto_apply": True,  "market": "LATAM/EEUU",    "session_key": "remotelatinos"},
+    {"name": "GetOnBrd",      "url": "https://www.getonbrd.com",      "auto_apply": True,  "market": "LATAM/Chile",   "session_key": "getonbrd"},
+    {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit"},
+    {"name": "Torre.ai",      "url": "https://torre.ai",              "auto_apply": False, "market": "LATAM/EEUU",    "session_key": None},
+    {"name": "InfoJobs",      "url": "https://www.infojobs.net",      "auto_apply": False, "market": "España",        "session_key": None},
+    {"name": "LaraJobs",      "url": "https://larajobs.com",          "auto_apply": False, "market": "Internacional", "session_key": None},
+    {"name": "FlexJobs",      "url": "https://www.flexjobs.com",      "auto_apply": False, "market": "Internacional", "session_key": None},
+    {"name": "Remotive",      "url": "https://remotive.com",          "auto_apply": False, "market": "Internacional", "session_key": None},
+    {"name": "RemoteOK",      "url": "https://remoteok.com",          "auto_apply": False, "market": "Internacional", "session_key": None},
 ]
+
+
+def _load_portal_list() -> list:
+    if os.path.exists(PORTALES_PATH):
+        try:
+            with open(PORTALES_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return DEFAULT_PORTAL_LIST
 
 
 def _cookie_active(session_key: str | None) -> bool:
@@ -37,6 +49,8 @@ def _cookie_active(session_key: str | None) -> bool:
 
 @router.get("")
 def list_portals(db: Session = Depends(get_db)):
+    portal_list = _load_portal_list()
+
     sent_statuses = ["ENVIADA", "POSTULADA"]
     counts_rows = (
         db.query(Offer.portal, func.count(Offer.id).label("count"))
@@ -50,7 +64,7 @@ def list_portals(db: Session = Depends(get_db)):
         counts_map[key] = r.count
 
     result = []
-    for p in PORTAL_LIST:
+    for p in portal_list:
         key = p["name"].lower().replace(" ", "").replace("-", "").replace(".", "")
         cookie_active = _cookie_active(p.get("session_key"))
         portal_data = {k: v for k, v in p.items() if k != "session_key"}
