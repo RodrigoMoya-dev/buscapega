@@ -5,12 +5,14 @@ from typing import Any
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
-DATA_DIR = os.getenv("DATA_DIR", "/wunen")
+WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
+DATA_DIR = os.path.join(WUNEN_DIR, "documentos")
 
 CV_ES_PATH = os.path.join(DATA_DIR, "cv_data.json")
 CV_EN_PATH = os.path.join(DATA_DIR, "cv_data_en.json")
 PROFILE_PATH = os.path.join(DATA_DIR, "perfil_data.json")
 PERFIL_MD_PATH = os.path.join(DATA_DIR, "perfil.md")
+PERFIL_ROOT_PATH = os.path.join(WUNEN_DIR, "perfil.md")  # lo lee el evaluador
 
 DEFAULT_CV = {
     "name": "",
@@ -268,6 +270,7 @@ def get_profile():
 def save_profile(data: dict):
     _write_json(PROFILE_PATH, data)
     md = _profile_to_markdown(data)
-    with open(PERFIL_MD_PATH, "w", encoding="utf-8") as f:
-        f.write(md)
+    for path in (PERFIL_MD_PATH, PERFIL_ROOT_PATH):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(md)
     return {"status": "ok"}

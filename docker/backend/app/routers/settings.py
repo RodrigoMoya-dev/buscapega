@@ -4,8 +4,8 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-DATA_DIR = os.getenv("DATA_DIR", "/wunen")
-SETTINGS_PATH = os.path.join(DATA_DIR, "settings.json")
+WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
+SETTINGS_PATH = os.path.join(WUNEN_DIR, "documentos", "settings.json")
 
 DEFAULT_SETTINGS = {
     "whatsapp_phone": "",
