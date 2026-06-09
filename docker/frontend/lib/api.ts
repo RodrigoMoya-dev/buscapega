@@ -103,3 +103,138 @@ export async function updateAnswer(id: number, data: Partial<Omit<Answer, "id" |
 export async function deleteAnswer(id: number): Promise<void> {
   await fetch(`${API}/api/answers/${id}`, { method: "DELETE" });
 }
+
+// --- Stats ---
+
+export interface Stats {
+  sent_this_week: number;
+  total_sent: number;
+  total_pending: number;
+  total_discarded: number;
+  by_portal: { portal: string; count: number }[];
+}
+
+export async function getStats(): Promise<Stats | null> {
+  try {
+    const res = await fetch(`${API}/api/stats`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+// --- Portals ---
+
+export interface Portal {
+  name: string;
+  url: string;
+  auto_apply: boolean;
+  market: string;
+  session_active: boolean;
+  applications_count: number;
+}
+
+export async function getPortals(): Promise<Portal[]> {
+  try {
+    const res = await fetch(`${API}/api/portals`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function validatePortal(url: string): Promise<any> {
+  try {
+    const res = await fetch(`${API}/api/portals/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+// --- CV ---
+
+export async function getCvEs(): Promise<any> {
+  try {
+    const res = await fetch(`${API}/api/cv/es`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+export async function saveCvEs(data: any): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/cv/es`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+export async function getCvEn(): Promise<any> {
+  try {
+    const res = await fetch(`${API}/api/cv/en`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+export async function saveCvEn(data: any): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/cv/en`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+export async function getProfile(): Promise<any> {
+  try {
+    const res = await fetch(`${API}/api/cv/profile`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+export async function saveProfile(data: any): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/cv/profile`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+// --- Settings ---
+
+export async function getSettings(): Promise<any> {
+  try {
+    const res = await fetch(`${API}/api/settings`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+export async function saveSettings(data: any): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch { return false; }
+}
