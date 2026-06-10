@@ -7,7 +7,7 @@ Wunen es un sistema self-hosted de automatización para búsqueda y postulacione
 - **Scraping multi-portal** — Remotive, RemoteOK, GetOnBrd, Tecnoempleo, ChileTrabajos y más
 - **Puntuación con IA** — Cada oferta se evalúa contra tu perfil de candidato usando Claude (Anthropic)
 - **Interfaz de revisión** — UI web para aceptar, descartar o auto-postularse a ofertas
-- **Auto-postulación** — Automatización con Playwright para portales compatibles (Tecnoempleo, GetOnBrd, ChileTrabajos, Chumi-IT, RemoteLatinos, FindJobIT)
+- **Auto-postulación** — Automatización con Playwright para portales compatibles 
 - **Notificaciones WhatsApp** — Recibe un mensaje cuando se envía una postulación
 - **Totalmente Dockerizado** — Un solo comando para levantar todo
 
