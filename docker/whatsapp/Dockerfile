@@ -11,7 +11,7 @@ RUN apk add --no-cache \
 
 # Instalar dependencias primero (cache)
 COPY package.json ./
-RUN npm install --production
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copiar código fuente
 COPY . .
