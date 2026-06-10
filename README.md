@@ -14,8 +14,8 @@ Wunen es un sistema self-hosted de automatización para búsqueda de empleo. Ext
 ## Requisitos previos
 
 - [Docker Desktop](https://docs.docker.com/get-docker/) (incluye Docker Compose)
-- Una [Anthropic API Key](https://console.anthropic.com/) (necesaria para la puntuación con IA)
 - Python 3.9+ y `pip` (solo para la configuración de sesiones de portales)
+- Una [Anthropic API Key](https://console.anthropic.com/) *(opcional)* — sin ella el sistema usa un evaluador local por palabras clave
 
 ## Instalación rápida
 
@@ -55,7 +55,7 @@ Edita `docker/.env` y completa los valores requeridos:
 
 | Variable | Obligatoria | Descripción |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Sí | Obtenerla en console.anthropic.com |
+| `ANTHROPIC_API_KEY` | No | Obtenerla en console.anthropic.com. Sin ella se usa evaluación local |
 | `POSTGRES_PASSWORD` | Sí | Elige una contraseña segura |
 | `NEXT_PUBLIC_API_URL` | Sí | URL del backend vista desde el navegador (por defecto: `http://localhost:8000`) |
 | `GMAIL_USER` / `GMAIL_APP_PASSWORD` | No | Para portales que postulan vía email |
