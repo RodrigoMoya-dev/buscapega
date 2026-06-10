@@ -229,7 +229,39 @@ EOF
 ok ".env generado"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Construir e iniciar servicios Docker
+# 5. Validar puertos disponibles
+# ─────────────────────────────────────────────────────────────────────────────
+log "Verificando disponibilidad de puertos..."
+
+check_port() {
+  local port=$1
+  local name=$2
+  if lsof -iTCP:"$port" -sTCP:LISTEN -n -P &>/dev/null 2>&1; then
+    warn "Puerto ${port} (${name}) ya está en uso:"
+    lsof -iTCP:"$port" -sTCP:LISTEN -n -P 2>/dev/null | tail -1
+    echo ""
+    echo -e "  Opciones:"
+    echo -e "  ${CYAN}a)${RESET} Detener el proceso que usa ese puerto"
+    echo -e "  ${CYAN}b)${RESET} Editar docker/docker-compose.yml y cambiar el puerto del host"
+    echo -e "  ${CYAN}c)${RESET} Continuar igual (puede fallar el servicio ${name})"
+    read -r -p "  ¿Continuar de todas formas? (s/N) > " FORCE_PORT
+    FORCE_PORT_L=$(echo "$FORCE_PORT" | tr '[:upper:]' '[:lower:]')
+    [[ "$FORCE_PORT_L" != "s" && "$FORCE_PORT_L" != "si" && "$FORCE_PORT_L" != "y" ]] && \
+      error "Instalación cancelada. Libera el puerto ${port} y vuelve a ejecutar install.sh"
+  else
+    ok "Puerto ${port} (${name}) disponible"
+  fi
+}
+
+check_port "$FRONTEND_PORT" "frontend"
+check_port "$BACKEND_PORT"  "backend"
+check_port 8001             "scraper"
+check_port 3001             "whatsapp"
+check_port 5432             "postgres"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Construir e iniciar servicios Docker
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 log "Construyendo e iniciando servicios Docker..."
@@ -245,7 +277,7 @@ echo ""
 ok "Servicios Docker iniciados"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Esperar a que el backend esté listo
+# 7. Esperar a que el backend esté listo
 # ─────────────────────────────────────────────────────────────────────────────
 log "Esperando a que el backend esté listo..."
 MAX_WAIT=60
@@ -263,7 +295,7 @@ echo ""
 curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1 && ok "Backend disponible en http://localhost:${BACKEND_PORT}"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Configurar sesiones de portales (opcional)
+# 8. Configurar sesiones de portales (opcional)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 sep
@@ -273,7 +305,8 @@ echo -e "  ${CYAN}Esto abrirá un navegador por cada portal para que puedas hace
 read -r -p "  > " SETUP_SESSIONS
 echo ""
 
-if [[ "${SETUP_SESSIONS,,}" == "s" || "${SETUP_SESSIONS,,}" == "si" || "${SETUP_SESSIONS,,}" == "y" || "${SETUP_SESSIONS,,}" == "yes" ]]; then
+SETUP_SESSIONS_L=$(echo "$SETUP_SESSIONS" | tr '[:upper:]' '[:lower:]')
+if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSIONS_L" == "y" || "$SETUP_SESSIONS_L" == "yes" ]]; then
 
   if [[ ! -d "$SETUP_DIR" ]]; then
     warn "No se encontró la carpeta setup/. Omitiendo configuración de sesiones."
@@ -345,7 +378,7 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Resumen final
+# 9. Resumen final
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
