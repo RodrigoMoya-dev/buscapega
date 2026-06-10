@@ -230,7 +230,37 @@ EOF
 ok ".env generado"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Construir e iniciar servicios Docker
+# 5. Validar puertos disponibles
+# ─────────────────────────────────────────────────────────────────────────────
+log "Verificando disponibilidad de puertos..."
+
+check_port() {
+  local port=$1
+  local name=$2
+  if lsof -iTCP:"$port" -sTCP:LISTEN -n -P &>/dev/null 2>&1; then
+    warn "Puerto ${port} (${name}) ya está en uso:"
+    lsof -iTCP:"$port" -sTCP:LISTEN -n -P 2>/dev/null | tail -1
+    echo ""
+    echo -e "  Opciones:"
+    echo -e "  ${CYAN}a)${RESET} Detener el proceso que usa ese puerto"
+    echo -e "  ${CYAN}b)${RESET} Editar docker/docker-compose.yml y cambiar el puerto del host"
+    read -r -p "  ¿Continuar de todas formas? (s/N) > " FORCE_PORT
+    [[ "${FORCE_PORT,,}" != "s" && "${FORCE_PORT,,}" != "si" && "${FORCE_PORT,,}" != "y" ]] && \
+      error "Instalación cancelada. Libera el puerto ${port} y vuelve a ejecutar install.sh"
+  else
+    ok "Puerto ${port} (${name}) disponible"
+  fi
+}
+
+check_port "$FRONTEND_PORT" "frontend"
+check_port "$BACKEND_PORT"  "backend"
+check_port 8001             "scraper"
+check_port 3001             "whatsapp"
+check_port 5432             "postgres"
+echo ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Construir e iniciar servicios Docker
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 log "Construyendo e iniciando servicios Docker..."
