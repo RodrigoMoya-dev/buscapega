@@ -1,6 +1,6 @@
 # Wunen — Automatización de Búsqueda de Empleo
 
-Wunen es un sistema self-hosted de automatización para búsqueda de empleo. Extrae ofertas de múltiples portales, las puntúa contra tu perfil usando Claude AI, te permite revisarlas en una interfaz web y puede postularse automáticamente a los portales compatibles mediante automatización de navegador con Playwright.
+Wunen es un sistema self-hosted de automatización para búsqueda y postulaciones de empleos. Es capaz de extraer ofertas de múltiples portales, valida tus capacidades, y ejecuta la postulacion de forma automática y luego te informa a tu whatsapp. Además, te permite revisarlas en una interfaz web y puede postularse automáticamente a los portales compatibles mediante automatización de navegador con Playwright, si el portal lo permite.
 
 ## Características
 
