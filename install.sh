@@ -245,7 +245,8 @@ check_port() {
     echo -e "  ${CYAN}a)${RESET} Detener el proceso que usa ese puerto"
     echo -e "  ${CYAN}b)${RESET} Editar docker/docker-compose.yml y cambiar el puerto del host"
     read -r -p "  ¿Continuar de todas formas? (s/N) > " FORCE_PORT
-    [[ "${FORCE_PORT,,}" != "s" && "${FORCE_PORT,,}" != "si" && "${FORCE_PORT,,}" != "y" ]] && \
+    FORCE_PORT_L=$(echo "$FORCE_PORT" | tr '[:upper:]' '[:lower:]')
+    [[ "$FORCE_PORT_L" != "s" && "$FORCE_PORT_L" != "si" && "$FORCE_PORT_L" != "y" ]] && \
       error "Instalación cancelada. Libera el puerto ${port} y vuelve a ejecutar install.sh"
   else
     ok "Puerto ${port} (${name}) disponible"
@@ -304,7 +305,8 @@ echo -e "  ${CYAN}Esto abrirá un navegador por cada portal para que puedas hace
 read -r -p "  > " SETUP_SESSIONS
 echo ""
 
-if [[ "${SETUP_SESSIONS,,}" == "s" || "${SETUP_SESSIONS,,}" == "si" || "${SETUP_SESSIONS,,}" == "y" || "${SETUP_SESSIONS,,}" == "yes" ]]; then
+SETUP_SESSIONS_L=$(echo "$SETUP_SESSIONS" | tr '[:upper:]' '[:lower:]')
+if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSIONS_L" == "y" || "$SETUP_SESSIONS_L" == "yes" ]]; then
 
   if [[ ! -d "$SETUP_DIR" ]]; then
     warn "No se encontró la carpeta setup/. Omitiendo configuración de sesiones."
