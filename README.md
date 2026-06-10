@@ -1,23 +1,23 @@
-# Wunen — Job Search Automation
+# Wunen — Automatización de Búsqueda de Empleo
 
-Wunen is a self-hosted job search automation system. It scrapes offers from multiple portals, scores each one against your profile using Claude AI, lets you review them in a web UI, and can automatically apply to supported portals via Playwright browser automation.
+Wunen es un sistema self-hosted de automatización para búsqueda de empleo. Extrae ofertas de múltiples portales, las puntúa contra tu perfil usando Claude AI, te permite revisarlas en una interfaz web y puede postularse automáticamente a los portales compatibles mediante automatización de navegador con Playwright.
 
-## Features
+## Características
 
-- **Multi-portal scraping** — Remotive, RemoteOK, GetOnBrd, Tecnoempleo, ChileTrabajos, and more
-- **AI-powered scoring** — Each offer is evaluated against your candidate profile using Claude (Anthropic)
-- **Review UI** — Web interface to accept, discard, or auto-apply to offers
-- **Auto-apply** — Playwright-based automation for supported portals (Tecnoempleo, GetOnBrd, ChileTrabajos, Chumi-IT, RemoteLatinos, FindJobIT)
-- **WhatsApp notifications** — Get notified when an application is submitted
-- **Fully Dockerized** — One command to start everything
+- **Scraping multi-portal** — Remotive, RemoteOK, GetOnBrd, Tecnoempleo, ChileTrabajos y más
+- **Puntuación con IA** — Cada oferta se evalúa contra tu perfil de candidato usando Claude (Anthropic)
+- **Interfaz de revisión** — UI web para aceptar, descartar o auto-postularse a ofertas
+- **Auto-postulación** — Automatización con Playwright para portales compatibles (Tecnoempleo, GetOnBrd, ChileTrabajos, Chumi-IT, RemoteLatinos, FindJobIT)
+- **Notificaciones WhatsApp** — Recibe un mensaje cuando se envía una postulación
+- **Totalmente Dockerizado** — Un solo comando para levantar todo
 
-## Prerequisites
+## Requisitos previos
 
-- [Docker Desktop](https://docs.docker.com/get-docker/) (includes Docker Compose)
-- An [Anthropic API Key](https://console.anthropic.com/) (required for AI scoring)
-- Python 3.9+ and `pip` (only needed for portal session setup)
+- [Docker Desktop](https://docs.docker.com/get-docker/) (incluye Docker Compose)
+- Una [Anthropic API Key](https://console.anthropic.com/) (necesaria para la puntuación con IA)
+- Python 3.9+ y `pip` (solo para la configuración de sesiones de portales)
 
-## Quick Install
+## Instalación rápida
 
 ```bash
 git clone https://github.com/RodrigoMoya-dev/wunen.git
@@ -25,180 +25,181 @@ cd wunen
 ./install.sh
 ```
 
-The installer will:
-1. Check for Docker
-2. Ask for your API key and notification settings
-3. Generate `docker/.env`
-4. Build and start all services
-5. Optionally walk you through portal session setup
+El instalador hará lo siguiente:
+1. Verificar que Docker esté disponible
+2. Pedirte tu API key y configuración de notificaciones
+3. Generar el archivo `docker/.env`
+4. Construir e iniciar todos los servicios
+5. Opcionalmente guiarte para configurar las sesiones de portales
 
-Once done, open **http://localhost:3000** in your browser.
+Una vez finalizado, abre **http://localhost:3000** en tu navegador.
 
-## Manual Installation
+## Instalación manual
 
-If you prefer to set things up step by step:
+Si prefieres configurar el proyecto paso a paso:
 
-**1. Clone the repository**
+**1. Clonar el repositorio**
 
 ```bash
 git clone https://github.com/RodrigoMoya-dev/wunen.git
 cd wunen
 ```
 
-**2. Configure environment variables**
+**2. Configurar las variables de entorno**
 
 ```bash
 cp docker/.env.example docker/.env
 ```
 
-Edit `docker/.env` and fill in the required values:
+Edita `docker/.env` y completa los valores requeridos:
 
-| Variable | Required | Description |
+| Variable | Obligatoria | Descripción |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Get it at console.anthropic.com |
-| `POSTGRES_PASSWORD` | Yes | Choose a secure password |
-| `NEXT_PUBLIC_API_URL` | Yes | Backend URL seen from the browser (default: `http://localhost:8000`) |
-| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | No | For portals that apply via email |
-| `WHATSAPP_DEFAULT_PHONE` | No | Phone number for notifications (no `+`) |
+| `ANTHROPIC_API_KEY` | Sí | Obtenerla en console.anthropic.com |
+| `POSTGRES_PASSWORD` | Sí | Elige una contraseña segura |
+| `NEXT_PUBLIC_API_URL` | Sí | URL del backend vista desde el navegador (por defecto: `http://localhost:8000`) |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | No | Para portales que postulan vía email |
+| `WHATSAPP_DEFAULT_PHONE` | No | Número de teléfono para notificaciones (sin el `+`) |
 
-**3. Create your candidate profile**
+**3. Crear tu perfil de candidato**
 
 ```bash
-cp perfil.ejemplo.md perfil.md   # if the file doesn't exist yet
+cp perfil.ejemplo.md perfil.md
 ```
 
-Edit `perfil.md` with your tech stack, salary expectations, and work preferences. The AI evaluator reads this file to score each offer.
+Edita `perfil.md` con tu stack tecnológico, expectativas salariales y preferencias de trabajo. El evaluador de IA usa este archivo para puntuar cada oferta.
 
-**4. Start all services**
+**4. Iniciar todos los servicios**
 
 ```bash
 cd docker
 docker compose up -d
 ```
 
-**5. Verify everything is running**
+**5. Verificar que todo está funcionando**
 
 ```bash
 docker compose ps
 ```
 
-All four services should show as `Up`:
+Los cuatro servicios deben aparecer como `Up`:
 
-| Service | Port | Description |
+| Servicio | Puerto | Descripción |
 |---|---|---|
 | `db` | 5432 | PostgreSQL 16 |
-| `backend` | 8000 | FastAPI — API, AI evaluator, orchestration |
-| `scraper` | 8001 | FastAPI — scrapers + Playwright applicators |
-| `frontend` | 3000 | Next.js review UI |
+| `backend` | 8000 | FastAPI — API, evaluador IA, orquestación |
+| `scraper` | 8001 | FastAPI — scrapers + aplicadores Playwright |
+| `frontend` | 3000 | Interfaz web Next.js 14 |
 
-Open **http://localhost:3000** to access the interface.
+Abre **http://localhost:3000** para acceder a la interfaz.
 
-## Usage
+## Uso
 
-**Start / stop**
+**Iniciar / detener**
 
 ```bash
 cd docker
 
-docker compose up -d       # start all services
-docker compose down        # stop everything
-docker compose logs -f     # follow logs (all services)
-docker compose logs -f backend   # follow a single service
+docker compose up -d            # iniciar todos los servicios
+docker compose down             # detener todo
+docker compose logs -f          # seguir logs (todos los servicios)
+docker compose logs -f backend  # seguir logs de un servicio específico
 ```
 
-**Scrape offers**
+**Buscar ofertas**
 
-Click **Buscar ofertas** in the web UI, or trigger it via the API:
+Haz clic en **Buscar ofertas** en la interfaz web, o dispáralo desde la API:
 
 ```bash
 curl -X POST http://localhost:8000/api/scraper/trigger
 ```
 
-**Review offers**
+**Revisar ofertas**
 
-Open http://localhost:3000. Offers appear in the **Pendiente** tab scored by the AI. You can:
-- **Guardar** — save for later
-- **Descartar** — dismiss
-- **Auto-postular** — submit the application automatically (supported portals only)
-- **Marcar como postulado** — mark as applied manually
+Abre http://localhost:3000. Las ofertas aparecen en la pestaña **Pendiente** con la puntuación de la IA. Desde ahí puedes:
 
-**API documentation**
+- **Guardar** — reservar para más tarde
+- **Descartar** — desestimar la oferta
+- **Auto-postular** — enviar la postulación automáticamente (solo portales compatibles)
+- **Marcar como postulado** — registrar una postulación manual
 
-Available at http://localhost:8000/docs when the backend is running.
+**Documentación del API**
 
-## Portal Session Setup (for Auto-Apply)
+Disponible en http://localhost:8000/docs cuando el backend está en ejecución.
 
-Auto-apply portals require a stored browser session (cookies). Run this on your **local machine** — it opens a real browser window so you can log in:
+## Configuración de sesiones para auto-postulación
+
+Los portales con auto-postulación requieren una sesión de navegador guardada (cookies). Ejecuta esto en tu **máquina local** — abre un navegador real para que puedas hacer login:
 
 ```bash
 cd setup
 pip3 install -r requirements.txt
 playwright install chromium
 
-python3 setup_session.py --lista           # list portals and session status
-python3 setup_session.py getonbrd          # capture session for one portal
+python3 setup_session.py --lista          # listar portales y estado de sesiones
+python3 setup_session.py getonbrd         # capturar sesión de un portal
 ```
 
-After capturing, the script copies the cookies to the Docker volume automatically.
+El script copia las cookies al volumen Docker automáticamente al finalizar.
 
-## Supported Portals
+## Portales compatibles
 
-| Portal | Auto-Apply | Market |
+| Portal | Auto-postulación | Mercado |
 |---|---|---|
-| Tecnoempleo | Yes | Spain |
-| GetOnBrd | Yes | LATAM / Chile |
-| ChileTrabajos | Yes | Chile |
-| Chumi-IT | Yes | LATAM / Spain |
-| RemoteLatinos | Yes | LATAM / USA |
-| FindJobIT | Yes | International |
-| Torre.ai | No | LATAM / USA |
-| InfoJobs | No | Spain |
-| Remotive | No | International |
-| RemoteOK | No | International |
-| LaraJobs | No | International |
-| FlexJobs | No | International |
+| Tecnoempleo | Sí | España |
+| GetOnBrd | Sí | LATAM / Chile |
+| ChileTrabajos | Sí | Chile |
+| Chumi-IT | Sí | LATAM / España |
+| RemoteLatinos | Sí | LATAM / EEUU |
+| FindJobIT | Sí | Internacional |
+| Torre.ai | No | LATAM / EEUU |
+| InfoJobs | No | España |
+| Remotive | No | Internacional |
+| RemoteOK | No | Internacional |
+| LaraJobs | No | Internacional |
+| FlexJobs | No | Internacional |
 
-Portals without auto-apply can be marked as applied manually from the UI.
+Los portales sin auto-postulación pueden marcarse como postulados manualmente desde la UI.
 
-## Project Structure
+## Estructura del proyecto
 
 ```
 wunen/
 ├── docker/
-│   ├── backend/      # FastAPI — API, evaluator, DB models
-│   ├── scraper/      # FastAPI — scrapers + Playwright applicators
-│   ├── frontend/     # Next.js 14 review UI
-│   ├── whatsapp/     # WhatsApp notification service (Baileys)
+│   ├── backend/      # FastAPI — API, evaluador, modelos de BD
+│   ├── scraper/      # FastAPI — scrapers + aplicadores Playwright
+│   ├── frontend/     # Interfaz web Next.js 14
+│   ├── whatsapp/     # Servicio de notificaciones WhatsApp (Baileys)
 │   └── docker-compose.yml
-├── setup/            # Portal session capture scripts (run locally)
-├── documentos/       # Runtime data: portales.json, CV, settings
-├── perfil.md         # Your candidate profile — read by the AI evaluator
-├── install.sh        # Interactive installer
-└── sync-github.sh    # Sync to GitHub (maintainer use)
+├── setup/            # Scripts de captura de sesiones (ejecutar en local)
+├── documentos/       # Datos en tiempo de ejecución: portales.json, CV, configuración
+├── perfil.md         # Tu perfil de candidato — lo lee el evaluador de IA
+├── install.sh        # Instalador interactivo
+└── sync-github.sh    # Sincronización con GitHub (uso del mantenedor)
 ```
 
-## Troubleshooting
+## Solución de problemas
 
-**Backend not starting**
+**El backend no arranca**
 ```bash
 cd docker && docker compose logs backend
 ```
 
-**Scraper can't find cookies**
+**El scraper no encuentra las cookies**
 
-Make sure you ran `setup_session.py` for the portal and that the cookies volume is mounted correctly.
+Asegúrate de haber ejecutado `setup_session.py` para ese portal y de que el volumen de cookies está montado correctamente.
 
-**AI scoring not working**
+**La puntuación IA no funciona**
 
-Check that `ANTHROPIC_API_KEY` is set in `docker/.env` and restart the backend:
+Verifica que `ANTHROPIC_API_KEY` esté configurada en `docker/.env` y reinicia el backend:
 ```bash
 cd docker && docker compose up -d --build backend
 ```
 
-**Port already in use**
+**Puerto en uso**
 
-Edit `docker/docker-compose.yml` and change the host port mappings (`"3000:3000"` → `"3001:3000"`, etc.).
+Edita `docker/docker-compose.yml` y cambia el mapeo de puertos del host (`"3000:3000"` → `"3001:3000"`, etc.).
 
-## License
+## Licencia
 
 MIT
