@@ -125,12 +125,14 @@ def run_findjobit():
 
     if not offers:
         print("[FindJobIT] No se encontraron ofertas")
+        _send_whatsapp("ℹ️ *FindJobIT* — No hay ofertas nuevas disponibles por ahora.")
         return
 
     print(f"[FindJobIT] {len(offers)} ofertas a procesar")
     applied = 0
     skipped = 0
     failed = 0
+    new_count = 0  # ofertas realmente nuevas (no duplicadas en BD)
 
     with httpx.Client(timeout=60.0) as client:
         for offer in offers:
@@ -159,6 +161,7 @@ def run_findjobit():
                 skipped += 1
                 continue
 
+            new_count += 1
             offer_id = result.get("id")
             score = result.get("score") or 0
 
@@ -199,9 +202,10 @@ def run_findjobit():
             else:
                 failed += 1
 
-    print(f"[FindJobIT] Pipeline finalizado: {applied} postuladas, {skipped} omitidas, {failed} fallidas")
-    if applied > 0 or failed > 0:
-        # Resumen general (las notificaciones individuales ya las envió el aplicador)
+    print(f"[FindJobIT] Pipeline finalizado: {new_count} nuevas, {applied} postuladas, {skipped} omitidas, {failed} fallidas")
+    if new_count == 0:
+        _send_whatsapp("ℹ️ *FindJobIT* — No hay ofertas nuevas disponibles por ahora.")
+    elif applied > 0 or failed > 0:
         print(f"[FindJobIT] Resumen: {applied} enviadas, {failed} fallidas")
 
 

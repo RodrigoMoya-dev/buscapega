@@ -11,11 +11,8 @@ La sesión se captura con: python3 setup/setup_session.py findjobit
 import os
 import re
 import smtplib
-import mimetypes
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
 from pathlib import Path
 
 import httpx
@@ -38,11 +35,15 @@ GAS_WEBHOOK_URL = os.getenv(
 BASE_URL = "https://www.findjobit.com"
 SESSION_FILE = Path("/app/cookies/findjobit_session.json")
 
-# Ruta al CV — montada en el contenedor desde el proyecto
+# Ruta al CV — montada en el contenedor desde el proyecto (usado para formularios con upload)
 CV_DIR = Path("/wunen")
 CV_ES = CV_DIR / "cv_es.pdf"
 CV_EN = CV_DIR / "cv_en.pdf"
 CV_FALLBACK = CV_DIR / "cv.pdf"
+
+# URLs públicas del CV (se incluyen como link en emails en lugar de adjuntar el archivo)
+CV_URL_ES = "https://moyadev.cl/cv/CV_Rodrigo_Moya_ATS_2026_IA.pdf"
+CV_URL_EN = "https://moyadev.cl/cv/CV_Rodrigo_Moya_ATS_2026_EN.pdf"
 
 APPLICANT_NAME = GMAIL_FROM_NAME
 
@@ -75,27 +76,31 @@ def _get_cv_path(language: str) -> Path | None:
     return pdfs[0] if pdfs else None
 
 
+def _get_cv_url(language: str) -> str:
+    return CV_URL_EN if language == "en" else CV_URL_ES
+
+
 def _send_email(to_email: str, subject: str, body_text: str,
-                body_html: str, cv_path: Path | None) -> bool:
+                body_html: str, cv_url: str | None) -> bool:
     """
     Envía email usando Google Apps Script webhook (HTTPS port 443).
     Fallback: Gmail SMTP si el webhook falla.
-    El CV se incluye codificado en base64 en el body cuando es posible.
+    El CV se incluye como link en el cuerpo del email.
     """
+    cv_link_text = f"\n\n📎 CV / Currículum: {cv_url}" if cv_url else ""
+    cv_link_html = (
+        f'<p style="margin-top:16px">📎 <a href="{cv_url}" target="_blank">'
+        f"Ver CV / Currículum Vitae</a></p>"
+    ) if cv_url else ""
+
     # ── Método 1: Google Apps Script webhook (evita bloqueo de SMTP) ──────────
     if GAS_WEBHOOK_URL:
         try:
-            # Incluir nota sobre CV en el body si no se puede adjuntar
-            cv_note = ""
-            if cv_path and cv_path.exists():
-                cv_note = f"\n\n---\nCV disponible: {cv_path.name}"
-            full_body = body_text + cv_note
-
             import json as _json
             payload = _json.dumps({
                 "to": to_email,
                 "subject": subject,
-                "body": full_body,
+                "body": body_text + cv_link_text,
             })
             # IMPORTANTE: No enviar Content-Type: application/json (GAS lo rechaza con 405)
             response = httpx.post(
@@ -117,27 +122,12 @@ def _send_email(to_email: str, subject: str, body_text: str,
         print("[FindJobIT] GMAIL_USER o GMAIL_APP_PASSWORD no configurados")
         return False
 
-    msg = MIMEMultipart("mixed")
+    msg = MIMEMultipart("alternative")
     msg["From"] = f"{GMAIL_FROM_NAME} <{GMAIL_USER}>"
     msg["To"] = to_email
     msg["Subject"] = subject
-
-    alt_part = MIMEMultipart("alternative")
-    alt_part.attach(MIMEText(body_text, "plain", "utf-8"))
-    alt_part.attach(MIMEText(body_html, "html", "utf-8"))
-    msg.attach(alt_part)
-
-    if cv_path and cv_path.exists():
-        with open(cv_path, "rb") as f:
-            cv_data = f.read()
-        attachment = MIMEBase("application", "octet-stream")
-        attachment.set_payload(cv_data)
-        encoders.encode_base64(attachment)
-        attachment.add_header("Content-Disposition", f"attachment; filename={cv_path.name}")
-        msg.attach(attachment)
-        print(f"[FindJobIT] CV adjunto: {cv_path.name}")
-    else:
-        print("[FindJobIT] ⚠️ No se encontró CV para adjuntar")
+    msg.attach(MIMEText(body_text + cv_link_text, "plain", "utf-8"))
+    msg.attach(MIMEText(body_html + cv_link_html, "html", "utf-8"))
 
     try:
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
@@ -155,7 +145,7 @@ def _send_email(to_email: str, subject: str, body_text: str,
         return False
 
 
-def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> ApplyResult:
+def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None, cv_url: str | None = None) -> ApplyResult:
     """
     Envía la postulación rellenando el formulario de FindJobIT via Playwright.
     Requiere sesión activa en SESSION_FILE.
@@ -311,7 +301,7 @@ def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> App
 
                     if email_found:
                         print(f"[FindJobIT] Aplicación por email detectada: {email_found}")
-                        # Enviar email con carta de presentación y CV
+                        # Enviar email con carta de presentación y link al CV
                         import re as _re
                         subj = subject_found or f"{APPLICANT_NAME} - Aplicar a vacante {title} - Findjobit"
                         subj = _re.sub(r"\[Nombre\]|\{\{Nombre\}\}", APPLICANT_NAME, subj, flags=_re.IGNORECASE)
@@ -319,7 +309,7 @@ def _apply_via_form(offer: dict, cover_letter: str, cv_path: Path | None) -> App
 <div style="padding:20px;">{cover_letter.replace(chr(10),'<br>')}<br><br>
 <p style="color:#666;font-size:12px;"><em>Postulación enviada a través de Findjobit — {url}</em></p>
 </div></body></html>"""
-                        ok = _send_email(email_found, subj, cover_letter, body_html, cv_path)
+                        ok = _send_email(email_found, subj, cover_letter, body_html, cv_url)
                         if ok:
                             return ApplyResult(
                                 status="ok", requiere_humano=False,
@@ -487,7 +477,8 @@ def apply(offer: dict) -> ApplyResult:
 
     cv_language = _detect_cv_language(description)
     cv_path = _get_cv_path(cv_language)
-    print(f"[FindJobIT] CV en {cv_language.upper()}: {cv_path}")
+    cv_url = _get_cv_url(cv_language)
+    print(f"[FindJobIT] CV en {cv_language.upper()}: {cv_url}")
 
     # ── Modo 1: Email directo ─────────────────────────────────────────────────
     if to_email:
@@ -515,7 +506,7 @@ def apply(offer: dict) -> ApplyResult:
             subject=subject,
             body_text=cover_letter,
             body_html=body_html,
-            cv_path=cv_path,
+            cv_url=cv_url,
         )
 
         if success:
@@ -552,7 +543,7 @@ def apply(offer: dict) -> ApplyResult:
     # ── Modo 2: Formulario Playwright ─────────────────────────────────────────
     if form_accessible or (not to_email and SESSION_FILE.exists()):
         print(f"[FindJobIT] Aplicando vía formulario Playwright para '{title}'...")
-        result = _apply_via_form(offer, cover_letter, cv_path)
+        result = _apply_via_form(offer, cover_letter, cv_path, cv_url)
 
         if result.status == "ok":
             _send_whatsapp(
