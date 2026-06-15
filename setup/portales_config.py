@@ -28,10 +28,16 @@ PORTALES = {
     },
     "remotelatinos": {
         "nombre": "RemoteLatinos",
-        "login_url": "https://www.remotelatinos.com/login",
-        "home_url": "https://www.remotelatinos.com",
-        "login_exitoso_url": "/jobs",
-        "login_exitoso_selector": "a[href*='logout'], a[href*='profile'], .user-menu",
+        "login_url": "https://app.remotelatinos.com/auth/login",
+        "home_url": "https://app.remotelatinos.com",
+        "login_exitoso_url": "/dashboard",
+        "login_exitoso_selector": (
+            "a[href*='logout'], button:has-text('Log out'), "
+            "a[href*='/profile'], img[alt*='avatar' i], "
+            "[data-testid*='user'], .user-menu, .avatar"
+        ),
+        # Google OAuth puede redirigir de /auth/login incluso sin autenticar
+        "skip_strategy_1": True,
     },
     "chiletrabajos": {
         "nombre": "ChileTrabajos",

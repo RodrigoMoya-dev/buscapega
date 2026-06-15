@@ -5,6 +5,7 @@ Wunen — Setup de sesión por portal
 Uso:
     python3 setup_session.py <portal>
     python3 setup_session.py <portal> --browser brave|chrome
+    python3 setup_session.py <portal> --real-chrome    # usa el perfil real de Chrome (útil para Google OAuth)
     python3 setup_session.py --lista
 
 Portales disponibles: findjobit, getonbrd, tecnoempleo, remotelatinos, chiletrabajos, chumiit
@@ -12,6 +13,10 @@ Portales disponibles: findjobit, getonbrd, tecnoempleo, remotelatinos, chiletrab
 El script abre el navegador elegido con un perfil persistente real, navegas al
 portal, haces login con Google, y las cookies quedan guardadas y sincronizadas
 con Presto automáticamente.
+
+--real-chrome: usa el perfil real de Chrome del sistema (~/.../Chrome/Default).
+  Requiere cerrar Chrome antes de ejecutar. Útil cuando el portal usa Google OAuth
+  y en el perfil vacío de Playwright Google no completa el login.
 """
 
 import sys
@@ -33,6 +38,9 @@ BROWSERS = {
     "chrome": {"channel": "chrome", "exe": None},
     "brave":  {"channel": None,     "exe": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"},
 }
+
+# Perfil real de Chrome en macOS — tiene la sesión de Google activa
+REAL_CHROME_PROFILE = Path.home() / "Library/Application Support/Google/Chrome/Default"
 
 # Flags que ocultan las señales de automatización a Google OAuth
 STEALTH_ARGS = [
@@ -68,7 +76,35 @@ def sincronizar_con_presto(portal: str):
         print(f"   Puedes hacerlo manualmente:\n   rsync -av {session_file} {PRESTO_COOKIES_PATH}")
 
 
-def setup_portal(portal: str, browser_name: str = "chrome"):
+def _finalizar_guardado(session_file: Path, portal: str, config: dict):
+    """Imprime resumen de cookies guardadas."""
+    with open(session_file) as f:
+        data = json.load(f)
+    cookies = data.get("cookies", [])
+    home = config.get("home_url", "").replace("https://www.", "").replace("https://", "").split("/")[0]
+    portal_cookies = [c for c in cookies
+                      if portal.lower() in c.get("domain", "").lower()
+                      or home in c.get("domain", "").lower()]
+    print(f"\n✅ Sesión guardada: {session_file.name}")
+    print(f"   {len(cookies)} cookies totales, {len(portal_cookies)} del portal")
+    if not portal_cookies:
+        print(f"\n⚠️  ADVERTENCIA: No se encontraron cookies del portal {config['nombre']}.")
+        print(f"   Es posible que el login no se haya completado correctamente.")
+        print(f"   Vuelve a ejecutar el setup y asegúrate de hacer login con tu cuenta.")
+    print(f"""
+╔══════════════════════════════════════════════════════╗
+║  ✅ Setup completado para {config['nombre']:<26}║
+╚══════════════════════════════════════════════════════╝
+
+La sesión está lista en Presto. Wunen puede ahora
+postular automáticamente en {config['nombre']}.
+
+Recuerda renovar la sesión si ves errores de login
+(normalmente cada 30-90 días).
+""")
+
+
+def setup_portal(portal: str, browser_name: str = "chrome", use_real_chrome: bool = False):
     if portal not in PORTALES:
         print(f"❌ Portal '{portal}' no reconocido.")
         listar_portales()
@@ -83,9 +119,18 @@ def setup_portal(portal: str, browser_name: str = "chrome"):
     PROFILES_DIR.mkdir(exist_ok=True)
     session_file = COOKIES_DIR / f"{portal}_session.json"
 
-    # Directorio de perfil persistente — uno por navegador, compartido entre portales
-    # para que el login de Google ya esté hecho en sesiones posteriores.
-    profile_dir = PROFILES_DIR / browser_name
+    if use_real_chrome:
+        if not REAL_CHROME_PROFILE.exists():
+            print(f"❌ No se encontró el perfil real de Chrome en:\n   {REAL_CHROME_PROFILE}")
+            sys.exit(1)
+        profile_dir = REAL_CHROME_PROFILE
+        print(f"\n⚠️  IMPORTANTE: Cierra TODAS las ventanas de Chrome antes de continuar.")
+        print(f"   Chrome no puede abrirse dos veces con el mismo perfil.\n")
+        input("Presiona Enter cuando Chrome esté cerrado...")
+    else:
+        # Directorio de perfil persistente — uno por navegador, compartido entre portales
+        # para que el login de Google ya esté hecho en sesiones posteriores.
+        profile_dir = PROFILES_DIR / browser_name
 
     print(f"""
 ╔══════════════════════════════════════════════════════╗
@@ -116,10 +161,14 @@ Tienes 5 minutos para completar el proceso.
             "headless": False,
             "args": STEALTH_ARGS,
         }
-        if browser_cfg["channel"]:
-            launch_kwargs["channel"] = browser_cfg["channel"]
-        if browser_cfg["exe"]:
-            launch_kwargs["executable_path"] = browser_cfg["exe"]
+        if use_real_chrome:
+            # Con el perfil real usamos el ejecutable de Chrome directamente
+            launch_kwargs["channel"] = "chrome"
+        else:
+            if browser_cfg["channel"]:
+                launch_kwargs["channel"] = browser_cfg["channel"]
+            if browser_cfg["exe"]:
+                launch_kwargs["executable_path"] = browser_cfg["exe"]
 
         context = p.chromium.launch_persistent_context(
             str(profile_dir),
@@ -127,6 +176,27 @@ Tienes 5 minutos para completar el proceso.
         )
 
         page = context.new_page()
+
+        # Con --real-chrome: intentar el home directamente primero.
+        # Si el perfil de Chrome ya tiene la sesión activa, cargará logueado
+        # y nos saltamos el OAuth por completo.
+        if use_real_chrome and config.get("home_url"):
+            print(f"\n🌐 Intentando home directamente: {config['home_url']}")
+            page.goto(config["home_url"], wait_until="domcontentloaded")
+            page.wait_for_timeout(2000)
+            already_logged = bool(page.query_selector(config["login_exitoso_selector"]))
+            if not already_logged:
+                # Verificar por URL — si NO estamos en login, es que hay sesión
+                already_logged = "login" not in page.url.lower() and "auth" not in page.url.lower()
+            if already_logged:
+                print(f"✅ Sesión activa detectada directamente en: {page.url}")
+                context.storage_state(path=str(session_file))
+                context.close()
+                _finalizar_guardado(session_file, portal, config)
+                sincronizar_con_presto(portal)
+                return
+            print("ℹ️  Sin sesión activa en el home — continuando con login OAuth...\n")
+
         page.goto(config["login_url"], wait_until="domcontentloaded")
 
         print(f"\n🌐 Navegando a {config['login_url']}")
@@ -183,33 +253,8 @@ Tienes 5 minutos para completar el proceso.
         context.storage_state(path=str(session_file))
         context.close()
 
-        with open(session_file) as f:
-            data = json.load(f)
-        cookies = data.get("cookies", [])
-        portal_cookies = [c for c in cookies if portal.lower() in c.get("domain", "").lower()
-                          or config.get("home_url", "").replace("https://www.", "").split("/")[0]
-                          in c.get("domain", "").lower()]
-        n_cookies = len(cookies)
-        print(f"\n✅ Sesión guardada: {session_file.name}")
-        print(f"   {n_cookies} cookies totales, {len(portal_cookies)} del portal")
-        if len(portal_cookies) == 0:
-            print(f"\n⚠️  ADVERTENCIA: No se encontraron cookies del portal {config['nombre']}.")
-            print(f"   Es posible que el login no se haya completado correctamente.")
-            print(f"   Vuelve a ejecutar el setup y asegúrate de hacer login con tu cuenta.")
-
+        _finalizar_guardado(session_file, portal, config)
         sincronizar_con_presto(portal)
-
-        print(f"""
-╔══════════════════════════════════════════════════════╗
-║  ✅ Setup completado para {config['nombre']:<26}║
-╚══════════════════════════════════════════════════════╝
-
-La sesión está lista en Presto. Wunen puede ahora
-postular automáticamente en {config['nombre']}.
-
-Recuerda renovar la sesión si ves errores de login
-(normalmente cada 30-90 días).
-""")
 
 
 if __name__ == "__main__":
@@ -230,4 +275,6 @@ if __name__ == "__main__":
             print("❌ Falta el nombre del navegador después de --browser")
             sys.exit(1)
 
-    setup_portal(portal, browser_name)
+    use_real_chrome = "--real-chrome" in args
+
+    setup_portal(portal, browser_name, use_real_chrome)
