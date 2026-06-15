@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Offer, getOffers, triggerScraping } from "@/lib/api";
+import { Offer, Stats, getOffers, getStats, triggerScraping } from "@/lib/api";
 import OfferCard from "@/components/OfferCard";
 
 const AUTO_APPLY_PORTALS = new Set([
@@ -12,6 +12,7 @@ const AUTO_APPLY_PORTALS = new Set([
 
 export default function Home() {
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
   const [tab, setTab] = useState<"PENDIENTE" | "ENVIADA" | "DESCARTADA">("PENDIENTE");
@@ -28,8 +29,9 @@ export default function Home() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getOffers(tab);
+    const [data, statsData] = await Promise.all([getOffers(tab), getStats()]);
     setOffers(data);
+    setStats(statsData);
     setLoading(false);
   }, [tab]);
 
@@ -77,11 +79,25 @@ export default function Home() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* Stats banner */}
+      {stats && (
+        <div className="mb-6 p-4 bg-blue-950 border border-blue-800 rounded-xl text-sm text-blue-200">
+          Ya se ha postulado a un total de{" "}
+          <span className="font-bold text-white">{stats.sent_this_week}</span>{" "}
+          oferta{stats.sent_this_week !== 1 ? "s" : ""} laborale{stats.sent_this_week !== 1 ? "s" : ""} durante esta semana
+          {stats.total_sent > 0 && (
+            <span className="text-blue-400">
+              {" "}· {stats.total_sent} total en total
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Wunen</h1>
+          <h1 className="text-3xl font-bold text-white">Ofertas</h1>
           <p className="text-gray-400 text-sm mt-1">Bandeja de propuestas de trabajo</p>
         </div>
         <button
