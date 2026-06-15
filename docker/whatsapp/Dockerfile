@@ -43,10 +43,11 @@ WORKDIR /app
 
 # Decirle a Puppeteer que use el Chromium del sistema
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV CHROME_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY package.json ./
-RUN npm install --production
+RUN npm install --omit=dev --legacy-peer-deps
 
 COPY server.js ./
 
