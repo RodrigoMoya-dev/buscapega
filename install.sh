@@ -265,14 +265,36 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 log "Construyendo e iniciando servicios Docker..."
-echo -e "${YELLOW}Esto puede tardar varios minutos la primera vez.${RESET}"
+echo -e "${YELLOW}  La primera vez puede tardar 5-15 minutos según tu conexión.${RESET}"
+echo -e "${CYAN}  Verás el progreso de cada imagen a continuación:${RESET}"
 echo ""
 
 cd "$DOCKER_DIR"
-$COMPOSE_CMD pull db --quiet 2>/dev/null || true
-$COMPOSE_CMD build --quiet
-$COMPOSE_CMD up -d
 
+log "[1/5] Descargando imagen de base de datos (PostgreSQL)..."
+$COMPOSE_CMD pull db --quiet 2>/dev/null || true
+ok "Imagen de base de datos lista"
+echo ""
+
+log "[2/5] Construyendo backend (Python/FastAPI)..."
+$COMPOSE_CMD build backend
+echo ""
+
+log "[3/5] Construyendo scraper (Playwright)..."
+$COMPOSE_CMD build scraper
+echo ""
+
+log "[4/5] Construyendo frontend (Next.js)..."
+$COMPOSE_CMD build frontend
+echo ""
+
+log "[5/5] Construyendo servicio WhatsApp (Node.js + Chromium)..."
+echo -e "${YELLOW}  Este paso instala Chromium y puede demorar más.${RESET}"
+$COMPOSE_CMD build whatsapp
+echo ""
+
+log "Iniciando todos los servicios..."
+$COMPOSE_CMD up -d
 echo ""
 ok "Servicios Docker iniciados"
 
