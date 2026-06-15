@@ -1,0 +1,14 @@
+[
+  {"name": "Tecnoempleo",    "url": "https://www.tecnoempleo.com",    "auto_apply": true,  "market": "España",        "session_key": "tecnoempleo"},
+  {"name": "ChileTrabajos",  "url": "https://www.chiletrabajos.cl",   "auto_apply": true,  "market": "Chile",         "session_key": "chiletrabajos"},
+  {"name": "Chumi-IT",       "url": "https://chumi-it.com",           "auto_apply": true,  "market": "LATAM/España",  "session_key": "chumiit"},
+  {"name": "RemoteLatinos",  "url": "https://www.remotelatinos.com",  "auto_apply": true,  "market": "LATAM/EEUU",    "session_key": "remotelatinos"},
+  {"name": "GetOnBrd",       "url": "https://www.getonbrd.com",       "auto_apply": true,  "market": "LATAM/Chile",   "session_key": "getonbrd"},
+  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit"},
+  {"name": "Torre.ai",       "url": "https://torre.ai",               "auto_apply": false, "market": "LATAM/EEUU",    "session_key": null},
+  {"name": "InfoJobs",       "url": "https://www.infojobs.net",       "auto_apply": false, "market": "España",        "session_key": null},
+  {"name": "LaraJobs",       "url": "https://larajobs.com",           "auto_apply": false, "market": "Internacional", "session_key": null},
+  {"name": "FlexJobs",       "url": "https://www.flexjobs.com",       "auto_apply": false, "market": "Internacional", "session_key": null},
+  {"name": "Remotive",       "url": "https://remotive.com",           "auto_apply": false, "market": "Internacional", "session_key": null},
+  {"name": "RemoteOK",       "url": "https://remoteok.com",           "auto_apply": false, "market": "Internacional", "session_key": null}
+]

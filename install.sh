@@ -164,9 +164,8 @@ echo "Necesitamos algunos datos para configurar el sistema."
 echo "Presiona Enter para usar el valor por defecto (entre corchetes)."
 echo ""
 
-ask "→ Anthropic API Key (console.anthropic.com — opcional, para evaluación IA de ofertas):"
-echo -e "  ${CYAN}Sin API key el sistema usa un evaluador local por palabras clave.${RESET}"
-read -r -p "  sk-ant-... (Enter para omitir) > " ANTHROPIC_API_KEY
+ask "→ Anthropic API Key (console.anthropic.com — necesaria para evaluación IA de ofertas):"
+read -r -p "  sk-ant-... > " ANTHROPIC_API_KEY
 [[ -z "$ANTHROPIC_API_KEY" ]] && warn "Sin API key — la evaluación usará scoring básico por keywords."
 echo ""
 
@@ -176,7 +175,7 @@ WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
 echo ""
 
 ask "→ Correo Gmail para postulaciones automáticas (para portales que usan email):"
-read -r -p "  correo@gmail.com (Enter para omitir) > " GMAIL_USER
+read -r -p "  correo@gmail.com > " GMAIL_USER
 echo ""
 
 GMAIL_APP_PASSWORD=""
@@ -244,6 +243,7 @@ check_port() {
     echo -e "  Opciones:"
     echo -e "  ${CYAN}a)${RESET} Detener el proceso que usa ese puerto"
     echo -e "  ${CYAN}b)${RESET} Editar docker/docker-compose.yml y cambiar el puerto del host"
+    echo -e "  ${CYAN}c)${RESET} Continuar igual (puede fallar el servicio ${name})"
     read -r -p "  ¿Continuar de todas formas? (s/N) > " FORCE_PORT
     FORCE_PORT_L=$(echo "$FORCE_PORT" | tr '[:upper:]' '[:lower:]')
     [[ "$FORCE_PORT_L" != "s" && "$FORCE_PORT_L" != "si" && "$FORCE_PORT_L" != "y" ]] && \
@@ -277,7 +277,7 @@ echo ""
 ok "Servicios Docker iniciados"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Esperar a que el backend esté listo
+# 7. Esperar a que el backend esté listo
 # ─────────────────────────────────────────────────────────────────────────────
 log "Esperando a que el backend esté listo..."
 MAX_WAIT=60
@@ -295,13 +295,13 @@ echo ""
 curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1 && ok "Backend disponible en http://localhost:${BACKEND_PORT}"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Configurar sesiones de portales (opcional)
+# 8. Configurar sesiones de portales (opcional)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 sep
 echo ""
 ask "¿Deseas configurar ahora las sesiones de los portales con auto-postulación? (s/N)"
-echo -e "  ${CYAN}Esto abrirá un navegador por cada portal para que puedas hacer login.${RESET}"
+echo -e "  ${CYAN}Esto abrirá un navegador por cada portal para que puedas hacer login con Google.${RESET}"
 read -r -p "  > " SETUP_SESSIONS
 echo ""
 
@@ -312,6 +312,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
     warn "No se encontró la carpeta setup/. Omitiendo configuración de sesiones."
     warn "Puedes hacerlo manualmente más tarde: cd setup && python3 setup_session.py --lista"
   else
+    # Verificar Python
     if ! command -v python3 &> /dev/null; then
       warn "Python 3 no está instalado. No se pueden configurar sesiones ahora."
       warn "Instala Python 3 y luego ejecuta: cd setup && python3 setup_session.py --lista"
@@ -338,6 +339,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
       echo ""
 
       if [[ -z "$PORTALES_INPUT" ]]; then
+        # Autenticar todos los que no tienen sesión
         PORTALES_TO_AUTH=$(python3 - << 'PYEOF'
 import json, sys
 from pathlib import Path
@@ -361,7 +363,7 @@ PYEOF
         IDX=$((IDX + 1))
         echo ""
         log "[${IDX}/${TOTAL}] Autenticando portal: ${portal}"
-        echo -e "  ${YELLOW}Se abrirá el navegador — completa el login y ciérralo cuando termines.${RESET}"
+        echo -e "  ${YELLOW}Se abrirá el navegador — completa el login con Google y ciérralo cuando termines.${RESET}"
         python3 setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || warn "No se pudo capturar sesión de ${portal}"
       done
 
@@ -376,7 +378,7 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Resumen final
+# 9. Resumen final
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
@@ -386,6 +388,14 @@ echo ""
 echo -e "  ${BOLD}Interfaz web:${RESET}  http://localhost:${FRONTEND_PORT}"
 echo -e "  ${BOLD}API / Backend:${RESET} http://localhost:${BACKEND_PORT}"
 echo -e "  ${BOLD}API Docs:${RESET}      http://localhost:${BACKEND_PORT}/docs"
+echo ""
+echo -e "  ${BOLD}Carpeta documentos/:${RESET}"
+echo -e "    ${SCRIPT_DIR}/documentos/"
+echo -e "    ├── portales.json  ← lista de portales (editable)"
+echo -e "    ├── cv_data.json   ← datos CV español (se genera al guardar desde web)"
+echo -e "    ├── cv_data_en.json"
+echo -e "    ├── perfil_data.json"
+echo -e "    └── settings.json  ← teléfono WA y emails"
 echo ""
 echo -e "  ${BOLD}Próximos pasos:${RESET}"
 echo -e "    1. Abre http://localhost:${FRONTEND_PORT} en tu navegador"
@@ -400,5 +410,11 @@ echo -e "    cd setup  && python3 setup_session.py --lista"
 echo ""
 
 [[ -z "${ANTHROPIC_API_KEY:-}" ]] && \
-  echo -e "  ${YELLOW}⚠  Sin API key — el sistema usa evaluación local por keywords.${RESET}"
-  echo -e "  ${YELLOW}   Para activar IA: agrega ANTHROPIC_API_KEY en docker/.env y reinicia.${RESET}\n"
+  echo -e "  ${YELLOW}⚠  Sin API key — agrega ANTHROPIC_API_KEY en docker/.env y reinicia el backend.${RESET}\n"
+
+if command -v claude &> /dev/null; then
+  echo -e "  ${BOLD}Claude Code disponible:${RESET}"
+  echo -e "    ${CYAN}claude /valida <url>${RESET}   — verifica si un portal es automatizable"
+  echo -e "    ${CYAN}claude /autentica${RESET}       — configura sesiones de todos los portales"
+  echo ""
+fi

@@ -16,8 +16,13 @@ SCRAPER_URL = os.getenv("SCRAPER_URL", "http://scraper:8001")
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/wunen-apply-result")
 
 AUTO_APPLY_PORTALS = [
-    "Tecnoempleo", "Chumi-IT", "ChileTrabajos", "RemoteLatinos",
-    "GetOnBrd", "Torre.ai", "InfoJobs",
+    "FindJobIT", "findjobit",
+    "Tecnoempleo", "tecnoempleo",
+    "Chumi-IT", "chumiit",
+    "ChileTrabajos", "chiletrabajos",
+    "RemoteLatinos", "remotelatinos",
+    "GetOnBrd", "getonbrd",
+    "Torre.ai", "InfoJobs",
 ]
 
 router = APIRouter(prefix="/api/offers", tags=["offers"])
@@ -134,6 +139,48 @@ def apply_offer(offer_id: int, db: Session = Depends(get_db)):
     offer.status = "ENVIADA"
     db.commit()
     return {"status": "ok", "url": offer.url}
+
+
+@router.post("/autoapply-batch")
+def autoapply_batch(
+    background_tasks: BackgroundTasks,
+    min_score: int = 40,
+    portal: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Auto-postula en background todas las ofertas PENDIENTE con score >= min_score.
+    Solo portales que tienen applicator registrado (AUTO_APPLY_PORTALS).
+    Opcionalmente filtra por portal (parcial, case-insensitive).
+    """
+    q = db.query(Offer).filter(
+        Offer.status == "PENDIENTE",
+        Offer.score >= min_score,
+        Offer.portal.in_(AUTO_APPLY_PORTALS),
+    )
+    if portal:
+        q = q.filter(Offer.portal.ilike(f"%{portal}%"))
+
+    offers = q.order_by(Offer.score.desc()).all()
+
+    started = []
+    for offer in offers:
+        offer.status = "POSTULANDO"
+        background_tasks.add_task(
+            _run_autoapply,
+            offer.id, offer.portal, offer.title, offer.company,
+            offer.url, offer.raw_description or "", offer.technologies or "", offer.score,
+        )
+        started.append({
+            "id": offer.id,
+            "title": offer.title,
+            "portal": offer.portal,
+            "score": float(offer.score or 0),
+        })
+
+    db.commit()
+    print(f"[AutoApply-Batch] Iniciadas {len(started)} postulaciones (min_score={min_score})")
+    return {"status": "ok", "started": len(started), "offers": started}
 
 
 @router.post("/{offer_id}/autoapply")

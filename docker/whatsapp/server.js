@@ -1,135 +1,223 @@
-import makeWASocket, {
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-  Browsers,
-} from "@whiskeysockets/baileys";
-import { Boom } from "@hapi/boom";
-import express from "express";
-import pino from "pino";
-import { existsSync, mkdirSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const { Client, LocalAuth } = require("whatsapp-web.js");
+const qrcode = require("qrcode-terminal");
+const QRCode = require("qrcode");
+const express = require("express");
+const { execSync } = require("child_process");
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 const AUTH_DIR = process.env.AUTH_DIR || "/app/auth";
-const DEFAULT_PHONE = process.env.DEFAULT_PHONE || "+56962075019";
-const PAIRING_PHONE = process.env.PAIRING_PHONE || "56962075019"; // sin + para Baileys
+const DEFAULT_PHONE = (process.env.DEFAULT_PHONE || "56962075019").replace(/[^0-9]/g, "");
 
-// ── Logger ────────────────────────────────────────────────────────────────────
-const logger = pino({ level: "silent" }); // silenciamos logs internos de Baileys
+const RECONNECT_DELAY_MS = 15000;   // esperar 15s antes de reconectar
+const MAX_RECONNECT_RETRIES = 5;    // máximo reintentos antes de rendirse
 
-// ── Estado global ─────────────────────────────────────────────────────────────
-let sock = null;
+// ── Estado ────────────────────────────────────────────────────────────────────
 let isConnected = false;
-let connectionStatus = "disconnected";
+let connectionStatus = "initializing";
+let waClient = null;
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+let lastQrData = null;  // QR data para endpoint /qr
 
-// ── Asegurar directorio de auth ───────────────────────────────────────────────
-if (!existsSync(AUTH_DIR)) {
-  mkdirSync(AUTH_DIR, { recursive: true });
-}
+// ── Puppeteer args (sin sandbox, bajo uso de memoria) ─────────────────────────
+const PUPPETEER_OPTS = {
+  headless: true,
+  executablePath: process.env.CHROME_PATH || "/usr/bin/chromium",
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-accelerated-2d-canvas",
+    "--no-first-run",
+    "--no-zygote",
+    "--disable-gpu",
+    "--disable-extensions",
+    "--disable-background-networking",
+    "--disable-sync",
+    "--metrics-recording-only",
+    "--mute-audio",
+    "--safebrowsing-disable-auto-update",
+    "--js-flags=--max-old-space-size=512",
+  ],
+  timeout: 60000,  // 60s para que Chromium arranque (puede ser lento con poca RAM)
+};
 
-// ── Conexión WhatsApp ─────────────────────────────────────────────────────────
-async function connectToWhatsApp() {
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  const { version } = await fetchLatestBaileysVersion();
-
-  console.log(`[WhatsApp] Usando Baileys v${version.join(".")}`);
-  connectionStatus = "connecting";
-
-  sock = makeWASocket({
-    version,
-    logger,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, logger),
-    },
-    browser: Browsers.ubuntu("Chrome"),
-    generateHighQualityLinkPreview: false,
-    syncFullHistory: false,
-  });
-
-  // ── Pairing con número de teléfono (alternativa al QR) ──────────────────
-  if (!sock.authState.creds.registered) {
-    console.log("[WhatsApp] No hay sesión guardada. Iniciando pairing por código...");
-    connectionStatus = "waiting_pairing";
-
-    // Esperar que se establezca la conexión antes de pedir código
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    try {
-      const code = await sock.requestPairingCode(PAIRING_PHONE);
-      console.log("╔════════════════════════════════════════╗");
-      console.log("║   CÓDIGO DE VINCULACIÓN WHATSAPP       ║");
-      console.log(`║   Código: ${code.match(/.{1,4}/g).join("-").padEnd(30)}║`);
-      console.log("╠════════════════════════════════════════╣");
-      console.log("║  1. Abre WhatsApp en tu teléfono       ║");
-      console.log("║  2. Dispositivos vinculados             ║");
-      console.log("║  3. Vincular un dispositivo             ║");
-      console.log("║  4. Ingresa el código de 8 dígitos     ║");
-      console.log("╚════════════════════════════════════════╝");
-    } catch (err) {
-      console.error("[WhatsApp] Error al solicitar código de pairing:", err.message);
-    }
+// ── Función de reconexión con backoff ─────────────────────────────────────────
+function scheduleReconnect(reason) {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
 
-  // ── Eventos ──────────────────────────────────────────────────────────────
-  sock.ev.on("creds.update", saveCreds);
+  reconnectAttempts++;
+  if (reconnectAttempts > MAX_RECONNECT_RETRIES) {
+    console.error(`[WhatsApp] ❌ Se alcanzó el máximo de ${MAX_RECONNECT_RETRIES} reintentos. El contenedor se reiniciará.`);
+    process.exit(1);  // Docker reinicia el contenedor → empieza desde cero
+  }
 
-  sock.ev.on("connection.update", async (update) => {
-    const { connection, lastDisconnect } = update;
+  const delay = RECONNECT_DELAY_MS * reconnectAttempts;
+  console.log(`[WhatsApp] Reintento ${reconnectAttempts}/${MAX_RECONNECT_RETRIES} en ${delay / 1000}s (motivo: ${reason})`);
 
-    if (connection === "close") {
-      const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-      console.log(`[WhatsApp] Conexión cerrada. Razón: ${reason}`);
-      isConnected = false;
-      connectionStatus = "disconnected";
-
-      if (reason === DisconnectReason.loggedOut) {
-        console.log("[WhatsApp] Sesión cerrada. Borra el directorio de auth y reinicia.");
-        connectionStatus = "logged_out";
-      } else {
-        console.log("[WhatsApp] Reconectando en 5 segundos...");
-        setTimeout(connectToWhatsApp, 5000);
-      }
-    } else if (connection === "open") {
-      console.log("[WhatsApp] ✅ Conectado exitosamente");
-      isConnected = true;
-      connectionStatus = "connected";
-    } else if (connection === "connecting") {
-      console.log("[WhatsApp] Conectando...");
-      connectionStatus = "connecting";
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+    if (waClient) {
+      try {
+        await waClient.destroy();
+      } catch (_) {}
+      waClient = null;
     }
-  });
+    startClient();
+  }, delay);
 }
 
-// ── Express API ───────────────────────────────────────────────────────────────
+// ── Limpiar locks de Chromium (persisten en el volumen entre reinicios) ───────
+function clearChromiumLocks() {
+  try {
+    execSync(
+      `find "${AUTH_DIR}" -name "SingletonLock" -delete 2>/dev/null; ` +
+      `find "${AUTH_DIR}" -name "SingletonSocket" -delete 2>/dev/null; ` +
+      `find "${AUTH_DIR}" -name "lockfile" -delete 2>/dev/null`,
+      { stdio: "ignore" }
+    );
+    console.log("[WhatsApp] Locks de Chromium limpiados");
+  } catch (_) {}
+}
+
+// ── Crear e inicializar el cliente ────────────────────────────────────────────
+async function startClient() {
+  clearChromiumLocks();
+  console.log("[WhatsApp] Iniciando cliente...");
+  connectionStatus = "initializing";
+
+  const client = new Client({
+    authStrategy: new LocalAuth({ dataPath: AUTH_DIR }),
+    puppeteer: PUPPETEER_OPTS,
+  });
+
+  client.on("qr", (qr) => {
+    connectionStatus = "waiting_qr";
+    reconnectAttempts = 0;  // reset: el QR es señal de vida del browser
+    lastQrData = qr;
+    console.log("\n╔══════════════════════════════════════════════════════╗");
+    console.log("║         ESCANEA EL QR CON WHATSAPP                  ║");
+    console.log(`║  Abre http://presto.local:3002/qr en el navegador   ║`);
+    console.log("║  WhatsApp → ⋮ → Dispositivos vinculados → Vincular  ║");
+    console.log("╚══════════════════════════════════════════════════════╝\n");
+    qrcode.generate(qr, { small: true });
+    console.log("\n(El QR expira en ~20 segundos, se regenerará solo)\n");
+  });
+
+  client.on("authenticated", () => {
+    console.log("[WhatsApp] ✅ Autenticado — guardando sesión...");
+    connectionStatus = "authenticated";
+    reconnectAttempts = 0;
+  });
+
+  client.on("ready", () => {
+    console.log("[WhatsApp] ✅ ¡Listo y conectado!");
+    isConnected = true;
+    connectionStatus = "connected";
+    reconnectAttempts = 0;
+    lastQrData = null;  // ya no necesitamos el QR
+  });
+
+  client.on("auth_failure", (msg) => {
+    console.error("[WhatsApp] ❌ Fallo de autenticación:", msg);
+    connectionStatus = "auth_failed";
+    isConnected = false;
+    scheduleReconnect("auth_failure");
+  });
+
+  client.on("disconnected", (reason) => {
+    console.log("[WhatsApp] Desconectado:", reason);
+    isConnected = false;
+    connectionStatus = "disconnected";
+    scheduleReconnect(reason);
+  });
+
+  waClient = client;
+
+  try {
+    await client.initialize();
+  } catch (err) {
+    console.error("[WhatsApp] ❌ Error al inicializar:", err.message || err);
+    isConnected = false;
+    waClient = null;
+    scheduleReconnect(err.message || "init_error");
+  }
+}
+
+// ── Capturar errores no manejados para evitar crash del proceso ───────────────
+process.on("unhandledRejection", (reason) => {
+  console.error("[WhatsApp] Unhandled rejection:", reason?.message || reason);
+  // No terminar el proceso — dejar que el ciclo de reconexión maneje
+});
+process.on("uncaughtException", (err) => {
+  console.error("[WhatsApp] Uncaught exception:", err.message);
+  // No terminar el proceso — dejar que el ciclo de reconexión maneje
+});
+
+// ── Arrancar ──────────────────────────────────────────────────────────────────
+console.log("[WhatsApp] Iniciando whatsapp-web.js...");
+startClient();
+
+// ── API HTTP ──────────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
 
-/**
- * GET /health
- * Verifica el estado del servicio
- */
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
     status: isConnected ? "ok" : "unavailable",
     connection: connectionStatus,
+    reconnect_attempts: reconnectAttempts,
     service: "whatsapp",
   });
 });
 
 /**
+ * GET /qr
+ * Devuelve el QR actual como imagen PNG o página HTML con auto-refresh.
+ * Útil para escanear desde el navegador cuando el terminal no es suficiente.
+ */
+app.get("/qr", async (_req, res) => {
+  if (isConnected) {
+    return res.send(`<html><body style="font-family:sans-serif;text-align:center;padding:40px">
+      <h2>✅ WhatsApp ya está conectado</h2>
+      <p>No es necesario escanear el QR.</p>
+    </body></html>`);
+  }
+  if (!lastQrData) {
+    return res.send(`<html><meta http-equiv="refresh" content="3"><body style="font-family:sans-serif;text-align:center;padding:40px">
+      <h2>⏳ Esperando QR...</h2>
+      <p>Estado: ${connectionStatus}. Esta página se recarga sola.</p>
+    </body></html>`);
+  }
+  try {
+    const qrDataUrl = await QRCode.toDataURL(lastQrData, { width: 300, margin: 2 });
+    res.send(`<html>
+    <head>
+      <meta http-equiv="refresh" content="20">
+      <style>body{font-family:sans-serif;text-align:center;padding:40px;background:#fff}</style>
+    </head>
+    <body>
+      <h2>📱 Escanea con WhatsApp</h2>
+      <p>WhatsApp → ⋮ → <strong>Dispositivos vinculados</strong> → Vincular dispositivo</p>
+      <img src="${qrDataUrl}" style="border:2px solid #25D366;border-radius:8px;padding:10px" />
+      <p style="color:#666;font-size:12px">El QR expira en ~20 segundos. Esta página se recarga automáticamente.</p>
+    </body>
+    </html>`);
+  } catch (err) {
+    res.status(500).send("Error generando QR: " + err.message);
+  }
+});
+
+/**
  * POST /send
- * Envía un mensaje de WhatsApp
  * Body: { message: string, to?: string }
  */
 app.post("/send", async (req, res) => {
-  if (!isConnected || !sock) {
+  if (!isConnected || !waClient) {
     return res.status(503).json({
       ok: false,
       error: "WhatsApp no está conectado",
@@ -138,45 +226,38 @@ app.post("/send", async (req, res) => {
   }
 
   const { message, to } = req.body;
+  if (!message) return res.status(400).json({ ok: false, error: "Falta 'message'" });
 
-  if (!message) {
-    return res.status(400).json({ ok: false, error: "Falta el campo 'message'" });
-  }
-
-  // Normalizar número: quitar el + y agregar @s.whatsapp.net
-  const rawPhone = (to || DEFAULT_PHONE).replace(/[^0-9]/g, "");
-  const jid = `${rawPhone}@s.whatsapp.net`;
+  const phone = (to || DEFAULT_PHONE).replace(/[^0-9]/g, "");
+  const chatId = `${phone}@c.us`;
 
   try {
-    await sock.sendMessage(jid, { text: message });
-    console.log(`[WhatsApp] ✅ Mensaje enviado a ${rawPhone}: ${message.substring(0, 50)}...`);
-    res.json({ ok: true, to: rawPhone });
+    await waClient.sendMessage(chatId, message);
+    console.log(`[WhatsApp] ✅ Enviado a ${phone}: ${message.substring(0, 60)}`);
+    res.json({ ok: true, to: phone });
   } catch (err) {
-    console.error(`[WhatsApp] ❌ Error al enviar a ${rawPhone}:`, err.message);
+    console.error(`[WhatsApp] ❌ Error al enviar:`, err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 /**
  * POST /send-bulk
- * Envía múltiples mensajes
- * Body: [{ message: string, to?: string }, ...]
+ * Body: [{ message, to? }, ...]
  */
 app.post("/send-bulk", async (req, res) => {
   const items = Array.isArray(req.body) ? req.body : [req.body];
   const results = [];
 
   for (const item of items) {
-    if (!isConnected || !sock) {
+    if (!isConnected || !waClient) {
       results.push({ ok: false, error: "No conectado" });
       continue;
     }
-    const rawPhone = (item.to || DEFAULT_PHONE).replace(/[^0-9]/g, "");
-    const jid = `${rawPhone}@s.whatsapp.net`;
+    const phone = (item.to || DEFAULT_PHONE).replace(/[^0-9]/g, "");
     try {
-      await sock.sendMessage(jid, { text: item.message });
-      results.push({ ok: true, to: rawPhone });
-      // Pequeña pausa para no spamear
+      await waClient.sendMessage(`${phone}@c.us`, item.message);
+      results.push({ ok: true, to: phone });
       await new Promise((r) => setTimeout(r, 500));
     } catch (err) {
       results.push({ ok: false, error: err.message });
@@ -186,12 +267,6 @@ app.post("/send-bulk", async (req, res) => {
   res.json({ results });
 });
 
-// ── Arranque ──────────────────────────────────────────────────────────────────
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[WhatsApp] Servicio escuchando en http://0.0.0.0:${PORT}`);
-});
-
-connectToWhatsApp().catch((err) => {
-  console.error("[WhatsApp] Error crítico al conectar:", err);
-  process.exit(1);
+  console.log(`[WhatsApp] API HTTP escuchando en http://0.0.0.0:${PORT}`);
 });

@@ -141,6 +141,7 @@ def run_findjobit():
             # Extraer metadata privada antes de enviar al backend
             apply_email = offer.get("_apply_email")
             apply_subject = offer.get("_apply_subject")
+            form_accessible = offer.get("_form_accessible", False)
 
             # 2. Ingestar al backend (evalúa con Claude, deduplica por URL)
             clean_offer = {k: v for k, v in offer.items() if not k.startswith("_")}
@@ -169,25 +170,23 @@ def run_findjobit():
                 skipped += 1
                 continue
 
-            # 4. Auto-postular vía email
-            if not apply_email:
-                print(f"[FindJobIT] Sin email de contacto para '{title}', se requiere revisión manual")
-                # Notificar que requiere revisión
+            # 4. Auto-postular: email directo O formulario Playwright (si hay sesión)
+            if not apply_email and not form_accessible:
+                # Sin email ni sesión → alerta para revisión manual
+                print(f"[FindJobIT] Sin email ni sesión activa para '{title}', revisión manual")
                 _send_whatsapp(
                     f"👀 *FindJobIT — Oferta interesante (score {score:.0f})*\n"
                     f"*Cargo:* {title}\n"
                     f"*Empresa:* {company}\n"
-                    f"⚠️ No tiene email de postulación directo. Revisar manualmente.\n"
+                    f"⚠️ Sin email directo. Activar sesión: `setup_session.py findjobit`\n"
                     f"*Link:* {url}"
                 )
                 skipped += 1
                 continue
 
-            # Agregar metadata de aplicación al offer para el aplicador
-            offer["_apply_email"] = apply_email
-            offer["_apply_subject"] = apply_subject
-
-            print(f"[FindJobIT] Aplicando a '{title}' ({company}) → {apply_email}")
+            # Llamar al aplicador — él decide la estrategia (email vs formulario)
+            apply_mode = "email" if apply_email else "formulario Playwright"
+            print(f"[FindJobIT] Aplicando a '{title}' ({company}) vía {apply_mode}")
             apply_result = findjobit_applicator.apply(offer)
 
             # 5. Actualizar estado en backend
