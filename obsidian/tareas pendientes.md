@@ -1,44 +1,73 @@
-# Tareas Pendientes — Sesión 09/06/2026
+## Plan de trabajo — sesión 15/06/2026
 
-## Objetivo
-Ordenar la aplicación para que pueda ser usada por cualquier usuario, tenga o no acceso a Claude Code. Crear instalador, comandos Claude y nueva interfaz web.
-
----
-
-## Lista de tareas
-
-### Backend
-- [ ] Endpoint `/api/stats` — resumen de postulaciones (semana, total, por portal)
-- [ ] Router `cv.py` — leer/guardar datos de CV y perfil (cv_data.json, cv_data_en.json, perfil_data.json)
-- [ ] Router `settings.py` — leer/guardar configuración (settings.json: teléfono WA, emails)
-- [ ] Router `portals.py` — listar portales con estado y conteo de postulaciones
-- [ ] Registrar nuevos routers en `main.py`
-
-### Frontend
-- [ ] Actualizar `layout.tsx` — navegación completa con todas las páginas
-- [ ] Actualizar `page.tsx` — agregar banner resumen de postulaciones semanales
-- [ ] Crear `app/validate/page.tsx` — página "Validar sitio" con botón para ejecutar /valida
-- [ ] Crear `app/authenticate/page.tsx` — página "Autenticar portales" con listado y estado
-- [ ] Crear `app/about/page.tsx` — página "Acerca de mí" con 3 tabs (CV español, CV inglés, Perfil)
-- [ ] Crear `app/settings/page.tsx` — página "Configuración" (teléfono WA, email)
-- [ ] Actualizar `lib/api.ts` — agregar funciones para nuevos endpoints
-
-### Comandos Claude Code
-- [ ] Crear `.claude/commands/valida.md` — comando `/valida <url>`
-- [ ] Crear `.claude/commands/autentica.md` — comando `/autentica`
-
-### Instalador
-- [ ] Crear `install.sh` — instalador Docker completo con prompts interactivos
-
-### Deploy
-- [ ] Commit y push a Gitea (rama: `feature_wunen_presto_whatsapp_findjobit_26052026`)
+- [ ] 1. Commit de cambios pendientes en branch actual (findjobit + scraper)
+- [ ] 2. Nueva rama: `feature_ui_mejoras_15062026`
+- [ ] 3. Layout: "Wunen" → enlace a home + texto más grande; saludo "Hola, [nombre]!" en nav
+- [ ] 4. Settings: agregar campo `user_name`; botón test WhatsApp; info setup WhatsApp y Gmail
+- [ ] 5. Validate: auto-agregar https:// si falta; fix findjobit.com (resultado incorrecto); cambiar texto "Equivalente..." + botón copiar
+- [ ] 6. Rename nav: "Acerca de mí" → "Configura tu perfil"; "Respuestas" → "Auto respuestas"
+- [ ] 7. About: título "Configura tu perfil" + caja explicativa
+- [ ] 8. Portales: cambiar texto python/claude a "Tip" + botón copiar; validar URL duplicada al validar sitio
+- [ ] 9. Push a Gitea + deploy en Presto
 
 ---
 
-## Notas técnicas
-- Los datos del CV se guardarán como JSON en `/wunen/cv_data.json` (ES), `/wunen/cv_data_en.json` (EN)
-- El perfil se guarda en `/wunen/perfil_data.json` (structured) y regenera `perfil.md`
-- Los settings van en `/wunen/settings.json`
-- Los archivos se montan desde el host vía volume en docker-compose
-- La validación de portales hace: check robots.txt + check Google OAuth en la página
-- "Ejecutar desde web" = el backend llama al subprocess claude CLI o implementa la lógica directamente en Python
+### Ambiente web 
+
+
+### Generales 
+
+
+* ¿Es posible, colocar en el menú superior el nombre de quien está usando la plataforma? Que diga "Hola, Rodrigo! ". Ese nombre se podría colocar al inicio, o configurar después dentro de un archivo de configuración donde están todos esos datos (Nombre, Teléfono whatsapp, correo, etc.). También agrega este campo en la pestaña "Configuración". 
+
+* Al hacer clic en "Wunen" se debiera volver al home. ¿Se puede dejar más notorio? Agrandar la letra 
+
+### Dashboard 
+
+* Este debiera ser el home del sitio, donde se muestre información relevante de postulaciones. 
+	* Agrega aquí el mensaje de la cantidad de ofertas laborales. 
+	* Crea también una "tarjeta" donde se muestren las ofertas totales vs las que se han podido automatizar con el envío a correo. 
+	* 
+
+## Ofertas 
+
+ * Al entrar en "Ofertas" me dice que no hay ninguna, lo cual está bien, pero no he ingresado ningún portal, por lo que deberia validar que no hay portales ingresados. 
+	
+
+
+### Validar sitio 
+
+* La aplicación funciona extraña. Aquí el detalle : 
+	* Por ejemplo, coloqué "Chiletrabajos.com" que sé que es una web que no existe. . Me apareció el mensaje "No se puede automatizar", me dice que si permite Scrapping pero no tiene autentificación con Google, y mas abajo aparece este mensaje : Error al acceder a la URL: Request URL is missing an 'http://' or 'https://' protocol. Aquí se deben validar ambos temas, y el último mensaje de error que aparece es algo que se podría automatizar, en el momento de escribir el mensaje. Es decir, agregar https si no fue ingresado en la ruta.
+	* Puse "https://findjobit.com" y me dice que no permite scrapping y tampoco autentificación con Google, lo cual es un error porque permite ambas cosas. Como dato, en el servidor presto (Puedes entrar con ssh rodrigo@presto) hay una instalación de wunen que está trabajando con findjobit.com. 
+* El texto "Equivalente al comando claude", cambialo por "Tip : Si cuentas con claude code, puedes ejecutar este comando desde la terminal, dentro del proyecto : " coloca el comando, y un botón "Copiar" para llevarlo al portapapeles. 
+
+
+### Portales de empleo 
+
+*  Aparece un listado de "portales con auto-postulacion" sin embargo no hay algun botón o herramienta que permita activarlos, entonces no se entiende mucho la finalidad. 
+* El texto para usar los scripts de python o el comando de Claude code, cambia su comentario como una alternativa (Similar a lo descrito en el párrafo anterior), y agrégale un botón "copiar". 
+* Si hay portales creados acá, en "Validar sitio", al momento de colocar uno debiera validar que el sitio ingresado no se encuentre acá. 
+* 
+
+
+### Acerca de mí 
+
+* Cambia el menú "Acerca de mí" por "Configura tu perfil", para que se entienda que es al usuario al que se le está usando. Dentro de la página, coloca un pequeño cuadro, que explique porqué es importante llenar estos datos. 
+
+
+### Respuestas
+
+* Cambia el texto por "Auto respuestas". Anda colocando las cajas de respuestas de cada portal, separado por una caja con el título de la página como nombre del portal. 
+
+### Configuración
+
+* En el botón de notificaciones de whatsapp, crea un botón que permita enviar un mensaje de prueba con la aplicación. 
+* Crea procedimientos de configuración, para poder configurara whatsapp con Baileys y el envío de correos mediante google mail. 
+
+
+
+# Instalador 
+
+* Falta una opción para que al momento de instalar se pueda realizar la sincronización via whatsapp y el código QR. Además, agrega un script que permita ejecutarlo a futuro si el usuario decide cambiar su número. 
+
