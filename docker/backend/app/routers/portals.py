@@ -76,18 +76,66 @@ def list_portals(db: Session = Depends(get_db)):
     return result
 
 
+KNOWN_PORTALS_SCRAPING = {
+    "findjobit.com": {"allows_scraping": True, "has_google_auth": True},
+    "getonbrd.com": {"allows_scraping": True, "has_google_auth": True},
+    "tecnoempleo.com": {"allows_scraping": True, "has_google_auth": False},
+    "chiletrabajos.cl": {"allows_scraping": True, "has_google_auth": False},
+    "chumi-it.com": {"allows_scraping": True, "has_google_auth": False},
+    "remotelatinos.com": {"allows_scraping": True, "has_google_auth": True},
+}
+
+
+def _normalize_url(url: str) -> str:
+    url = url.strip()
+    if url and not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+    return url
+
+
+def _match_known_portal(url: str) -> dict | None:
+    url_lower = url.lower()
+    for domain, props in KNOWN_PORTALS_SCRAPING.items():
+        if domain in url_lower:
+            return props
+    return None
+
+
 @router.post("/validate")
 async def validate_portal(body: dict):
-    url: str = body.get("url", "")
-    if not url:
+    raw_url: str = body.get("url", "")
+    if not raw_url:
         return {"error": "url requerida"}
+
+    url = _normalize_url(raw_url)
 
     result = {
         "url": url,
         "allows_scraping": False,
         "has_google_auth": False,
         "notes": [],
+        "already_configured": False,
     }
+
+    if url != raw_url.strip():
+        result["notes"].append("URL normalizada: se agregó https:// automáticamente")
+
+    portal_list = _load_portal_list()
+    for p in portal_list:
+        p_domain = p["url"].lower().replace("https://", "").replace("http://", "").replace("www.", "").rstrip("/")
+        q_domain = url.lower().replace("https://", "").replace("http://", "").replace("www.", "").rstrip("/")
+        if p_domain and (q_domain.startswith(p_domain) or p_domain.startswith(q_domain.split("/")[0])):
+            result["already_configured"] = True
+            result["notes"].append(f"Este sitio ya está registrado en Wunen como '{p['name']}'")
+            break
+
+    known = _match_known_portal(url)
+    if known:
+        result["allows_scraping"] = known["allows_scraping"]
+        result["has_google_auth"] = known["has_google_auth"]
+        result["notes"].append("Portal conocido — datos obtenidos del registro interno de Wunen")
+        result["automatable"] = result["allows_scraping"]
+        return result
 
     try:
         async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
@@ -125,11 +173,11 @@ async def validate_portal(body: dict):
                         result["notes"].append(f"Google Auth detectado: '{ind}'")
                         break
                 if not result["has_google_auth"]:
-                    result["notes"].append("No se detectó autenticación Google en la página principal")
+                    result["notes"].append("No se detectó autenticación Google en la página principal (puede requerir JS para renderizarla)")
             except Exception as e:
                 result["notes"].append(f"Error al acceder a la URL: {str(e)}")
     except Exception as e:
         result["notes"].append(f"Error general: {str(e)}")
 
-    result["automatable"] = result["allows_scraping"] and result["has_google_auth"]
+    result["automatable"] = result["allows_scraping"]
     return result

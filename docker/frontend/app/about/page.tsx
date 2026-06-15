@@ -80,7 +80,15 @@ export default function AboutPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-white mb-6">Acerca de mí</h1>
+      <h1 className="text-2xl font-bold text-white mb-2">Configura tu perfil</h1>
+      <div className="bg-blue-950 border border-blue-800 rounded-xl p-4 mb-6">
+        <p className="text-blue-300 text-sm font-medium mb-1">¿Por qué es importante completar estos datos?</p>
+        <p className="text-blue-400 text-xs leading-relaxed">
+          Wunen usa tu CV y perfil para que el evaluador de IA seleccione las mejores ofertas para ti,
+          y para generar cartas de presentación personalizadas al postular automáticamente.
+          Entre más completo esté tu perfil, mejores serán los resultados.
+        </p>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-8 bg-gray-900 rounded-lg p-1 w-fit">

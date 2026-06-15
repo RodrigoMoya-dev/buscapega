@@ -9,20 +9,40 @@ interface ValidationResult {
   has_google_auth: boolean;
   automatable: boolean;
   notes: string[];
+  already_configured?: boolean;
+}
+
+function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    return "https://" + trimmed;
+  }
+  return trimmed;
 }
 
 export default function ValidatePage() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ValidationResult | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const claudeCommand = "claude /valida <url del sitio>";
 
   async function handleValidate() {
-    if (!url.trim()) return;
+    const normalized = normalizeUrl(url);
+    if (!normalized) return;
+    if (normalized !== url) setUrl(normalized);
     setLoading(true);
     setResult(null);
-    const data = await validatePortal(url.trim());
+    const data = await validatePortal(normalized);
     setResult(data);
     setLoading(false);
+  }
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(claudeCommand);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   return (
@@ -34,15 +54,25 @@ export default function ValidatePage() {
       </p>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-        <p className="text-xs text-gray-500 mb-3 uppercase tracking-wide">Equivalente al comando Claude:</p>
-        <code className="text-cyan-400 text-sm font-mono bg-gray-950 px-3 py-2 rounded block">
-          claude /valida &lt;url del sitio&gt;
-        </code>
+        <p className="text-xs text-gray-500 mb-3">
+          Tip: Si cuentas con Claude Code, puedes ejecutar este comando desde la terminal, dentro del proyecto:
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 text-cyan-400 text-sm font-mono bg-gray-950 px-3 py-2 rounded">
+            {claudeCommand}
+          </code>
+          <button
+            onClick={handleCopy}
+            className="shrink-0 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-2 rounded transition-colors"
+          >
+            {copied ? "✓ Copiado" : "Copiar"}
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-3 mb-8">
         <input
-          type="url"
+          type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleValidate()}
@@ -60,6 +90,11 @@ export default function ValidatePage() {
 
       {result && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          {result.already_configured && (
+            <div className="mb-4 px-4 py-3 bg-yellow-950 border border-yellow-800 rounded-lg">
+              <p className="text-yellow-300 text-sm">Este portal ya está registrado en Wunen. Puedes verlo en la sección <a href="/authenticate" className="underline hover:text-yellow-200">Portales</a>.</p>
+            </div>
+          )}
           <div className="flex items-center gap-3 mb-5">
             <span className={`text-2xl ${result.automatable ? "text-green-400" : "text-red-400"}`}>
               {result.automatable ? "✓" : "✗"}

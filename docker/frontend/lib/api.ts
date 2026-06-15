@@ -238,3 +238,11 @@ export async function saveSettings(data: any): Promise<boolean> {
     return res.ok;
   } catch { return false; }
 }
+
+export async function testWhatsapp(): Promise<{ status: string; message: string } | null> {
+  try {
+    const res = await fetch(`${API}/api/settings/test-whatsapp`, { method: "POST" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
