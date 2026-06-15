@@ -1,14 +1,14 @@
 ## Plan de trabajo — sesión 15/06/2026
 
-- [ ] 1. Commit de cambios pendientes en branch actual (findjobit + scraper)
-- [ ] 2. Nueva rama: `feature_ui_mejoras_15062026`
-- [ ] 3. Layout: "Wunen" → enlace a home + texto más grande; saludo "Hola, [nombre]!" en nav
-- [ ] 4. Settings: agregar campo `user_name`; botón test WhatsApp; info setup WhatsApp y Gmail
-- [ ] 5. Validate: auto-agregar https:// si falta; fix findjobit.com (resultado incorrecto); cambiar texto "Equivalente..." + botón copiar
-- [ ] 6. Rename nav: "Acerca de mí" → "Configura tu perfil"; "Respuestas" → "Auto respuestas"
-- [ ] 7. About: título "Configura tu perfil" + caja explicativa
-- [ ] 8. Portales: cambiar texto python/claude a "Tip" + botón copiar; validar URL duplicada al validar sitio
-- [ ] 9. Push a Gitea + deploy en Presto
+- [x] 1. Commit de cambios pendientes en branch actual (findjobit + scraper)
+- [x] 2. Nueva rama: `feature_ui_mejoras_15062026`
+- [x] 3. Layout: "Wunen" → enlace a home + texto más grande; saludo "Hola, [nombre]!" en nav
+- [x] 4. Settings: agregar campo `user_name`; botón test WhatsApp; info setup WhatsApp y Gmail
+- [x] 5. Validate: auto-agregar https:// si falta; fix findjobit.com (resultado incorrecto); cambiar texto "Equivalente..." + botón copiar
+- [x] 6. Rename nav: "Acerca de mí" → "Configura tu perfil"; "Respuestas" → "Auto respuestas"
+- [x] 7. About: título "Configura tu perfil" + caja explicativa
+- [x] 8. Portales: cambiar texto python/claude a "Tip" + botón copiar; validar URL duplicada al validar sitio
+- [x] 9. Push a Gitea + deploy en Presto (rsync + docker build)
 
 ---
 
