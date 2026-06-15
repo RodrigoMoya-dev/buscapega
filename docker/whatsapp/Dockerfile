@@ -47,7 +47,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY package.json ./
-RUN npm install --omit=dev --legacy-peer-deps
+RUN PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    npm install --omit=dev --legacy-peer-deps
 
 COPY server.js ./
 
