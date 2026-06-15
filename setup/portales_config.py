@@ -1,4 +1,17 @@
 PORTALES = {
+    "findjobit": {
+        "nombre": "FindJobIT",
+        # FindJobIT redirige /job-seekers/login → /job-seekers incluso SIN autenticar,
+        # lo que engaña a Strategy 1. Usamos la página de perfil (requiere auth real)
+        # y "skip_strategy_1": True para forzar que el usuario siempre haga login manual.
+        "login_url": "https://www.findjobit.com/job-seekers/login",
+        "home_url": "https://www.findjobit.com",
+        "login_exitoso_url": "/job-seekers/profile",  # solo accesible tras auth real
+        "login_exitoso_selector": "[href*='/job-seekers/logout'], [href*='signout'], "
+                                  ".avatar, [class*='avatar'], [class*='user-menu'], "
+                                  "[data-cy*='user'], img[alt*='profile' i]",
+        "skip_strategy_1": True,  # no inferir login desde redirect, siempre confirmar
+    },
     "getonbrd": {
         "nombre": "GetOnBrd",
         "login_url": "https://www.getonbrd.com/sessions/new",

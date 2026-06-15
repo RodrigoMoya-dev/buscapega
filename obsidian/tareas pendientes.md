@@ -1,66 +1,44 @@
-# Tareas Pendientes - Sesión 26/05/2026
+# Tareas Pendientes — Sesión 09/06/2026
 
-## Plan de trabajo
-
-### ✅ TAREA 1 — Configurar http://wunen.presto (nginx en Presto)
-- [x] Agregar bloque en `/etc/nginx/conf.d/presto-proxy.conf`:
-  - `wunen.presto` → puerto 3020 (frontend)
-  - `api.wunen.presto` → puerto 8020 (backend API)
-- [x] Recargar nginx
+## Objetivo
+Ordenar la aplicación para que pueda ser usada por cualquier usuario, tenga o no acceso a Claude Code. Crear instalador, comandos Claude y nueva interfaz web.
 
 ---
 
-### 🔲 TAREA 2 — Baileys WhatsApp Service
-- [x] Crear `docker/whatsapp/` con:
-  - `package.json` — @whiskeysockets/baileys + express
-  - `server.js` — HTTP API para enviar mensajes
-  - `Dockerfile`
-- [x] Agregar servicio `whatsapp` en `docker-compose.yml`
-- [ ] **Pairing manual requerido**: al levantar el servicio por primera vez,
-  leer los logs del contenedor `wunen_whatsapp` — mostrará un código de 8 dígitos.
-  Abrir WhatsApp → Dispositivos vinculados → Vincular → Ingresar código.
-  ```bash
-  cd ~/docker/wunen && docker compose logs -f whatsapp
-  ```
-  El estado de autenticación se persiste en el volumen `whatsapp_auth`.
+## Lista de tareas
+
+### Backend
+- [ ] Endpoint `/api/stats` — resumen de postulaciones (semana, total, por portal)
+- [ ] Router `cv.py` — leer/guardar datos de CV y perfil (cv_data.json, cv_data_en.json, perfil_data.json)
+- [ ] Router `settings.py` — leer/guardar configuración (settings.json: teléfono WA, emails)
+- [ ] Router `portals.py` — listar portales con estado y conteo de postulaciones
+- [ ] Registrar nuevos routers en `main.py`
+
+### Frontend
+- [ ] Actualizar `layout.tsx` — navegación completa con todas las páginas
+- [ ] Actualizar `page.tsx` — agregar banner resumen de postulaciones semanales
+- [ ] Crear `app/validate/page.tsx` — página "Validar sitio" con botón para ejecutar /valida
+- [ ] Crear `app/authenticate/page.tsx` — página "Autenticar portales" con listado y estado
+- [ ] Crear `app/about/page.tsx` — página "Acerca de mí" con 3 tabs (CV español, CV inglés, Perfil)
+- [ ] Crear `app/settings/page.tsx` — página "Configuración" (teléfono WA, email)
+- [ ] Actualizar `lib/api.ts` — agregar funciones para nuevos endpoints
+
+### Comandos Claude Code
+- [ ] Crear `.claude/commands/valida.md` — comando `/valida <url>`
+- [ ] Crear `.claude/commands/autentica.md` — comando `/autentica`
+
+### Instalador
+- [ ] Crear `install.sh` — instalador Docker completo con prompts interactivos
+
+### Deploy
+- [ ] Commit y push a Gitea (rama: `feature_wunen_presto_whatsapp_findjobit_26052026`)
 
 ---
 
-### 🔲 TAREA 3 — Portal FindJobIT: scraper + aplicador vía email
-- [x] Crear `docker/scraper/scrapers/findjobit.py` (Playwright, country/chile, solo remoto)
-- [x] Crear `docker/scraper/applicator/findjobit.py` (envío por Gmail SMTP)
-- [x] Registrar en `applicator/registry.py`
-- [x] Agregar ruta `POST /run/findjobit` en `scraper/main.py`
-- [x] Agregar vars de entorno Gmail en `docker-compose.yml` y `.env.example`
-- [x] Crear workflow n8n: cron horario → POST /run/findjobit (en presto)
-- [x] Documentar portal en `obsidian/tecnico/portales/findjobit.md`
-
-#### Paso a paso para conectar Gmail con la aplicación
-1. Ir a https://myaccount.google.com/security
-2. Activar "Verificación en 2 pasos" si no está activa
-3. Ir a https://myaccount.google.com/apppasswords
-4. Crear una contraseña de aplicación: seleccionar "Otro (nombre personalizado)" → escribir "Wunen"
-5. Copiar la contraseña de 16 caracteres generada (formato: xxxx xxxx xxxx xxxx)
-6. En `~/docker/wunen/.env` (en presto), agregar:
-   ```env
-   GMAIL_USER=correo@ejemplo.com
-   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
-   ```
-7. Reiniciar el scraper: `cd ~/docker/wunen && docker compose restart scraper`
-
----
-
-### 🔲 TAREA 4 — Git: crear repo en Gitea y subir cambios
-- [x] Crear repo `moya.dev/wunen` en Gitea (http://gitea.presto)
-- [x] Init repo local y hacer push a Gitea
-- [x] Crear rama `feature_wunen_presto_whatsapp_findjobit_26052026`
-- [x] Commits por tarea con descripción de cambios
-- [ ] Deploy en presto (git pull + docker compose up --build)
-
----
-
-## Tareas originales
-
-* ~~Lo primero es armar http://wunen.presto para poder utilizar la aplicación ahí.~~
-* Necesito que configures Baileys para el envío de mensajes de whatsapp desde la aplicación hacia un telefono personal. El numero de envío y el de recepción son el +56912345678.  
-* Necesito que me ayudes a automatizar, usando esta plataforma, el proceso de postulación a trabajos a través del portal findjobit.com.
+## Notas técnicas
+- Los datos del CV se guardarán como JSON en `/wunen/cv_data.json` (ES), `/wunen/cv_data_en.json` (EN)
+- El perfil se guarda en `/wunen/perfil_data.json` (structured) y regenera `perfil.md`
+- Los settings van en `/wunen/settings.json`
+- Los archivos se montan desde el host vía volume en docker-compose
+- La validación de portales hace: check robots.txt + check Google OAuth en la página
+- "Ejecutar desde web" = el backend llama al subprocess claude CLI o implementa la lógica directamente en Python
