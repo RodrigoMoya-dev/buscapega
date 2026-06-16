@@ -13,6 +13,11 @@ Diagnóstico hecho antes de codear (texto original de las tareas más abajo, int
 - [x] **Tarea I** (chiletrabajos en respuestas automáticas): confirmado — sí se puede postular a ChileTrabajos (`docker/scraper/applicator/chiletrabajos.py` está completo: login, llenado de formulario, carta de presentación, captcha, etc., y está registrado en `registry.py`). El reporte del usuario era de antes de esta implementación. Se mantiene activo, sin cambios de código.
 - [x] **Tarea J** (teléfono/correo desde instalador en Configuración): ya implementado en sesión 15/06 (Tarea 3) y deployado hoy. Verificado: `GET /api/settings` en Presto responde con la estructura correcta (vacío porque aún no se reinstaló/configuró ahí; el mecanismo funciona).
 
+**Deploy completado (16/06/2026):**
+- [x] Commit `e5db5b4` pusheado a gitea.presto rama `feature_ui_mejoras_15062026`
+- [x] Sincronizados `docker/backend/` y `docker/frontend/` a Presto, rebuild `backend` + `frontend` — ambos healthy (200 OK)
+- [x] Verificado orden de portales en `/api/portals`: FindJobIT queda primero
+
 ---
 
 ### Web
