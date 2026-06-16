@@ -169,13 +169,34 @@ read -r -p "  sk-ant-... > " ANTHROPIC_API_KEY
 [[ -z "$ANTHROPIC_API_KEY" ]] && warn "Sin API key — la evaluación usará scoring básico por keywords."
 echo ""
 
-ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
-read -r -p "  [56912345678] > " WHATSAPP_PHONE
-WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
+while true; do
+  ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
+  read -r -p "  [56912345678] > " WHATSAPP_PHONE
+  WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
+  WHATSAPP_PHONE_CLEAN=$(echo "$WHATSAPP_PHONE" | tr -dc '0-9')
+  if [[ ${#WHATSAPP_PHONE_CLEAN} -lt 10 ]]; then
+    warn "Teléfono inválido. Debe contener al menos 10 dígitos con código de país (ej: 56912345678)."
+  else
+    WHATSAPP_PHONE="$WHATSAPP_PHONE_CLEAN"
+    break
+  fi
+done
 echo ""
 
-ask "→ Correo Gmail para postulaciones automáticas (para portales que usan email):"
-read -r -p "  correo@gmail.com > " GMAIL_USER
+while true; do
+  ask "→ Correo Gmail para postulaciones automáticas (para portales que usan email):"
+  read -r -p "  correo@gmail.com > " GMAIL_USER
+  if [[ -z "$GMAIL_USER" ]]; then
+    warn "Sin correo — las postulaciones por email no funcionarán. ¿Continuar sin correo? (s/N)"
+    read -r -p "  > " SKIP_EMAIL
+    SKIP_EMAIL_L=$(echo "$SKIP_EMAIL" | tr '[:upper:]' '[:lower:]')
+    [[ "$SKIP_EMAIL_L" == "s" || "$SKIP_EMAIL_L" == "si" || "$SKIP_EMAIL_L" == "y" ]] && break
+  elif [[ "$GMAIL_USER" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
+    break
+  else
+    warn "Correo inválido. Usa el formato correo@dominio.com"
+  fi
+done
 echo ""
 
 GMAIL_APP_PASSWORD=""
@@ -227,6 +248,23 @@ FINDJOBIT_MIN_SCORE=50
 EOF
 
 ok ".env generado"
+
+# Escribir settings.json para que la interfaz web muestre los datos inmediatamente
+SETTINGS_JSON_PATH="$SCRIPT_DIR/documentos/settings.json"
+mkdir -p "$SCRIPT_DIR/documentos"
+if [[ ! -f "$SETTINGS_JSON_PATH" ]]; then
+  cat > "$SETTINGS_JSON_PATH" << EOF
+{
+  "user_name": "",
+  "whatsapp_phone": "${WHATSAPP_PHONE}",
+  "notification_email": "${GMAIL_USER:-}",
+  "reply_email": "${GMAIL_USER:-}"
+}
+EOF
+  ok "settings.json creado (visible en Configuración de la web)"
+else
+  warn "settings.json ya existe — no se sobreescribe. Actualiza teléfono y correo desde la web en Configuración."
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Validar puertos disponibles
