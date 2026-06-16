@@ -36,10 +36,12 @@ cd setup
 pip3 install -r requirements.txt
 playwright install chromium
 
-python3 setup_session.py --lista          # list portals and session status
-python3 setup_session.py getonbrd         # capture session for a portal
+./setup-sessions.sh --lista          # list portals and session status (root wrapper, cds into setup/)
+./setup-sessions.sh getonbrd         # capture session for a portal
 ```
 After capturing, the script auto-rsync's cookies to `rodrigo@presto:~/docker/wunen/cookies/`.
+
+**WhatsApp QR linking**: `./whatsapp-qr.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
 
 **API docs** (when backend is running): http://localhost:8000/docs  
 **Frontend**: http://localhost:3000

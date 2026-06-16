@@ -31,10 +31,10 @@ El servicio WhatsApp usa un código QR para vincular tu número. Hay tres formas
 
 ```bash
 # Si Wunen corre en local
-bash setup/whatsapp-qr.sh
+bash whatsapp-qr.sh
 
 # Si Wunen corre en un servidor remoto (ej: presto)
-bash setup/whatsapp-qr.sh presto 3001
+bash whatsapp-qr.sh presto 3001
 ```
 
 El script muestra la URL del QR y los pasos a seguir.
@@ -77,7 +77,7 @@ cd ~/docker/wunen
 docker volume rm wunen_whatsapp_auth
 docker compose up -d whatsapp
 # Espera ~30 segundos y repite el proceso de vinculación
-bash ~/wunen/setup/whatsapp-qr.sh presto 3001
+bash ~/wunen/whatsapp-qr.sh presto 3001
 ```
 
 ---
@@ -96,7 +96,7 @@ cd ~/docker/wunen && docker compose restart backend
 cd ~/docker/wunen && docker compose down
 
 # Configurar sesiones de portales
-cd setup && python3 setup_session.py --lista
+./setup-sessions.sh --lista
 ```
 
 ---

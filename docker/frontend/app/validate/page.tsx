@@ -10,6 +10,7 @@ interface ValidationResult {
   automatable: boolean;
   notes: string[];
   already_configured?: boolean;
+  error?: string;
 }
 
 function normalizeUrl(url: string): string {
@@ -88,7 +89,15 @@ export default function ValidatePage() {
         </button>
       </div>
 
-      {result && (
+      {result && result.error && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="px-4 py-3 bg-red-950 border border-red-800 rounded-lg">
+            <p className="text-red-300 text-sm">{result.error}</p>
+          </div>
+        </div>
+      )}
+
+      {result && !result.error && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           {result.already_configured && (
             <div className="mb-4 px-4 py-3 bg-yellow-950 border border-yellow-800 rounded-lg">
