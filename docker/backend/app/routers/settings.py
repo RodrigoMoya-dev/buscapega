@@ -18,10 +18,11 @@ DEFAULT_SETTINGS = {
 
 
 def _read() -> dict:
+    base = DEFAULT_SETTINGS.copy()
     if os.path.exists(SETTINGS_PATH):
         with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return DEFAULT_SETTINGS.copy()
+            base.update(json.load(f))
+    return base
 
 
 def _write(data: dict):

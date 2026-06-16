@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { getCvEs, saveCvEs, getCvEn, saveCvEn, getProfile, saveProfile } from "@/lib/api";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { getCvEs, saveCvEs, getCvEn, saveCvEn, getProfile, saveProfile, uploadCvPdf, getCvPdfUrl, cvPdfExists } from "@/lib/api";
 
 type Tab = "cv-es" | "cv-en" | "profile";
 
@@ -52,12 +52,16 @@ export default function AboutPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [pdfEsExists, setPdfEsExists] = useState(false);
+  const [pdfEnExists, setPdfEnExists] = useState(false);
 
   useEffect(() => {
-    Promise.all([getCvEs(), getCvEn(), getProfile()]).then(([es, en, pr]) => {
+    Promise.all([getCvEs(), getCvEn(), getProfile(), cvPdfExists("es"), cvPdfExists("en")]).then(([es, en, pr, hasEs, hasEn]) => {
       if (es) setCvEs({ ...DEFAULT_CV, ...es });
       if (en) setCvEn({ ...DEFAULT_CV, ...en });
       if (pr) setProfile({ ...DEFAULT_PROFILE, ...pr });
+      setPdfEsExists(hasEs);
+      setPdfEnExists(hasEn);
       setLoading(false);
     });
   }, []);
@@ -107,6 +111,14 @@ export default function AboutPage() {
           {tab === "cv-es" && <CvForm cv={cvEs} setCv={setCvEs} lang="es" />}
           {tab === "cv-en" && <CvForm cv={cvEn} setCv={setCvEn} lang="en" />}
           {tab === "profile" && <ProfileForm profile={profile} setProfile={setProfile} />}
+
+          {(tab === "cv-es" || tab === "cv-en") && (
+            <CvPdfUpload
+              lang={tab === "cv-es" ? "es" : "en"}
+              hasFile={tab === "cv-es" ? pdfEsExists : pdfEnExists}
+              onUploaded={(lang) => lang === "es" ? setPdfEsExists(true) : setPdfEnExists(true)}
+            />
+          )}
 
           <div className="mt-8 flex items-center gap-4">
             <button onClick={handleSave} disabled={saving}
@@ -572,6 +584,70 @@ function ProfileForm({ profile, setProfile }: { profile: typeof DEFAULT_PROFILE;
           </Field>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ── CV PDF Upload ─────────────────────────────────────────────────────────────
+
+function CvPdfUpload({ lang, hasFile, onUploaded }: { lang: "es" | "en"; hasFile: boolean; onUploaded: (lang: "es" | "en") => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const label = lang === "es" ? "CV en PDF (Español)" : "CV in PDF (English)";
+  const downloadName = lang === "es" ? "cv_es.pdf" : "cv_en.pdf";
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Solo se aceptan archivos PDF");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    const ok = await uploadCvPdf(lang, file);
+    setUploading(false);
+    if (ok) {
+      setSuccess(true);
+      onUploaded(lang);
+      setTimeout(() => setSuccess(false), 3000);
+    } else {
+      setError("Error al subir el archivo. Intenta de nuevo.");
+    }
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  return (
+    <div className="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h3 className="text-sm font-semibold text-white mb-1">{label}</h3>
+      <p className="text-xs text-gray-500 mb-4">
+        Sube el archivo PDF de tu CV. Se usará en postulaciones que requieran adjuntar el CV.
+      </p>
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+          {uploading ? "Subiendo..." : hasFile ? "Reemplazar PDF" : "Subir PDF"}
+          <input ref={inputRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleFile} disabled={uploading} />
+        </label>
+        {hasFile && (
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cv/${lang}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            download={downloadName}
+            className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors"
+          >
+            Descargar PDF actual
+          </a>
+        )}
+        {success && <span className="text-green-400 text-sm">✓ PDF subido correctamente</span>}
+        {error && <span className="text-red-400 text-sm">{error}</span>}
+      </div>
+      {hasFile && (
+        <p className="text-xs text-gray-600 mt-2">Ya tienes un PDF cargado. Sube uno nuevo para reemplazarlo.</p>
+      )}
     </div>
   );
 }
