@@ -199,6 +199,28 @@ export async function saveCvEn(data: any): Promise<boolean> {
   } catch { return false; }
 }
 
+export async function uploadCvPdf(lang: "es" | "en", file: File): Promise<boolean> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API}/api/cv/${lang}/upload`, { method: "POST", body: form });
+    return res.ok;
+  } catch { return false; }
+}
+
+export async function getCvPdfUrl(lang: "es" | "en"): Promise<string> {
+  return `${API}/api/cv/${lang}/pdf`;
+}
+
+export async function cvPdfExists(lang: "es" | "en"): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/cv/${lang}/pdf/exists`, { cache: "no-store" });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.exists === true;
+  } catch { return false; }
+}
+
 export async function getProfile(): Promise<any> {
   try {
     const res = await fetch(`${API}/api/cv/profile`, { cache: "no-store" });
