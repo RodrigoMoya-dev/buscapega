@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import httpx
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -15,12 +16,12 @@ WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
 PORTALES_PATH = os.path.join(WUNEN_DIR, "documentos", "portales.json")
 
 DEFAULT_PORTAL_LIST = [
+    {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit"},
     {"name": "Tecnoempleo",   "url": "https://www.tecnoempleo.com",   "auto_apply": True,  "market": "España",        "session_key": "tecnoempleo"},
     {"name": "ChileTrabajos", "url": "https://www.chiletrabajos.cl",  "auto_apply": True,  "market": "Chile",         "session_key": "chiletrabajos"},
     {"name": "Chumi-IT",      "url": "https://chumi-it.com",          "auto_apply": True,  "market": "LATAM/España",  "session_key": "chumiit"},
     {"name": "RemoteLatinos", "url": "https://www.remotelatinos.com", "auto_apply": True,  "market": "LATAM/EEUU",    "session_key": "remotelatinos"},
     {"name": "GetOnBrd",      "url": "https://www.getonbrd.com",      "auto_apply": True,  "market": "LATAM/Chile",   "session_key": "getonbrd"},
-    {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit"},
     {"name": "Torre.ai",      "url": "https://torre.ai",              "auto_apply": False, "market": "LATAM/EEUU",    "session_key": None},
     {"name": "InfoJobs",      "url": "https://www.infojobs.net",      "auto_apply": False, "market": "España",        "session_key": None},
     {"name": "LaraJobs",      "url": "https://larajobs.com",          "auto_apply": False, "market": "Internacional", "session_key": None},
@@ -93,6 +94,16 @@ def _normalize_url(url: str) -> str:
     return url
 
 
+DOMAIN_RE = re.compile(
+    r"^https?://([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(:\d+)?(/.*)?$",
+    re.IGNORECASE,
+)
+
+
+def _has_valid_domain(url: str) -> bool:
+    return bool(DOMAIN_RE.match(url))
+
+
 def _match_known_portal(url: str) -> dict | None:
     url_lower = url.lower()
     for domain, props in KNOWN_PORTALS_SCRAPING.items():
@@ -116,6 +127,11 @@ async def validate_portal(body: dict):
         "notes": [],
         "already_configured": False,
     }
+
+    if not _has_valid_domain(url):
+        result["error"] = "URL inválida — debe tener una estructura tipo 'sitio.com'"
+        result["automatable"] = False
+        return result
 
     if url != raw_url.strip():
         result["notes"].append("URL normalizada: se agregó https:// automáticamente")

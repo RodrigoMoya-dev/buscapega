@@ -79,12 +79,12 @@ if [[ ! -f "$DOCS_DIR/portales.json" ]]; then
   log "Creando portales.json con lista por defecto..."
   cat > "$DOCS_DIR/portales.json" << 'PORTALES_EOF'
 [
+  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit"},
   {"name": "Tecnoempleo",    "url": "https://www.tecnoempleo.com",    "auto_apply": true,  "market": "España",        "session_key": "tecnoempleo"},
   {"name": "ChileTrabajos",  "url": "https://www.chiletrabajos.cl",   "auto_apply": true,  "market": "Chile",         "session_key": "chiletrabajos"},
   {"name": "Chumi-IT",       "url": "https://chumi-it.com",           "auto_apply": true,  "market": "LATAM/España",  "session_key": "chumiit"},
   {"name": "RemoteLatinos",  "url": "https://www.remotelatinos.com",  "auto_apply": true,  "market": "LATAM/EEUU",    "session_key": "remotelatinos"},
   {"name": "GetOnBrd",       "url": "https://www.getonbrd.com",       "auto_apply": true,  "market": "LATAM/Chile",   "session_key": "getonbrd"},
-  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit"},
   {"name": "Torre.ai",       "url": "https://torre.ai",               "auto_apply": false, "market": "LATAM/EEUU",    "session_key": null},
   {"name": "InfoJobs",       "url": "https://www.infojobs.net",       "auto_apply": false, "market": "España",        "session_key": null},
   {"name": "LaraJobs",       "url": "https://larajobs.com",           "auto_apply": false, "market": "Internacional", "session_key": null},
@@ -164,9 +164,13 @@ echo "Necesitamos algunos datos para configurar el sistema."
 echo "Presiona Enter para usar el valor por defecto (entre corchetes)."
 echo ""
 
-ask "→ Anthropic API Key (console.anthropic.com — necesaria para evaluación IA de ofertas):"
+ask "→ Tu nombre (para personalizar la interfaz, ej: Rodrigo):"
+read -r -p "  > " USER_NAME
+echo ""
+
+ask "→ Anthropic API Key (opcional — console.anthropic.com; si usas Claude Code para evaluar las ofertas no la necesitas):"
 read -r -p "  sk-ant-... > " ANTHROPIC_API_KEY
-[[ -z "$ANTHROPIC_API_KEY" ]] && warn "Sin API key — la evaluación usará scoring básico por keywords."
+[[ -z "$ANTHROPIC_API_KEY" ]] && warn "Sin API key — la evaluación usará scoring básico por keywords (o Claude Code, si lo usas)."
 echo ""
 
 while true; do
@@ -255,7 +259,7 @@ mkdir -p "$SCRIPT_DIR/documentos"
 if [[ ! -f "$SETTINGS_JSON_PATH" ]]; then
   cat > "$SETTINGS_JSON_PATH" << EOF
 {
-  "user_name": "",
+  "user_name": "${USER_NAME:-}",
   "whatsapp_phone": "${WHATSAPP_PHONE}",
   "notification_email": "${GMAIL_USER:-}",
   "reply_email": "${GMAIL_USER:-}"
@@ -370,23 +374,40 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
   if [[ ! -d "$SETUP_DIR" ]]; then
     warn "No se encontró la carpeta setup/. Omitiendo configuración de sesiones."
-    warn "Puedes hacerlo manualmente más tarde: cd setup && python3 setup_session.py --lista"
+    warn "Puedes hacerlo manualmente más tarde: ./setup-sessions.sh --lista"
   else
     # Verificar Python
     if ! command -v python3 &> /dev/null; then
       warn "Python 3 no está instalado. No se pueden configurar sesiones ahora."
-      warn "Instala Python 3 y luego ejecuta: cd setup && python3 setup_session.py --lista"
+      warn "Instala Python 3 y luego ejecuta: ./setup-sessions.sh --lista"
     else
       cd "$SETUP_DIR"
+      SETUP_DEPS_OK=true
 
       log "Instalando dependencias de setup..."
-      python3 -m pip install -q -r requirements.txt 2>/dev/null || {
-        warn "Falló pip install. Intenta manualmente: pip3 install -r setup/requirements.txt"
-      }
+      if ! python3 -m pip install -q -r requirements.txt 2>/tmp/wunen_pip_err.log; then
+        if ! python3 -m pip install -q --break-system-packages -r requirements.txt 2>>/tmp/wunen_pip_err.log; then
+          warn "Falló pip install. Detalle: $(tail -n 1 /tmp/wunen_pip_err.log)"
+          warn "Intenta manualmente: pip3 install -r setup/requirements.txt (o crea un venv)"
+          SETUP_DEPS_OK=false
+        fi
+      fi
 
-      python3 -m playwright install chromium 2>/dev/null || {
-        warn "Falló playwright install. Intenta manualmente: playwright install chromium"
-      }
+      if $SETUP_DEPS_OK && ! python3 -c "import playwright" 2>/dev/null; then
+        warn "El paquete 'playwright' no quedó instalado tras pip install."
+        SETUP_DEPS_OK=false
+      fi
+
+      if $SETUP_DEPS_OK && ! python3 -m playwright install chromium 2>/tmp/wunen_pw_err.log; then
+        warn "Falló playwright install. Detalle: $(tail -n 1 /tmp/wunen_pw_err.log)"
+        warn "Intenta manualmente: playwright install chromium"
+        SETUP_DEPS_OK=false
+      fi
+
+      if ! $SETUP_DEPS_OK; then
+        warn "Omitiendo configuración de sesiones por dependencias faltantes."
+        warn "Una vez resuelto, ejecuta: ./setup-sessions.sh --lista"
+      else
 
       echo ""
       log "Portales disponibles para autenticar:"
@@ -430,11 +451,12 @@ PYEOF
       echo ""
       ok "Proceso de autenticación completado"
       cd "$SCRIPT_DIR"
+      fi
     fi
   fi
 else
   echo -e "  Puedes configurar sesiones más tarde:"
-  echo -e "  ${CYAN}cd setup && python3 setup_session.py --lista${RESET}"
+  echo -e "  ${CYAN}./setup-sessions.sh --lista${RESET}"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -466,7 +488,7 @@ echo ""
 echo -e "  ${BOLD}Comandos útiles:${RESET}"
 echo -e "    cd docker && docker compose logs -f"
 echo -e "    cd docker && docker compose down"
-echo -e "    cd setup  && python3 setup_session.py --lista"
+echo -e "    ./setup-sessions.sh --lista"
 echo ""
 
 [[ -z "${ANTHROPIC_API_KEY:-}" ]] && \
