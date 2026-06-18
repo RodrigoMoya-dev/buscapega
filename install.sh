@@ -79,7 +79,7 @@ if [[ ! -f "$DOCS_DIR/portales.json" ]]; then
   log "Creando portales.json con lista por defecto..."
   cat > "$DOCS_DIR/portales.json" << 'PORTALES_EOF'
 [
-  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit"},
+  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit", "demo_active": true},
   {"name": "Tecnoempleo",    "url": "https://www.tecnoempleo.com",    "auto_apply": true,  "market": "España",        "session_key": "tecnoempleo"},
   {"name": "ChileTrabajos",  "url": "https://www.chiletrabajos.cl",   "auto_apply": true,  "market": "Chile",         "session_key": "chiletrabajos"},
   {"name": "Chumi-IT",       "url": "https://chumi-it.com",           "auto_apply": true,  "market": "LATAM/España",  "session_key": "chumiit"},
@@ -383,24 +383,40 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
     else
       cd "$SETUP_DIR"
       SETUP_DEPS_OK=true
+      VENV_DIR="$SETUP_DIR/.venv"
 
-      log "Instalando dependencias de setup..."
-      if ! python3 -m pip install -q -r requirements.txt 2>/tmp/wunen_pip_err.log; then
-        if ! python3 -m pip install -q --break-system-packages -r requirements.txt 2>>/tmp/wunen_pip_err.log; then
-          warn "Falló pip install. Detalle: $(tail -n 1 /tmp/wunen_pip_err.log)"
-          warn "Intenta manualmente: pip3 install -r setup/requirements.txt (o crea un venv)"
+      # Las dependencias de Playwright se instalan SIEMPRE dentro de un entorno
+      # virtual (venv) para evitar el error PEP 668 "externally-managed-environment"
+      # que rompe pip en macOS/Homebrew y Linux moderno.
+      log "Preparando entorno virtual de Python (setup/.venv)..."
+      if [[ ! -d "$VENV_DIR" ]]; then
+        if ! python3 -m venv "$VENV_DIR" 2>/tmp/wunen_venv_err.log; then
+          warn "No se pudo crear el venv. Detalle: $(tail -n 1 /tmp/wunen_venv_err.log)"
+          warn "En Debian/Ubuntu instala: sudo apt install python3-venv"
           SETUP_DEPS_OK=false
         fi
       fi
 
-      if $SETUP_DEPS_OK && ! python3 -c "import playwright" 2>/dev/null; then
+      VENV_PY="$VENV_DIR/bin/python"
+
+      if $SETUP_DEPS_OK; then
+        log "Instalando dependencias de setup en el venv..."
+        if ! "$VENV_PY" -m pip install -q --upgrade pip 2>/dev/null; then :; fi
+        if ! "$VENV_PY" -m pip install -q -r requirements.txt 2>/tmp/wunen_pip_err.log; then
+          warn "Falló pip install. Detalle: $(tail -n 1 /tmp/wunen_pip_err.log)"
+          warn "Intenta manualmente: cd setup && ./run_setup.sh --lista"
+          SETUP_DEPS_OK=false
+        fi
+      fi
+
+      if $SETUP_DEPS_OK && ! "$VENV_PY" -c "import playwright" 2>/dev/null; then
         warn "El paquete 'playwright' no quedó instalado tras pip install."
         SETUP_DEPS_OK=false
       fi
 
-      if $SETUP_DEPS_OK && ! python3 -m playwright install chromium 2>/tmp/wunen_pw_err.log; then
+      if $SETUP_DEPS_OK && ! "$VENV_PY" -m playwright install chromium 2>/tmp/wunen_pw_err.log; then
         warn "Falló playwright install. Detalle: $(tail -n 1 /tmp/wunen_pw_err.log)"
-        warn "Intenta manualmente: playwright install chromium"
+        warn "Intenta manualmente: cd setup && ./run_setup.sh --lista"
         SETUP_DEPS_OK=false
       fi
 
@@ -411,7 +427,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
       echo ""
       log "Portales disponibles para autenticar:"
-      python3 setup_session.py --lista
+      "$VENV_PY" setup_session.py --lista
       echo ""
 
       ask "¿Qué portales deseas autenticar? (Enter = todos los que falten, o escribe los nombres separados por coma)"
@@ -421,7 +437,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
       if [[ -z "$PORTALES_INPUT" ]]; then
         # Autenticar todos los que no tienen sesión
-        PORTALES_TO_AUTH=$(python3 - << 'PYEOF'
+        PORTALES_TO_AUTH=$("$VENV_PY" - << 'PYEOF'
 import json, sys
 from pathlib import Path
 cookies_dir = Path("cookies")
@@ -445,7 +461,7 @@ PYEOF
         echo ""
         log "[${IDX}/${TOTAL}] Autenticando portal: ${portal}"
         echo -e "  ${YELLOW}Se abrirá el navegador — completa el login con Google y ciérralo cuando termines.${RESET}"
-        python3 setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || warn "No se pudo capturar sesión de ${portal}"
+        "$VENV_PY" setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || warn "No se pudo capturar sesión de ${portal}"
       done
 
       echo ""
@@ -485,18 +501,40 @@ echo -e "    2. Ve a ${BOLD}Acerca de mí${RESET} y completa tu CV y perfil"
 echo -e "    3. Ve a ${BOLD}Portales${RESET} para ver el estado de las sesiones"
 echo -e "    4. Presiona ${BOLD}Buscar ofertas${RESET} en la home"
 echo ""
+echo -e "  ${BOLD}¿Cambiar teléfono o correo más tarde?${RESET}"
+echo -e "    Puedes editarlos en cualquier momento desde:"
+echo -e "    • La web → sección ${BOLD}Configuración${RESET}"
+echo -e "    • O el archivo ${CYAN}${SCRIPT_DIR}/documentos/settings.json${RESET}"
+echo ""
+echo -e "  ${BOLD}Vincular WhatsApp (Baileys — notificaciones):${RESET}"
+echo -e "    WhatsApp NO se configura en el instalador: requiere escanear un QR."
+echo -e "    Ejecuta este script y escanea el QR con tu teléfono:"
+echo -e "    ${CYAN}./whatsapp-qr.sh${RESET}              (local)"
+echo -e "    ${CYAN}./whatsapp-qr.sh presto 3001${RESET}  (servidor remoto Presto)"
+echo ""
+echo -e "  ${BOLD}Correo Gmail de postulaciones:${RESET}"
+echo -e "    Se pidió en este instalador. Para cambiarlo más tarde:"
+echo -e "    ${CYAN}./setup-gmail.sh${RESET}"
+echo ""
 echo -e "  ${BOLD}Comandos útiles:${RESET}"
 echo -e "    cd docker && docker compose logs -f"
 echo -e "    cd docker && docker compose down"
-echo -e "    ./setup-sessions.sh --lista"
+echo -e "    ./setup-sessions.sh --lista          # estado de sesiones de portales"
+echo -e "    ./whatsapp-qr.sh                     # vincular WhatsApp"
 echo ""
 
-[[ -z "${ANTHROPIC_API_KEY:-}" ]] && \
-  echo -e "  ${YELLOW}⚠  Sin API key — agrega ANTHROPIC_API_KEY en docker/.env y reinicia el backend.${RESET}\n"
-
-if command -v claude &> /dev/null; then
-  echo -e "  ${BOLD}Claude Code disponible:${RESET}"
-  echo -e "    ${CYAN}claude /valida <url>${RESET}   — verifica si un portal es automatizable"
-  echo -e "    ${CYAN}claude /autentica${RESET}       — configura sesiones de todos los portales"
+# La API key de Anthropic es OPCIONAL — recordatorio amable, no una advertencia de error
+if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+  echo -e "  ${CYAN}ℹ  Sin Anthropic API key (es ${BOLD}opcional${RESET}${CYAN}):${RESET}"
+  echo -e "     La evaluación de ofertas funciona igual con scoring básico por keywords."
+  echo -e "     Para evaluación con IA tienes dos opciones:"
+  echo -e "       • Usar ${BOLD}Claude Code${RESET} (recomendado — no requiere API key de pago), o"
+  echo -e "       • Agregar ANTHROPIC_API_KEY en ${CYAN}docker/.env${RESET} y reiniciar el backend."
   echo ""
 fi
+
+# Comandos de Claude Code — se muestran siempre, por si el usuario tiene Claude instalado
+echo -e "  ${BOLD}Si tienes Claude Code instalado, puedes usar estos comandos del proyecto:${RESET}"
+echo -e "    ${CYAN}claude /valida <url>${RESET}   — verifica si un portal es automatizable"
+echo -e "    ${CYAN}claude /autentica${RESET}      — configura sesiones de todos los portales"
+echo ""

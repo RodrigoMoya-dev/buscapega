@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import NavGreeting from "@/components/NavGreeting";
+import NavLinks from "@/components/NavLinks";
 
 export const metadata: Metadata = {
   title: "Wunen — Automatización de búsqueda laboral",
@@ -15,12 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav className="border-b border-gray-800 bg-gray-950 sticky top-0 z-10">
           <div className="max-w-5xl mx-auto px-4 flex gap-1 h-12 items-center">
             <Link href="/" className="text-blue-400 font-bold text-lg mr-4 hover:text-blue-300 transition-colors">Wunen</Link>
-            <NavLink href="/">Ofertas</NavLink>
-            <NavLink href="/validate">Validar sitio</NavLink>
-            <NavLink href="/authenticate">Portales</NavLink>
-            <NavLink href="/about">Configura tu perfil</NavLink>
-            <NavLink href="/respuestas">Auto respuestas</NavLink>
-            <NavLink href="/settings">Configuración</NavLink>
+            <NavLinks />
             <div className="ml-auto">
               <NavGreeting />
             </div>
@@ -29,16 +25,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
       </body>
     </html>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-md transition-colors"
-    >
-      {children}
-    </Link>
   );
 }

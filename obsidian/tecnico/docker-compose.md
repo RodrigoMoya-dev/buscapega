@@ -35,7 +35,14 @@ Orquesta los 5 servicios principales del sistema Wunen. Cada servicio corre en s
 - **Build:** desde `./frontend/Dockerfile`
 - **Puerto expuesto:** `3000`
 - **Depende de:** `backend`
-- **Hot reload:** montaje de `./frontend` como volumen para desarrollo
+- **Modo de ejecución:** **producción** — `command: sh -c "npm run build && npm start"`.
+  Se compila la app y se sirve optimizada en cada arranque. Se cambió desde `npm run dev`
+  porque el modo desarrollo compilaba cada ruta on-demand: el menú superior requería
+  varios clics para cambiar de vista y la consola mostraba peticiones fallidas a
+  `webpack hot-update`. El código se monta como volumen, así un redeploy siempre
+  reconstruye la versión más reciente.
+- **Nota tsconfig:** `target: ES2017` es obligatorio para que `next build` compile
+  (el spread de `Set` en `app/page.tsx` falla con el target por defecto ES5).
 
 ---
 

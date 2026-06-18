@@ -1,22 +1,41 @@
-## Sesión 16/06/2026 — Plan de trabajo
+* Revisa si todas las tareas de este documento están realizadas, y en caso de estarlo márcalas como completadas. 
 
-Diagnóstico hecho antes de codear (texto original de las tareas más abajo, intacto):
+---
 
-- [x] **Tarea A** (instalador): `install.sh` silenciaba errores de pip/playwright y seguía ejecutando `setup_session.py` aunque la instalación hubiera fallado → producía el traceback `ModuleNotFoundError: No module named 'playwright'`. Fix: reintenta con `--break-system-packages`, valida `import playwright`, y aborta la sección con instrucciones claras si algo falla, en vez de seguir.
-- [x] **Tarea B** (API key Anthropic opcional): confirmado que ya es opcional (evaluator.py cae a scorer local si falta `ANTHROPIC_API_KEY`). Se corrigió el texto del instalador: ahora dice "(opcional...; si usas Claude Code para evaluar las ofertas no la necesitas)".
-- [x] **Tarea C** (scripts a la raíz): Gmail ya se configura dentro de `install.sh` (no necesita script aparte). Se movió `setup/whatsapp-qr.sh` → `whatsapp-qr.sh` en la raíz (es autocontenido). Se creó `setup-sessions.sh` en la raíz como wrapper de `setup/setup_session.py` (ese script necesita quedarse en `setup/` por sus rutas relativas a `cookies/` y su propio `requirements.txt`). README.md, install.sh y CLAUDE.md actualizados con las nuevas rutas.
-- [x] **Tarea D** (nav web rota): `docker/frontend/app/layout.tsx` usaba `<a href>` planos en vez de `next/link` → recarga completa la página en cada click (de ahí el "doble clic" y los errores de webpack HMR en consola). Fix: ahora usa `<Link>` de Next.js.
-- [x] **Tarea E** (saludo "Hola, X"): `install.sh` nunca preguntaba el nombre del usuario ni lo escribía en `settings.json` (`user_name` quedaba hardcodeado en `""`), por eso `NavGreeting` nunca lo mostraba. Fix: se agregó pregunta "→ Tu nombre" al inicio de la configuración interactiva y se guarda en `settings.json`.
-- [x] **Tarea F** (validar sitio no valida estructura): `/api/portals/validate` no validaba el formato del dominio antes de hacer fetch; si la URL no resolvía, caía al branch "se asume permisivo" y quedaba como válida igual. Fix: se agregó regex de validación de dominio (`DOMAIN_RE`) que rechaza URLs sin estructura tipo `sitio.com` antes de cualquier fetch; el frontend (`validate/page.tsx`) ahora muestra ese error en rojo.
-- [x] **Tarea G** (error "Fetch API cannot load... access control checks"): era consecuencia de la Tarea D — la recarga completa de página cancelaba el fetch en curso y el navegador lo reportaba como error de CORS. Resuelto junto con D.
-- [x] **Tarea H** (findjobit activo por defecto): confirmado con el usuario → reordenado para que FindJobIT aparezca primero en la lista de portales (`documentos/portales.json`, `portals.py` DEFAULT_PORTAL_LIST, y el seed default de `install.sh`).
-- [x] **Tarea I** (chiletrabajos en respuestas automáticas): confirmado — sí se puede postular a ChileTrabajos (`docker/scraper/applicator/chiletrabajos.py` está completo: login, llenado de formulario, carta de presentación, captcha, etc., y está registrado en `registry.py`). El reporte del usuario era de antes de esta implementación. Se mantiene activo, sin cambios de código.
-- [x] **Tarea J** (teléfono/correo desde instalador en Configuración): ya implementado en sesión 15/06 (Tarea 3) y deployado hoy. Verificado: `GET /api/settings` en Presto responde con la estructura correcta (vacío porque aún no se reinstaló/configuró ahí; el mecanismo funciona).
+## Plan de trabajo — sesión 17/06/2026 (rama `feature_ui_mejoras_17062026`)
 
-**Deploy completado (16/06/2026):**
-- [x] Commit `e5db5b4` pusheado a gitea.presto rama `feature_ui_mejoras_15062026`
-- [x] Sincronizados `docker/backend/` y `docker/frontend/` a Presto, rebuild `backend` + `frontend` — ambos healthy (200 OK)
-- [x] Verificado orden de portales en `/api/portals`: FindJobIT queda primero
+### Instalador
+- [x] 1. Mensaje claro de que la Anthropic Key es OPCIONAL (no obligatoria) — también en el resumen final
+- [x] 2. Indicar que teléfono y correo se pueden editar luego en `documentos/settings.json` o en la web (Configuración)
+- [x] 3. Indicar el script para sincronizar WhatsApp (`./whatsapp-qr.sh`)
+- [x] 4. Mostrar siempre el apartado con los dos comandos de Claude Code (`/valida`, `/autentica`)
+- [x] 5. Arreglar fallo pip/playwright al configurar sesiones (ahora usa venv en `setup/.venv`)
+
+### Web
+- [x] 6. Mostrar el nombre de la persona ("Hola, Rodrigo") — ya implementado vía settings.json; se corrige al desplegar build actualizado
+- [x] 7. Validación de estructura de URL en "Validar sitio" (cliente + servidor) y manejo de error de red/CORS
+- [x] 8. Aclarar/generalizar las "keywords especiales para ChileTrabajos" en Auto respuestas
+- [x] 9. Explicar en la UI cómo funcionan las respuestas automáticas (no se obtienen de un sitio web)
+- [x] 10. Dejar findjobit.com activo por defecto (demo) — flag `demo_active` en backend
+- [x] 11. Menú superior: causa raíz era el modo dev (frontend ahora corre en modo producción) + resaltado de enlace activo
+- [x] 12. Configuración: teléfono y correo vienen del instalador (settings.json) — se corrige al desplegar
+- [x] 13. Quitar/aclarar que la API de Anthropic es necesaria (mensaje del instalador aclarado; la web no la pide)
+- [x] 14. Baileys (WhatsApp `./whatsapp-qr.sh`) y Gmail (`./setup-gmail.sh`): scripts en la raíz + aclaración en instalador
+
+### Cierre
+- [x] 15. Actualizar documentación en `/obsidian` (web/, tecnico/instalador.md, docker-compose.md)
+- [ ] 16. Commit + push a gitea (origin)
+- [ ] 17. Deploy a Presto
+
+---
+
+# Instalador 
+
+* Sigue sin aparecer algun mensaje que indique que agregar una Key de Anthropic es opcional, no obligatorio. 
+* Debiera indicar que en caso de no llenar los datos del teléfono y el correo, después puede modificarlos en --Colocar la ruta del archivo--
+* En el instalador falta indicar el script para poder sincronizar el teléfono con whatsapp
+* También sería bueno colocar un apartado de que, en el caso deque el usuario tenga Claude, mu
+* estre los dos comandos creados para este proyecto que funcionan con Claude Code. 
 
 ---
 
@@ -53,18 +72,4 @@ Traceback (most recent call last):
 
 ---
 
-## Sesión 15/06/2026 — Plan de trabajo
 
-- [x] **Tarea 3**: Datos del instalador (teléfono y correo) no aparecen en la web → Fix: además del `.env`, también escribir `documentos/settings.json` al final de `install.sh`
-- [x] **Tarea 2**: Validar formato de teléfono (solo dígitos, mínimo 10) y email (contiene @ y .) en `install.sh`
-- [x] **Tarea 1**: Script bash `setup/whatsapp-qr.sh` para obtener el QR de sincronización de WhatsApp + README.md con instrucciones
-- [x] **Tarea 4**: Subir archivos PDF de CV en "Acerca de mí": endpoints `POST /api/cv/es/upload` y `POST /api/cv/en/upload` en backend + componente CvPdfUpload en frontend
-
-**Deploy completado (16/06/2026):**
-- [x] Push a gitea.presto rama `feature_ui_mejoras_15062026` (commit f778653) — sí fue alcanzable desde la Mac local
-- [x] Sincronizados `docker/backend/` y `docker/frontend/` a `~/docker/wunen/` en Presto (no es repo git, se sincroniza por rsync)
-- [x] Rebuild `docker compose up -d --build backend frontend` en Presto — `wunen_backend` y `wunen_frontend` healthy (200 OK)
-
----
-
-## Tareas originales — Completadas

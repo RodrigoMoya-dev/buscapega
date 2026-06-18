@@ -21,6 +21,13 @@ function normalizeUrl(url: string): string {
   return trimmed;
 }
 
+// Valida que la URL tenga una estructura tipo "sitio.com" (dominio con punto y TLD).
+const DOMAIN_RE = /^https?:\/\/([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(:\d+)?(\/.*)?$/i;
+
+function isValidDomain(url: string): boolean {
+  return DOMAIN_RE.test(url);
+}
+
 export default function ValidatePage() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,9 +40,36 @@ export default function ValidatePage() {
     const normalized = normalizeUrl(url);
     if (!normalized) return;
     if (normalized !== url) setUrl(normalized);
+
+    // Validación de estructura en el cliente, antes de llamar al servidor.
+    if (!isValidDomain(normalized)) {
+      setResult({
+        url: normalized,
+        allows_scraping: false,
+        has_google_auth: false,
+        automatable: false,
+        notes: [],
+        error: "URL inválida — debe tener una estructura tipo 'sitio.com' (un dominio con punto y extensión, ej: wunen.app).",
+      });
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     const data = await validatePortal(normalized);
+    if (!data) {
+      // validatePortal devuelve null si la petición falló (red/CORS/servidor caído)
+      setResult({
+        url: normalized,
+        allows_scraping: false,
+        has_google_auth: false,
+        automatable: false,
+        notes: [],
+        error: "No se pudo contactar al servidor de validación. Verifica que el backend esté corriendo (docker compose ps) e inténtalo de nuevo.",
+      });
+      setLoading(false);
+      return;
+    }
     setResult(data);
     setLoading(false);
   }

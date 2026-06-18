@@ -81,7 +81,11 @@ services:
       - /app/.next
     ports:
       - "3000:3000"
-    command: npm run dev
+    # Modo producción: compila la app y la sirve optimizada. Evita la compilación
+    # on-demand del modo dev (que hacía que el menú requiriera varios clics y
+    # generaba peticiones webpack hot-update). Reconstruye desde el código montado
+    # en cada arranque, así un redeploy siempre sirve la versión más reciente.
+    command: sh -c "npm run build && npm start"
 
   whatsapp:
     build:
