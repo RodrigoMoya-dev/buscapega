@@ -31,6 +31,28 @@ de nuevo `install.sh`. La descarga fresca de hoy ya trae el instalador corregido
 
 ---
 
+## Resultado del `/prueba` (18/06/2026) — bug encontrado y corregido
+
+Se clonó `github/main` (HEAD `d3d72cd`) en `/demo` y se corrió `install.sh`. Confirmado:
+el instalador muestra el texto **OPCIONAL** de Anthropic, pregunta el nombre y escribe
+`settings.json` con `user_name`. **El `smoke-test.sh` detectó un fallo real:** el backend
+no levantaba.
+
+- **Síntoma:** `password authentication failed for user "wunen"` en los logs del backend.
+- **Causa:** `install.sh` generaba un `POSTGRES_PASSWORD` aleatorio **en cada corrida**,
+  pero el volumen de Postgres (`wunen_db_data`) conserva la contraseña de la PRIMERA
+  instalación. Al regenerarla, el backend ya no podía autenticar contra el volumen
+  existente. Afecta a re-instalaciones o a equipos con un volumen previo.
+- **Fix (rama `fix_install_db_password_18062026`):**
+  1. Si ya existe `docker/.env`, se **reutiliza** su `POSTGRES_PASSWORD` (no se regenera).
+  2. Tras arrancar, si el backend no responde y los logs muestran el error de
+     autenticación, el instalador imprime la remediación exacta
+     (`docker compose down -v && docker compose up -d`).
+- **Validación:** tras el fix, `./smoke-test.sh` da **6/6 OK** (backend, scraper,
+  frontend y `/api/settings` con `user_name`).
+
+---
+
 ## Cómo validar que nada se rompió después de un cambio
 
 Se agregó el script **`smoke-test.sh`** en la raíz del proyecto. Responde a la
