@@ -52,3 +52,6 @@ setup/profiles/brave/
 setup/profiles/vivaldi/
 # Notas personales (solo Gitea — no publicar en GitHub)
 obsidian/
+
+# Clon de pruebas local (no versionar)
+/test/

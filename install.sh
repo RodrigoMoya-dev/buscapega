@@ -79,12 +79,12 @@ if [[ ! -f "$DOCS_DIR/portales.json" ]]; then
   log "Creando portales.json con lista por defecto..."
   cat > "$DOCS_DIR/portales.json" << 'PORTALES_EOF'
 [
+  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit", "demo_active": true},
   {"name": "Tecnoempleo",    "url": "https://www.tecnoempleo.com",    "auto_apply": true,  "market": "España",        "session_key": "tecnoempleo"},
   {"name": "ChileTrabajos",  "url": "https://www.chiletrabajos.cl",   "auto_apply": true,  "market": "Chile",         "session_key": "chiletrabajos"},
   {"name": "Chumi-IT",       "url": "https://chumi-it.com",           "auto_apply": true,  "market": "LATAM/España",  "session_key": "chumiit"},
   {"name": "RemoteLatinos",  "url": "https://www.remotelatinos.com",  "auto_apply": true,  "market": "LATAM/EEUU",    "session_key": "remotelatinos"},
   {"name": "GetOnBrd",       "url": "https://www.getonbrd.com",       "auto_apply": true,  "market": "LATAM/Chile",   "session_key": "getonbrd"},
-  {"name": "FindJobIT",      "url": "https://findjobit.com",          "auto_apply": true,  "market": "Internacional", "session_key": "findjobit"},
   {"name": "Torre.ai",       "url": "https://torre.ai",               "auto_apply": false, "market": "LATAM/EEUU",    "session_key": null},
   {"name": "InfoJobs",       "url": "https://www.infojobs.net",       "auto_apply": false, "market": "España",        "session_key": null},
   {"name": "LaraJobs",       "url": "https://larajobs.com",           "auto_apply": false, "market": "Internacional", "session_key": null},
@@ -164,18 +164,47 @@ echo "Necesitamos algunos datos para configurar el sistema."
 echo "Presiona Enter para usar el valor por defecto (entre corchetes)."
 echo ""
 
-ask "→ Anthropic API Key (console.anthropic.com — necesaria para evaluación IA de ofertas):"
+ask "→ Tu nombre (se usará para saludarte en la web, ej: Rodrigo):"
+read -r -p "  > " USER_NAME
+[[ -z "$USER_NAME" ]] && warn "Sin nombre — podrás agregarlo luego en la web (Configuración) o en documentos/settings.json."
+echo ""
+
+ask "→ Anthropic API Key  [OPCIONAL — puedes dejarlo vacío y presionar Enter]:"
+echo -e "  ${CYAN}No es obligatoria.${RESET} La evaluación de ofertas funciona sin ella (scoring por"
+echo -e "  keywords). Para evaluación con IA, lo recomendado es usar ${BOLD}Claude Code${RESET} (no requiere"
+echo -e "  esta key). Solo complétala si prefieres usar la API de pago de Anthropic (console.anthropic.com)."
 read -r -p "  sk-ant-... > " ANTHROPIC_API_KEY
-[[ -z "$ANTHROPIC_API_KEY" ]] && warn "Sin API key — la evaluación usará scoring básico por keywords."
+[[ -z "$ANTHROPIC_API_KEY" ]] && ok "Sin API key (opción válida) — se usará scoring por keywords o Claude Code."
 echo ""
 
-ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
-read -r -p "  [56912345678] > " WHATSAPP_PHONE
-WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
+while true; do
+  ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
+  read -r -p "  [56912345678] > " WHATSAPP_PHONE
+  WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
+  WHATSAPP_PHONE_CLEAN=$(echo "$WHATSAPP_PHONE" | tr -dc '0-9')
+  if [[ ${#WHATSAPP_PHONE_CLEAN} -lt 10 ]]; then
+    warn "Teléfono inválido. Debe contener al menos 10 dígitos con código de país (ej: 56912345678)."
+  else
+    WHATSAPP_PHONE="$WHATSAPP_PHONE_CLEAN"
+    break
+  fi
+done
 echo ""
 
-ask "→ Correo Gmail para postulaciones automáticas (para portales que usan email):"
-read -r -p "  correo@gmail.com > " GMAIL_USER
+while true; do
+  ask "→ Correo Gmail para postulaciones automáticas (para portales que usan email):"
+  read -r -p "  correo@gmail.com > " GMAIL_USER
+  if [[ -z "$GMAIL_USER" ]]; then
+    warn "Sin correo — las postulaciones por email no funcionarán. ¿Continuar sin correo? (s/N)"
+    read -r -p "  > " SKIP_EMAIL
+    SKIP_EMAIL_L=$(echo "$SKIP_EMAIL" | tr '[:upper:]' '[:lower:]')
+    [[ "$SKIP_EMAIL_L" == "s" || "$SKIP_EMAIL_L" == "si" || "$SKIP_EMAIL_L" == "y" ]] && break
+  elif [[ "$GMAIL_USER" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
+    break
+  else
+    warn "Correo inválido. Usa el formato correo@dominio.com"
+  fi
+done
 echo ""
 
 GMAIL_APP_PASSWORD=""
@@ -227,6 +256,23 @@ FINDJOBIT_MIN_SCORE=50
 EOF
 
 ok ".env generado"
+
+# Escribir settings.json para que la interfaz web muestre los datos inmediatamente
+SETTINGS_JSON_PATH="$SCRIPT_DIR/documentos/settings.json"
+mkdir -p "$SCRIPT_DIR/documentos"
+if [[ ! -f "$SETTINGS_JSON_PATH" ]]; then
+  cat > "$SETTINGS_JSON_PATH" << EOF
+{
+  "user_name": "${USER_NAME:-}",
+  "whatsapp_phone": "${WHATSAPP_PHONE}",
+  "notification_email": "${GMAIL_USER:-}",
+  "reply_email": "${GMAIL_USER:-}"
+}
+EOF
+  ok "settings.json creado (visible en Configuración de la web)"
+else
+  warn "settings.json ya existe — no se sobreescribe. Actualiza teléfono y correo desde la web en Configuración."
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Validar puertos disponibles
@@ -332,27 +378,60 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
   if [[ ! -d "$SETUP_DIR" ]]; then
     warn "No se encontró la carpeta setup/. Omitiendo configuración de sesiones."
-    warn "Puedes hacerlo manualmente más tarde: cd setup && python3 setup_session.py --lista"
+    warn "Puedes hacerlo manualmente más tarde: ./setup-sessions.sh --lista"
   else
     # Verificar Python
     if ! command -v python3 &> /dev/null; then
       warn "Python 3 no está instalado. No se pueden configurar sesiones ahora."
-      warn "Instala Python 3 y luego ejecuta: cd setup && python3 setup_session.py --lista"
+      warn "Instala Python 3 y luego ejecuta: ./setup-sessions.sh --lista"
     else
       cd "$SETUP_DIR"
+      SETUP_DEPS_OK=true
+      VENV_DIR="$SETUP_DIR/.venv"
 
-      log "Instalando dependencias de setup..."
-      python3 -m pip install -q -r requirements.txt 2>/dev/null || {
-        warn "Falló pip install. Intenta manualmente: pip3 install -r setup/requirements.txt"
-      }
+      # Las dependencias de Playwright se instalan SIEMPRE dentro de un entorno
+      # virtual (venv) para evitar el error PEP 668 "externally-managed-environment"
+      # que rompe pip en macOS/Homebrew y Linux moderno.
+      log "Preparando entorno virtual de Python (setup/.venv)..."
+      if [[ ! -d "$VENV_DIR" ]]; then
+        if ! python3 -m venv "$VENV_DIR" 2>/tmp/wunen_venv_err.log; then
+          warn "No se pudo crear el venv. Detalle: $(tail -n 1 /tmp/wunen_venv_err.log)"
+          warn "En Debian/Ubuntu instala: sudo apt install python3-venv"
+          SETUP_DEPS_OK=false
+        fi
+      fi
 
-      python3 -m playwright install chromium 2>/dev/null || {
-        warn "Falló playwright install. Intenta manualmente: playwright install chromium"
-      }
+      VENV_PY="$VENV_DIR/bin/python"
+
+      if $SETUP_DEPS_OK; then
+        log "Instalando dependencias de setup en el venv..."
+        if ! "$VENV_PY" -m pip install -q --upgrade pip 2>/dev/null; then :; fi
+        if ! "$VENV_PY" -m pip install -q -r requirements.txt 2>/tmp/wunen_pip_err.log; then
+          warn "Falló pip install. Detalle: $(tail -n 1 /tmp/wunen_pip_err.log)"
+          warn "Intenta manualmente: cd setup && ./run_setup.sh --lista"
+          SETUP_DEPS_OK=false
+        fi
+      fi
+
+      if $SETUP_DEPS_OK && ! "$VENV_PY" -c "import playwright" 2>/dev/null; then
+        warn "El paquete 'playwright' no quedó instalado tras pip install."
+        SETUP_DEPS_OK=false
+      fi
+
+      if $SETUP_DEPS_OK && ! "$VENV_PY" -m playwright install chromium 2>/tmp/wunen_pw_err.log; then
+        warn "Falló playwright install. Detalle: $(tail -n 1 /tmp/wunen_pw_err.log)"
+        warn "Intenta manualmente: cd setup && ./run_setup.sh --lista"
+        SETUP_DEPS_OK=false
+      fi
+
+      if ! $SETUP_DEPS_OK; then
+        warn "Omitiendo configuración de sesiones por dependencias faltantes."
+        warn "Una vez resuelto, ejecuta: ./setup-sessions.sh --lista"
+      else
 
       echo ""
       log "Portales disponibles para autenticar:"
-      python3 setup_session.py --lista
+      "$VENV_PY" setup_session.py --lista
       echo ""
 
       ask "¿Qué portales deseas autenticar? (Enter = todos los que falten, o escribe los nombres separados por coma)"
@@ -362,7 +441,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
       if [[ -z "$PORTALES_INPUT" ]]; then
         # Autenticar todos los que no tienen sesión
-        PORTALES_TO_AUTH=$(python3 - << 'PYEOF'
+        PORTALES_TO_AUTH=$("$VENV_PY" - << 'PYEOF'
 import json, sys
 from pathlib import Path
 cookies_dir = Path("cookies")
@@ -386,17 +465,18 @@ PYEOF
         echo ""
         log "[${IDX}/${TOTAL}] Autenticando portal: ${portal}"
         echo -e "  ${YELLOW}Se abrirá el navegador — completa el login con Google y ciérralo cuando termines.${RESET}"
-        python3 setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || warn "No se pudo capturar sesión de ${portal}"
+        "$VENV_PY" setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || warn "No se pudo capturar sesión de ${portal}"
       done
 
       echo ""
       ok "Proceso de autenticación completado"
       cd "$SCRIPT_DIR"
+      fi
     fi
   fi
 else
   echo -e "  Puedes configurar sesiones más tarde:"
-  echo -e "  ${CYAN}cd setup && python3 setup_session.py --lista${RESET}"
+  echo -e "  ${CYAN}./setup-sessions.sh --lista${RESET}"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -425,18 +505,40 @@ echo -e "    2. Ve a ${BOLD}Acerca de mí${RESET} y completa tu CV y perfil"
 echo -e "    3. Ve a ${BOLD}Portales${RESET} para ver el estado de las sesiones"
 echo -e "    4. Presiona ${BOLD}Buscar ofertas${RESET} en la home"
 echo ""
+echo -e "  ${BOLD}¿Cambiar teléfono o correo más tarde?${RESET}"
+echo -e "    Puedes editarlos en cualquier momento desde:"
+echo -e "    • La web → sección ${BOLD}Configuración${RESET}"
+echo -e "    • O el archivo ${CYAN}${SCRIPT_DIR}/documentos/settings.json${RESET}"
+echo ""
+echo -e "  ${BOLD}Vincular WhatsApp (Baileys — notificaciones):${RESET}"
+echo -e "    WhatsApp NO se configura en el instalador: requiere escanear un QR."
+echo -e "    Ejecuta este script y escanea el QR con tu teléfono:"
+echo -e "    ${CYAN}./whatsapp-qr.sh${RESET}              (local)"
+echo -e "    ${CYAN}./whatsapp-qr.sh presto 3001${RESET}  (servidor remoto Presto)"
+echo ""
+echo -e "  ${BOLD}Correo Gmail de postulaciones:${RESET}"
+echo -e "    Se pidió en este instalador. Para cambiarlo más tarde:"
+echo -e "    ${CYAN}./setup-gmail.sh${RESET}"
+echo ""
 echo -e "  ${BOLD}Comandos útiles:${RESET}"
 echo -e "    cd docker && docker compose logs -f"
 echo -e "    cd docker && docker compose down"
-echo -e "    cd setup  && python3 setup_session.py --lista"
+echo -e "    ./setup-sessions.sh --lista          # estado de sesiones de portales"
+echo -e "    ./whatsapp-qr.sh                     # vincular WhatsApp"
 echo ""
 
-[[ -z "${ANTHROPIC_API_KEY:-}" ]] && \
-  echo -e "  ${YELLOW}⚠  Sin API key — agrega ANTHROPIC_API_KEY en docker/.env y reinicia el backend.${RESET}\n"
-
-if command -v claude &> /dev/null; then
-  echo -e "  ${BOLD}Claude Code disponible:${RESET}"
-  echo -e "    ${CYAN}claude /valida <url>${RESET}   — verifica si un portal es automatizable"
-  echo -e "    ${CYAN}claude /autentica${RESET}       — configura sesiones de todos los portales"
+# La API key de Anthropic es OPCIONAL — recordatorio amable, no una advertencia de error
+if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+  echo -e "  ${CYAN}ℹ  Sin Anthropic API key (es ${BOLD}opcional${RESET}${CYAN}):${RESET}"
+  echo -e "     La evaluación de ofertas funciona igual con scoring básico por keywords."
+  echo -e "     Para evaluación con IA tienes dos opciones:"
+  echo -e "       • Usar ${BOLD}Claude Code${RESET} (recomendado — no requiere API key de pago), o"
+  echo -e "       • Agregar ANTHROPIC_API_KEY en ${CYAN}docker/.env${RESET} y reiniciar el backend."
   echo ""
 fi
+
+# Comandos de Claude Code — se muestran siempre, por si el usuario tiene Claude instalado
+echo -e "  ${BOLD}Si tienes Claude Code instalado, puedes usar estos comandos del proyecto:${RESET}"
+echo -e "    ${CYAN}claude /valida <url>${RESET}   — verifica si un portal es automatizable"
+echo -e "    ${CYAN}claude /autentica${RESET}      — configura sesiones de todos los portales"
+echo ""

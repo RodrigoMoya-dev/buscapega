@@ -1,6 +1,7 @@
 import json
 import os
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 from typing import Any
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
@@ -13,6 +14,9 @@ CV_EN_PATH = os.path.join(DATA_DIR, "cv_data_en.json")
 PROFILE_PATH = os.path.join(DATA_DIR, "perfil_data.json")
 PERFIL_MD_PATH = os.path.join(DATA_DIR, "perfil.md")
 PERFIL_ROOT_PATH = os.path.join(WUNEN_DIR, "perfil.md")  # lo lee el evaluador
+
+CV_ES_PDF_PATH = os.path.join(DATA_DIR, "cv_es.pdf")
+CV_EN_PDF_PATH = os.path.join(DATA_DIR, "cv_en.pdf")
 
 DEFAULT_CV = {
     "name": "",
@@ -259,6 +263,52 @@ def save_cv_en(data: dict):
     with open(cv_en_md_path, "w", encoding="utf-8") as f:
         f.write(md)
     return {"status": "ok"}
+
+
+@router.post("/es/upload")
+async def upload_cv_es(file: UploadFile = File(...)):
+    if file.content_type not in ("application/pdf", "application/octet-stream") and not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    content = await file.read()
+    with open(CV_ES_PDF_PATH, "wb") as f:
+        f.write(content)
+    return {"status": "ok", "filename": "cv_es.pdf"}
+
+
+@router.get("/es/pdf")
+def get_cv_es_pdf():
+    if not os.path.exists(CV_ES_PDF_PATH):
+        raise HTTPException(status_code=404, detail="CV en español no encontrado")
+    return FileResponse(CV_ES_PDF_PATH, media_type="application/pdf", filename="cv_es.pdf")
+
+
+@router.get("/es/pdf/exists")
+def cv_es_pdf_exists():
+    return {"exists": os.path.exists(CV_ES_PDF_PATH)}
+
+
+@router.post("/en/upload")
+async def upload_cv_en(file: UploadFile = File(...)):
+    if file.content_type not in ("application/pdf", "application/octet-stream") and not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    content = await file.read()
+    with open(CV_EN_PDF_PATH, "wb") as f:
+        f.write(content)
+    return {"status": "ok", "filename": "cv_en.pdf"}
+
+
+@router.get("/en/pdf")
+def get_cv_en_pdf():
+    if not os.path.exists(CV_EN_PDF_PATH):
+        raise HTTPException(status_code=404, detail="CV in English not found")
+    return FileResponse(CV_EN_PDF_PATH, media_type="application/pdf", filename="cv_en.pdf")
+
+
+@router.get("/en/pdf/exists")
+def cv_en_pdf_exists():
+    return {"exists": os.path.exists(CV_EN_PDF_PATH)}
 
 
 @router.get("/profile")
