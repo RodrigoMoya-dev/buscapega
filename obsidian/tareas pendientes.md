@@ -24,8 +24,12 @@
 
 ### Cierre
 - [x] 15. Actualizar documentación en `/obsidian` (web/, tecnico/instalador.md, docker-compose.md)
-- [ ] 16. Commit + push a gitea (origin)
-- [ ] 17. Deploy a Presto
+- [x] 16. Commit + push a gitea (origin) — rama `feature_ui_mejoras_17062026`
+- [x] 17. Deploy a Presto — backend+frontend recreados; FindJobIT activo, validate OK, frontend en modo producción
+
+> Nota deploy: Presto usa puertos propios (frontend 3020, backend 8020, scraper 8021,
+> whatsapp 3002, db 5433) por conflicto con gitea (3000) y convoy (8000). El compose
+> desplegado conserva esos puertos; el compose del repo mantiene los puertos por defecto.
 
 ---
 
