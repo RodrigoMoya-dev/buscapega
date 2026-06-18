@@ -164,13 +164,17 @@ echo "Necesitamos algunos datos para configurar el sistema."
 echo "Presiona Enter para usar el valor por defecto (entre corchetes)."
 echo ""
 
-ask "→ Tu nombre (para personalizar la interfaz, ej: Rodrigo):"
+ask "→ Tu nombre (se usará para saludarte en la web, ej: Rodrigo):"
 read -r -p "  > " USER_NAME
+[[ -z "$USER_NAME" ]] && warn "Sin nombre — podrás agregarlo luego en la web (Configuración) o en documentos/settings.json."
 echo ""
 
-ask "→ Anthropic API Key (opcional — console.anthropic.com; si usas Claude Code para evaluar las ofertas no la necesitas):"
+ask "→ Anthropic API Key  [OPCIONAL — puedes dejarlo vacío y presionar Enter]:"
+echo -e "  ${CYAN}No es obligatoria.${RESET} La evaluación de ofertas funciona sin ella (scoring por"
+echo -e "  keywords). Para evaluación con IA, lo recomendado es usar ${BOLD}Claude Code${RESET} (no requiere"
+echo -e "  esta key). Solo complétala si prefieres usar la API de pago de Anthropic (console.anthropic.com)."
 read -r -p "  sk-ant-... > " ANTHROPIC_API_KEY
-[[ -z "$ANTHROPIC_API_KEY" ]] && warn "Sin API key — la evaluación usará scoring básico por keywords (o Claude Code, si lo usas)."
+[[ -z "$ANTHROPIC_API_KEY" ]] && ok "Sin API key (opción válida) — se usará scoring por keywords o Claude Code."
 echo ""
 
 while true; do
