@@ -227,8 +227,21 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Generar archivo .env
 # ─────────────────────────────────────────────────────────────────────────────
-POSTGRES_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9_' < /dev/urandom | head -c 24 2>/dev/null || echo "wunen_$(date +%s)")
 ENV_FILE="$DOCKER_DIR/.env"
+
+# Reutilizar la contraseña de Postgres si ya existe un .env. El volumen de la base de
+# datos se inicializa con la contraseña de la PRIMERA instalación y NO cambia aunque el
+# .env se regenere; generar una nueva rompería la autenticación del backend contra ese
+# volumen ("password authentication failed for user wunen").
+POSTGRES_PASSWORD=""
+if [[ -f "$ENV_FILE" ]]; then
+  POSTGRES_PASSWORD=$(grep -E '^POSTGRES_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
+fi
+if [[ -n "$POSTGRES_PASSWORD" ]]; then
+  log "Reutilizando POSTGRES_PASSWORD del .env existente (coincide con el volumen de la DB)"
+else
+  POSTGRES_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9_' < /dev/urandom | head -c 24 2>/dev/null || echo "wunen_$(date +%s)")
+fi
 
 [[ -f "$ENV_FILE" ]] && cp "$ENV_FILE" "$ENV_FILE.bak" && warn "Backup del .env anterior guardado como .env.bak"
 
@@ -360,7 +373,15 @@ until curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1; do
   WAITED=$((WAITED + 2))
 done
 echo ""
-curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1 && ok "Backend disponible en http://localhost:${BACKEND_PORT}"
+if curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1; then
+  ok "Backend disponible en http://localhost:${BACKEND_PORT}"
+elif $COMPOSE_CMD logs backend 2>/dev/null | grep -q "password authentication failed"; then
+  # Volumen de DB de una instalación previa con OTRA contraseña: el backend no puede conectar.
+  warn "El backend no pudo conectar a la base de datos: la contraseña no coincide."
+  warn "Existe un volumen de Postgres de una instalación anterior con otra contraseña."
+  echo -e "  ${BOLD}Para resetear la base de datos${RESET} (se borran ofertas/datos previos) ejecuta:"
+  echo -e "    ${CYAN}cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v && $COMPOSE_CMD up -d${RESET}"
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 8. Configurar sesiones de portales (opcional)

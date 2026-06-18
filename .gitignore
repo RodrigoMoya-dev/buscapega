@@ -52,5 +52,6 @@ setup/profiles/brave/
 setup/profiles/vivaldi/
 obsidian/.obsidian/
 
-# Clon de pruebas local (no versionar)
+# Clones de pruebas locales (no versionar)
 /test/
+/demo/
