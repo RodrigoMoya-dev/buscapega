@@ -6,7 +6,7 @@ import { getPortals, Portal } from "@/lib/api";
 export default function AuthenticatePage() {
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -17,10 +17,20 @@ export default function AuthenticatePage() {
 
   useEffect(() => { load(); }, []);
 
+  async function handleCopy(text: string, key: string) {
+    await navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
   const autoApplyPortals = portals.filter((p) => p.auto_apply);
   const manualPortals = portals.filter((p) => !p.auto_apply);
   const activeCount = autoApplyPortals.filter((p) => p.session_active).length;
   const inactiveCount = autoApplyPortals.filter((p) => !p.session_active).length;
+
+  const cmd1 = "python3 setup/setup_session.py --lista";
+  const cmd2 = "python3 setup/setup_session.py <portal>";
+  const cmdClaude = "claude /autentica";
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -30,16 +40,19 @@ export default function AuthenticatePage() {
         Para activar un portal, captura la sesión desde la máquina local.
       </p>
 
-      {/* Comando Claude */}
+      {/* Tip comandos */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
-        <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">Para autenticar portales inactivos:</p>
-        <code className="text-cyan-400 text-sm font-mono bg-gray-950 px-3 py-2 rounded block mt-2">
-          python3 setup/setup_session.py --lista
-        </code>
-        <code className="text-cyan-400 text-sm font-mono bg-gray-950 px-3 py-2 rounded block mt-2">
-          python3 setup/setup_session.py &lt;portal&gt;
-        </code>
-        <p className="text-xs text-gray-600 mt-2">O usando el comando Claude: <span className="text-cyan-600">claude /autentica</span></p>
+        <p className="text-xs text-gray-500 mb-3">
+          Tip: Para autenticar portales inactivos, ejecuta estos comandos desde la terminal del proyecto:
+        </p>
+        <div className="space-y-2">
+          <CopyRow text={cmd1} copied={copied} id="cmd1" onCopy={handleCopy} />
+          <CopyRow text={cmd2} copied={copied} id="cmd2" onCopy={handleCopy} />
+        </div>
+        <p className="text-xs text-gray-600 mt-3">
+          O usando Claude Code (alternativa):
+        </p>
+        <CopyRow text={cmdClaude} copied={copied} id="cmdClaude" onCopy={handleCopy} />
       </div>
 
       {/* Resumen */}
@@ -85,6 +98,22 @@ export default function AuthenticatePage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function CopyRow({ text, copied, id, onCopy }: { text: string; copied: string | null; id: string; onCopy: (text: string, id: string) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <code className="flex-1 text-cyan-400 text-sm font-mono bg-gray-950 px-3 py-2 rounded">
+        {text}
+      </code>
+      <button
+        onClick={() => onCopy(text, id)}
+        className="shrink-0 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-2 rounded transition-colors"
+      >
+        {copied === id ? "✓ Copiado" : "Copiar"}
+      </button>
     </div>
   );
 }

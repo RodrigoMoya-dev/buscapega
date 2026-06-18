@@ -73,7 +73,9 @@ services:
       - /app/.next
     ports:
       - "3000:3000"
-    command: npm run dev
+    # Modo producción: evita la compilación on-demand del modo dev (menú lento /
+    # webpack hot-update). Reconstruye desde el código montado en cada arranque.
+    command: sh -c "npm run build && npm start"
 
 volumes:
   db_data:
