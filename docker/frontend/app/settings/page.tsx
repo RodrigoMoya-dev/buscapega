@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSettings, saveSettings } from "@/lib/api";
+import { getSettings, saveSettings, testWhatsapp } from "@/lib/api";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
+    user_name: "",
     whatsapp_phone: "",
     notification_email: "",
     reply_email: "",
@@ -12,10 +13,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [testingWa, setTestingWa] = useState(false);
+  const [waTestResult, setWaTestResult] = useState<{ status: string; message: string } | null>(null);
 
   useEffect(() => {
     getSettings().then((data) => {
-      if (data) setForm({ ...form, ...data });
+      if (data) setForm((prev) => ({ ...prev, ...data }));
       setLoading(false);
     });
   }, []);
@@ -26,6 +29,15 @@ export default function SettingsPage() {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function handleTestWhatsapp() {
+    setTestingWa(true);
+    setWaTestResult(null);
+    const result = await testWhatsapp();
+    setWaTestResult(result ?? { status: "error", message: "Sin respuesta del servidor" });
+    setTestingWa(false);
+    setTimeout(() => setWaTestResult(null), 5000);
   }
 
   function set(field: string, val: string) {
@@ -43,13 +55,31 @@ export default function SettingsPage() {
         <div className="text-gray-500 text-center py-10">Cargando...</div>
       ) : (
         <div className="space-y-8">
+          {/* Nombre de usuario */}
+          <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <h2 className="text-base font-semibold text-white mb-1">Tu nombre</h2>
+            <p className="text-gray-500 text-xs mb-5">
+              Se muestra en el saludo del menú superior.
+            </p>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">Nombre</label>
+              <input
+                type="text"
+                value={form.user_name}
+                onChange={(e) => set("user_name", e.target.value)}
+                placeholder="Rodrigo"
+                className="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-600"
+              />
+            </div>
+          </section>
+
           {/* WhatsApp */}
           <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <h2 className="text-base font-semibold text-white mb-1">Notificaciones WhatsApp</h2>
             <p className="text-gray-500 text-xs mb-5">
-              Número de teléfono que recibirá las notificaciones de postulaciones via Baileys.
+              Número que recibirá las notificaciones de postulaciones via Baileys.
             </p>
-            <div>
+            <div className="mb-4">
               <label className="block text-xs text-gray-500 mb-1.5">Número de teléfono</label>
               <input
                 type="tel"
@@ -60,13 +90,39 @@ export default function SettingsPage() {
               />
               <p className="text-gray-600 text-xs mt-1.5">Incluir código de país (ej: +56 para Chile)</p>
             </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleTestWhatsapp}
+                disabled={testingWa || !form.whatsapp_phone.trim()}
+                className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors border border-gray-700"
+              >
+                {testingWa ? "Enviando..." : "Enviar mensaje de prueba"}
+              </button>
+              {waTestResult && (
+                <span className={`text-sm ${waTestResult.status === "ok" ? "text-green-400" : "text-red-400"}`}>
+                  {waTestResult.message}
+                </span>
+              )}
+            </div>
+
+            {/* Setup WhatsApp */}
+            <div className="mt-6 border-t border-gray-800 pt-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Configurar WhatsApp (Baileys)</p>
+              <ol className="space-y-2 text-xs text-gray-500">
+                <li><span className="text-gray-400 font-medium">1.</span> Accede al servidor: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">ssh rodrigo@presto</code></li>
+                <li><span className="text-gray-400 font-medium">2.</span> Entra al contenedor WhatsApp: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">docker exec -it wunen_whatsapp sh</code></li>
+                <li><span className="text-gray-400 font-medium">3.</span> Ejecuta el script de vinculación: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">node link.js</code></li>
+                <li><span className="text-gray-400 font-medium">4.</span> Escanea el código QR con tu WhatsApp (Ajustes → Dispositivos vinculados)</li>
+                <li><span className="text-gray-400 font-medium">5.</span> Usa el botón "Enviar mensaje de prueba" para verificar</li>
+              </ol>
+            </div>
           </section>
 
           {/* Email */}
           <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <h2 className="text-base font-semibold text-white mb-1">Correo de postulaciones</h2>
             <p className="text-gray-500 text-xs mb-5">
-              Correo usado para el envío y recepción de respuestas de las postulaciones automáticas.
+              Correo usado para envío y recepción de respuestas en postulaciones automáticas.
             </p>
             <div className="space-y-4">
               <div>
@@ -89,6 +145,17 @@ export default function SettingsPage() {
                   className="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-600"
                 />
               </div>
+            </div>
+
+            {/* Setup Gmail */}
+            <div className="mt-6 border-t border-gray-800 pt-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Configurar envío con Gmail</p>
+              <ol className="space-y-2 text-xs text-gray-500">
+                <li><span className="text-gray-400 font-medium">1.</span> Ve a <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">myaccount.google.com/apppasswords</a> y genera una contraseña de aplicación</li>
+                <li><span className="text-gray-400 font-medium">2.</span> En el servidor, edita <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">docker/.env</code> y agrega:</li>
+                <li className="pl-4"><code className="text-cyan-400 bg-gray-800 px-2 py-1 rounded block mt-1">GMAIL_USER=tucorreo@gmail.com<br/>GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx</code></li>
+                <li><span className="text-gray-400 font-medium">3.</span> Reinicia el scraper: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">docker compose up -d scraper</code></li>
+              </ol>
             </div>
           </section>
 
