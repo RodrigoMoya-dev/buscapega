@@ -16,7 +16,7 @@ WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
 PORTALES_PATH = os.path.join(WUNEN_DIR, "documentos", "portales.json")
 
 DEFAULT_PORTAL_LIST = [
-    {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit"},
+    {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit", "demo_active": True},
     {"name": "Tecnoempleo",   "url": "https://www.tecnoempleo.com",   "auto_apply": True,  "market": "España",        "session_key": "tecnoempleo"},
     {"name": "ChileTrabajos", "url": "https://www.chiletrabajos.cl",  "auto_apply": True,  "market": "Chile",         "session_key": "chiletrabajos"},
     {"name": "Chumi-IT",      "url": "https://chumi-it.com",          "auto_apply": True,  "market": "LATAM/España",  "session_key": "chumiit"},
@@ -48,6 +48,16 @@ def _cookie_active(session_key: str | None) -> bool:
     return os.path.exists(path)
 
 
+# Portales que se muestran como "activos" por defecto para demostrar el flujo,
+# aunque no exista una sesión real capturada. Funciona aunque el portales.json
+# instalado no incluya el flag "demo_active".
+DEMO_ACTIVE_KEYS = {"findjobit"}
+
+
+def _is_demo_active(portal: dict) -> bool:
+    return bool(portal.get("demo_active")) or portal.get("session_key") in DEMO_ACTIVE_KEYS
+
+
 @router.get("")
 def list_portals(db: Session = Depends(get_db)):
     portal_list = _load_portal_list()
@@ -67,8 +77,10 @@ def list_portals(db: Session = Depends(get_db)):
     result = []
     for p in portal_list:
         key = p["name"].lower().replace(" ", "").replace("-", "").replace(".", "")
-        cookie_active = _cookie_active(p.get("session_key"))
-        portal_data = {k: v for k, v in p.items() if k != "session_key"}
+        # demo_active deja un portal marcado como activo para demostrar el flujo
+        # aunque no haya una sesión real capturada (ej: FindJobIT por defecto).
+        cookie_active = _cookie_active(p.get("session_key")) or _is_demo_active(p)
+        portal_data = {k: v for k, v in p.items() if k not in ("session_key", "demo_active")}
         result.append({
             **portal_data,
             "session_active": cookie_active,

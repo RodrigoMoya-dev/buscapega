@@ -83,7 +83,7 @@ export default function RespuestasPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Respuestas automáticas</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Wunen usa estas respuestas para completar formularios de postulación
+            Respuestas que tú defines para que Wunen complete los formularios de postulación
           </p>
         </div>
         <button
@@ -94,9 +94,26 @@ export default function RespuestasPage() {
         </button>
       </div>
 
-      {/* Tip de keywords especiales */}
+      {/* Cómo funcionan las respuestas automáticas */}
+      <div className="mb-6 p-4 bg-blue-950 border border-blue-800 rounded-xl text-sm">
+        <p className="font-medium text-blue-300 mb-1">¿Cómo funcionan?</p>
+        <p className="text-blue-400 text-xs leading-relaxed">
+          Estas respuestas <span className="font-semibold">las defines tú</span> aquí — Wunen no las
+          obtiene de ningún sitio web. Cuando Wunen postula automáticamente y un formulario tiene
+          preguntas (ej: "¿Cuál es tu pretensión de renta?"), busca la respuesta cuyas{" "}
+          <span className="font-semibold">keywords</span> coincidan con el texto del campo y la
+          escribe por ti. Si ninguna coincide, ese campo se deja vacío o la postulación queda
+          marcada como "parcial" para que la completes a mano.
+        </p>
+      </div>
+
+      {/* Tip de keywords especiales (opcional, según el portal) */}
       <div className="mb-6 p-4 bg-gray-900 border border-gray-700 rounded-xl text-sm text-gray-400">
-        <p className="font-medium text-gray-300 mb-1">Keywords especiales para ChileTrabajos</p>
+        <p className="font-medium text-gray-300 mb-1">Keywords especiales (opcionales)</p>
+        <p className="text-xs text-gray-500 mb-2">
+          Algunos portales tienen campos fijos que puedes responder con keywords reservadas.
+          Solo se usan si postulas a ese portal; si no lo usas, ignóralas. Ejemplos para ChileTrabajos:
+        </p>
         <div className="flex flex-wrap gap-3 mt-2">
           {[
             { kw: "pretensiones_renta", desc: 'Renta pretendida. Respuesta: "1500000"' },
