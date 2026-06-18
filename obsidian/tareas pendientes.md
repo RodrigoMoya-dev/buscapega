@@ -14,8 +14,9 @@
 - [x] A. Reforzar que la Anthropic Key es OPCIONAL en el prompt del instalador (texto más explícito + [OPCIONAL])
 - [x] B. Verificar pipeline del nombre de usuario — correcto en la rama (backend monta `..:/wunen`, lee settings.json)
 - [x] C. Confirmar que el instalador pregunta el nombre (ya existe en la rama, línea 167)
-- [ ] D. Mergear `feature_ui_mejoras_17062026` → `main` en gitea y github
+- [ ] D. Mergear `feature_ui_mejoras_17062026` → `main` en gitea y github (EXCLUYENDO obsidian/ — main es público code-only)
 - [ ] E. Commit + push a gitea y github
+- [x] F. Actualizar `journal.md`: regla de mergear cada rama feature/fix a `main` tras subirla (sin incluir obsidian/)
 
 ---
 
