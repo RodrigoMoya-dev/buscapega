@@ -14,9 +14,13 @@
 - [x] A. Reforzar que la Anthropic Key es OPCIONAL en el prompt del instalador (texto más explícito + [OPCIONAL])
 - [x] B. Verificar pipeline del nombre de usuario — correcto en la rama (backend monta `..:/wunen`, lee settings.json)
 - [x] C. Confirmar que el instalador pregunta el nombre (ya existe en la rama, línea 167)
-- [ ] D. Mergear `feature_ui_mejoras_17062026` → `main` en gitea y github (EXCLUYENDO obsidian/ — main es público code-only)
-- [ ] E. Commit + push a gitea y github
+- [x] D. Mergear `feature_ui_mejoras_17062026` → `main` en gitea y github (commit 5c49458, obsidian/ excluido ✓)
+- [x] E. Commit + push a gitea y github (rama feature y main en ambos remotos)
 - [x] F. Actualizar `journal.md`: regla de mergear cada rama feature/fix a `main` tras subirla (sin incluir obsidian/)
+
+> ⚠️ SEGURIDAD: `.claude/commands/journal.md` contiene la contraseña de gitea en texto plano y
+> ya estaba publicada en el `main` de GitHub (público) desde antes. Recomendado: rotar la
+> contraseña de gitea y considerar quitar el archivo del repo público / limpiar historial.
 
 ---
 
