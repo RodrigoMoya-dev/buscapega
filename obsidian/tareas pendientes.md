@@ -1,15 +1,25 @@
-* Revisa si todas las tareas de este documento están realizadas, y en caso de estarlo márcalas como completadas. 
+* En el instalador sigue sin aparecer el mensaje "opcional" en la clave de Anthropic. Este es el texto que aparece " **Anthropic API Key (console.anthropic.com — necesaria para evaluación IA de ofertas):**"
+
+* Revisé el punto 6 de "Web", y aun no aparece el nombre de usuario, pese a que el proyecto fue recién descargado de github y corrido el instalador.¿Puedes ver que ocurre? Y lo otro ¿Puedes agregar en el mismo instalador, una opción de ingreso para colocar el nombre que se usará para después referirse al usuario en la web? 
 
 ---
 
-## Plan de trabajo — sesión 17/06/2026 (rama `feature_ui_mejoras_17062026`)
+## Plan de trabajo — sesión 17/06/2026 (continuación)
 
-### Instalador
-- [x] 1. Mensaje claro de que la Anthropic Key es OPCIONAL (no obligatoria) — también en el resumen final
-- [x] 2. Indicar que teléfono y correo se pueden editar luego en `documentos/settings.json` o en la web (Configuración)
-- [x] 3. Indicar el script para sincronizar WhatsApp (`./whatsapp-qr.sh`)
-- [x] 4. Mostrar siempre el apartado con los dos comandos de Claude Code (`/valida`, `/autentica`)
-- [x] 5. Arreglar fallo pip/playwright al configurar sesiones (ahora usa venv en `setup/.venv`)
+> CAUSA RAÍZ: el usuario descargó `main` de GitHub, que está desactualizado. Las correcciones
+> de esta sesión están en la rama `feature_ui_mejoras_17062026`, nunca mergeada a `main`.
+> `main` (viejo) NO pregunta el nombre, NO escribe settings.json y muestra el texto Anthropic
+> "necesaria para evaluación IA". Todo eso ya está corregido en la rama feature.
+
+- [x] A. Reforzar que la Anthropic Key es OPCIONAL en el prompt del instalador (texto más explícito + [OPCIONAL])
+- [x] B. Verificar pipeline del nombre de usuario — correcto en la rama (backend monta `..:/wunen`, lee settings.json)
+- [x] C. Confirmar que el instalador pregunta el nombre (ya existe en la rama, línea 167)
+- [ ] D. Mergear `feature_ui_mejoras_17062026` → `main` en gitea y github
+- [ ] E. Commit + push a gitea y github
+
+---
+
+
 
 ### Web
 - [x] 6. Mostrar el nombre de la persona ("Hola, Rodrigo") — ya implementado vía settings.json; se corrige al desplegar build actualizado
