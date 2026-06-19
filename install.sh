@@ -153,6 +153,14 @@ fi
 
 ok "Docker disponible: $(docker --version | head -1)"
 
+# El binario existe, pero el daemon puede estar apagado (Docker Desktop cerrado).
+# Sin daemon, los 'docker compose build/up' fallan más adelante con errores confusos.
+if ! docker info &> /dev/null 2>&1; then
+  error "Docker está instalado pero el daemon no responde.
+  Inicia Docker Desktop (o el servicio docker) y vuelve a ejecutar install.sh."
+fi
+ok "Docker daemon activo"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Configuración interactiva
 # ─────────────────────────────────────────────────────────────────────────────
@@ -294,10 +302,28 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 log "Verificando disponibilidad de puertos..."
 
+# Detectar una instalación previa de Wunen (contenedores ya creados o corriendo).
+# Sirve para no asustar con falsos "puerto en uso" cuando el puerto lo ocupa el
+# propio Wunen: en ese caso es una reinstalación y 'compose up -d' lo recrea.
+WUNEN_EXISTING=$(docker ps -a --filter "name=wunen_" --format "{{.Names}}" 2>/dev/null || true)
+if [[ -n "$WUNEN_EXISTING" ]]; then
+  warn "Detecté una instalación previa de Wunen (contenedores existentes):"
+  echo "$WUNEN_EXISTING" | sed 's/^/      • /'
+  echo -e "  ${CYAN}Se recrearán con la nueva configuración al iniciar los servicios.${RESET}"
+  echo -e "  ${CYAN}Tus datos (base de datos, cookies) se conservan en los volúmenes.${RESET}"
+  echo ""
+fi
+
 check_port() {
   local port=$1
   local name=$2
   if lsof -iTCP:"$port" -sTCP:LISTEN -n -P &>/dev/null 2>&1; then
+    # ¿El puerto lo ocupa un contenedor de Wunen ya corriendo? Entonces es una
+    # reinstalación, no un conflicto real: 'compose up -d' recreará el contenedor.
+    if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^wunen_.*:${port}->"; then
+      ok "Puerto ${port} (${name}) lo usa tu Wunen actual — se recreará al reiniciar"
+      return
+    fi
     warn "Puerto ${port} (${name}) ya está en uso:"
     lsof -iTCP:"$port" -sTCP:LISTEN -n -P 2>/dev/null | tail -1
     echo ""
