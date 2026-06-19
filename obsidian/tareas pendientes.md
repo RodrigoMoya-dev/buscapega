@@ -19,8 +19,10 @@
 - [x] Prompt de WhatsApp en `install.sh` ahora aclara que solo guarda el número y que
       la vinculación se hace después con `./whatsapp-qr.sh` (QR).
 - [x] Documentación actualizada en `obsidian/tecnico/instalador.md`.
-- [ ] Subir a gitea + github, mergear a `main` (sin `obsidian/`).
-- [ ] `/test`.
+- [x] Subido a gitea + github (rama) y mergeado a `main` (sin `obsidian/`), `main` pusheado a ambos.
+- [x] Validación: `./smoke-test.sh --static` → 2 OK, 0 fallidas. La fase dinámica no aplica
+      (no hay servicios locales arriba) y mis cambios son a scripts de instalación/setup,
+      no a los servicios en runtime. `setup_session.py` compila (`py_compile`).
 
 ---
 
