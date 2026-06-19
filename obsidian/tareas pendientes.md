@@ -34,4 +34,5 @@
 - [x] **`check_port` sin falsos positivos:** los puertos ocupados por contenedores de Wunen
       corriendo se reportan como "se recreará", no como conflicto. Procesos ajenos siguen alertando.
 - [x] Documentación en `obsidian/tecnico/instalador.md`.
-- [ ] Subir a gitea + github, mergear a `main` (sin `obsidian/`), `/test`.
+- [x] Subido a gitea + github (rama) y mergeado a `main` (sin `obsidian/`), `main` pusheado a ambos.
+- [x] Validación: `./smoke-test.sh --static` → 2 OK, 0 fallidas. `install.sh` pasa `bash -n`.
