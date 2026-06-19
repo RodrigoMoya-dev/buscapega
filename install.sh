@@ -179,6 +179,8 @@ echo ""
 
 while true; do
   ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
+  echo -e "  ${CYAN}Aquí solo se guarda el número. La vinculación se hace DESPUÉS escaneando${RESET}"
+  echo -e "  ${CYAN}un QR: al terminar la instalación ejecuta ./whatsapp-qr.sh y escanéalo.${RESET}"
   read -r -p "  [56912345678] > " WHATSAPP_PHONE
   WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
   WHATSAPP_PHONE_CLEAN=$(echo "$WHATSAPP_PHONE" | tr -dc '0-9')
