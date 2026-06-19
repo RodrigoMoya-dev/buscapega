@@ -33,6 +33,21 @@ La captura de sesiones (Playwright) **siempre** instala dependencias dentro de u
 y Linux moderno. Todas las llamadas usan `setup/.venv/bin/python` (mismo enfoque que
 `setup/run_setup.sh`).
 
+### Las sesiones de portales se cargan LOCALMENTE (no a Presto)
+Wunen funciona 100% en el equipo de quien lo instala. La captura de sesión
+(`setup/setup_session.py`) guarda las cookies en `setup/cookies/` y luego las copia
+al volumen del contenedor local con `docker cp ... wunen_scraper:/app/cookies/`
+(función `sincronizar_local`). **No** se sincroniza a ningún servidor remoto durante
+la instalación.
+
+La sincronización a Presto vía `rsync` quedó como opción **interna del desarrollador**:
+solo se ejecuta si se pasa el flag `--presto` a `setup_session.py`. Sin ese flag, el
+instalador no toca Presto.
+
+### Vinculación de WhatsApp se hace después por QR
+En el prompt del teléfono se aclara que ahí **solo se guarda el número**; la vinculación
+real se hace al terminar la instalación ejecutando `./whatsapp-qr.sh` y escaneando el QR.
+
 ### Comandos de Claude Code siempre visibles
 El resumen muestra siempre `claude /valida <url>` y `claude /autentica`, por si el usuario tiene
 Claude Code instalado.
@@ -53,3 +68,14 @@ Claude Code instalado.
 - Comandos de Claude Code mostrados siempre.
 - Captura de sesiones via venv `setup/.venv` (arregla fallo pip/playwright).
 - Nuevo script `setup-gmail.sh`.
+
+## Cambios sesión 19/06/2026 — instalador 100% local (fix)
+
+- **Sesiones de portales ya NO se sincronizan a Presto durante la instalación.**
+  `setup_session.py` ahora copia las cookies al contenedor local (`wunen_scraper`)
+  vía `docker cp` (`sincronizar_local`). El `rsync` a Presto pasó a ser opcional
+  con `--presto` (uso interno del desarrollador).
+- Mensajes corregidos: ya no dice "La sesión está lista en Presto"; ahora dice
+  "guardada localmente".
+- El prompt del teléfono de WhatsApp aclara que solo se guarda el número y que la
+  vinculación se hace después con `./whatsapp-qr.sh` (QR).
