@@ -26,7 +26,12 @@
 
 ---
 
-## Tema 3 — ¿El instalador detecta puertos/Docker corriendo? (PENDIENTE de revisar)
-- `install.sh` ya tiene `check_port` (líneas ~295-317) que valida frontend/backend/
-  scraper/whatsapp y ofrece detener o cambiar puerto. Falta revisar si conviene además
-  detectar una instalación previa de Wunen ya corriendo. **No abordado en esta sesión.**
+## Tema 3 — Instalador detecta Docker/puertos corriendo ✅ (rama `feature_instalador_detecta_docker_19062026`)
+- [x] **Daemon de Docker:** se verifica con `docker info` (antes solo `command -v docker`).
+      Si Docker Desktop está apagado, aborta con mensaje claro en vez de fallar en `compose build`.
+- [x] **Instalación previa de Wunen:** detecta contenedores `wunen_*` y avisa que es
+      reinstalación (datos en volúmenes se conservan).
+- [x] **`check_port` sin falsos positivos:** los puertos ocupados por contenedores de Wunen
+      corriendo se reportan como "se recreará", no como conflicto. Procesos ajenos siguen alertando.
+- [x] Documentación en `obsidian/tecnico/instalador.md`.
+- [ ] Subir a gitea + github, mergear a `main` (sin `obsidian/`), `/test`.

@@ -33,6 +33,19 @@ La captura de sesiones (Playwright) **siempre** instala dependencias dentro de u
 y Linux moderno. Todas las llamadas usan `setup/.venv/bin/python` (mismo enfoque que
 `setup/run_setup.sh`).
 
+### Detección de Docker y de instalaciones previas
+- **Daemon de Docker:** además de verificar que el binario exista (`command -v docker`),
+  el instalador comprueba que el **daemon responda** con `docker info`. Si Docker Desktop
+  está cerrado, aborta con un mensaje claro en vez de fallar más tarde en `compose build`.
+- **Instalación previa de Wunen:** antes de validar puertos, detecta contenedores
+  `wunen_*` existentes (`docker ps -a --filter name=wunen_`) y avisa que es una
+  reinstalación (los datos en volúmenes se conservan; `compose up -d` recrea los
+  contenedores).
+- **`check_port` no da falsos positivos:** si un puerto está en uso pero lo ocupa un
+  contenedor de Wunen corriendo (match `^wunen_.*:<port>->` en `docker ps`), lo reporta
+  como "se recreará al reiniciar" en lugar de marcarlo como conflicto. Un conflicto real
+  (otro proceso ajeno) sigue mostrando las opciones a/b/c.
+
 ### Las sesiones de portales se cargan LOCALMENTE (no a Presto)
 Wunen funciona 100% en el equipo de quien lo instala. La captura de sesión
 (`setup/setup_session.py`) guarda las cookies en `setup/cookies/` y luego las copia
@@ -79,3 +92,12 @@ Claude Code instalado.
   "guardada localmente".
 - El prompt del teléfono de WhatsApp aclara que solo se guarda el número y que la
   vinculación se hace después con `./whatsapp-qr.sh` (QR).
+
+## Cambios sesión 19/06/2026 — detección de Docker/instalación previa (feature)
+
+- Verificación del **daemon de Docker** con `docker info` (antes solo se comprobaba el
+  binario). Si el daemon no responde, aborta con mensaje claro.
+- **Detección de instalación previa de Wunen** (contenedores `wunen_*`) antes de validar
+  puertos, avisando que es una reinstalación.
+- `check_port` ya no marca como conflicto los puertos ocupados por contenedores de Wunen
+  corriendo (reinstalación); solo alerta ante procesos ajenos.
