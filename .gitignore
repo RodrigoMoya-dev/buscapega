@@ -55,3 +55,8 @@ obsidian/.obsidian/
 # Clones de pruebas locales (no versionar)
 /test/
 /demo/
+
+# Comandos de Claude Code privados (NO publicar — journal.md tiene credenciales).
+# valida.md y autentica.md SÍ se versionan (son comandos públicos del proyecto).
+.claude/commands/journal.md
+.claude/commands/prueba.md
