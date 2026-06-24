@@ -19,9 +19,9 @@ Decisiones tomadas:
 - [x] **D1 · Docs `obsidian/web/`** ya usan el nombre textual de cada vista en su título
       (no se renombran archivos para no romper enlaces). Verificado.
 
-## Rama `fix_buscar_ofertas_24062026` — Ofertas (corrección)
-- [ ] **O3 · "Buscar ofertas" parecía no hacer nada.** Mostrar un dialog con animación flat
-      "Cargando..." y debajo ir mostrando "Buscando en --nombre portal--"; desaparece al terminar.
+## Rama `fix_buscar_ofertas_24062026` — Ofertas (corrección) ✅
+- [x] **O3 · "Buscar ofertas" parecía no hacer nada.** Dialog modal con spinner flat "Cargando…"
+      y debajo "Buscando en --portal--" recorriendo `GET /api/portals`; cierra al terminar y recarga.
 
 ## Rama `feature_ofertas_ui_24062026` — Ofertas (mejoras)
 - [ ] **O1 · Aviso de postulaciones bajo el título "Ofertas"** (mover el banner de stats debajo
