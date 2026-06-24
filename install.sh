@@ -239,6 +239,11 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 ENV_FILE="$DOCKER_DIR/.env"
 
+# ¿Existía ya un .env al iniciar? Se usa más abajo para detectar el caso peligroso de
+# "volumen de DB sin .env" (clon nuevo sobre datos viejos → contraseña irrecuperable).
+ENV_PREEXISTING=false
+[[ -f "$ENV_FILE" ]] && ENV_PREEXISTING=true
+
 # Reutilizar la contraseña de Postgres si ya existe un .env. El volumen de la base de
 # datos se inicializa con la contraseña de la PRIMERA instalación y NO cambia aunque el
 # .env se regenere; generar una nueva rompería la autenticación del backend contra ese
@@ -250,7 +255,11 @@ fi
 if [[ -n "$POSTGRES_PASSWORD" ]]; then
   log "Reutilizando POSTGRES_PASSWORD del .env existente (coincide con el volumen de la DB)"
 else
-  POSTGRES_PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9_' < /dev/urandom | head -c 24 2>/dev/null || echo "wunen_$(date +%s)")
+  # `head -c 24` cierra el pipe y `tr` recibe SIGPIPE (exit 141). El `|| true` evita que
+  # `set -o pipefail` aborte el script y, sobre todo, que el fallback se concatene al
+  # valor aleatorio (antes salía "<aleatorio>wunen_<timestamp>" en un mismo string).
+  POSTGRES_PASSWORD="$(LC_ALL=C tr -dc 'A-Za-z0-9_' < /dev/urandom 2>/dev/null | head -c 24 || true)"
+  [[ -z "$POSTGRES_PASSWORD" ]] && POSTGRES_PASSWORD="wunen_$(date +%s)"
 fi
 
 [[ -f "$ENV_FILE" ]] && cp "$ENV_FILE" "$ENV_FILE.bak" && warn "Backup del .env anterior guardado como .env.bak"
@@ -311,6 +320,38 @@ if [[ -n "$WUNEN_EXISTING" ]]; then
   echo "$WUNEN_EXISTING" | sed 's/^/      • /'
   echo -e "  ${CYAN}Se recrearán con la nueva configuración al iniciar los servicios.${RESET}"
   echo -e "  ${CYAN}Tus datos (base de datos, cookies) se conservan en los volúmenes.${RESET}"
+  echo ""
+fi
+
+# Volumen de base de datos huérfano: existe el volumen de Postgres de una instalación
+# previa pero NO había un docker/.env que conserve su contraseña (caso típico: clon nuevo
+# sobre datos viejos, o se borró el .env). El volumen guarda la contraseña ORIGINAL, pero
+# install.sh acaba de generar una NUEVA → el backend fallará con "password authentication
+# failed". Sin el .env original esa contraseña es irrecuperable: hay que resetear el
+# volumen o restaurar el .env. (Si el .env preexistía, su contraseña se reutiliza arriba y
+# no hay conflicto, así que no preguntamos.)
+DB_VOLUME_HUERFANO=$(docker volume ls --format '{{.Name}}' 2>/dev/null | grep -Fx "wunen_db_data" || true)
+if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
+  warn "Detecté un volumen de base de datos de una instalación anterior (wunen_db_data)"
+  echo -e "  pero no hay un ${CYAN}docker/.env${RESET} que conserve su contraseña. La contraseña nueva"
+  echo -e "  generada NO coincidirá con la del volumen y el backend no podrá autenticar."
+  echo ""
+  echo -e "  ${CYAN}a)${RESET} Resetear la base de datos (borra ofertas/datos previos del volumen)"
+  echo -e "  ${CYAN}b)${RESET} Conservar el volumen (deberás restaurar el docker/.env original a mano)"
+  read -r -p "  ¿Resetear la base de datos para una instalación limpia? (s/N) > " RESET_DB
+  RESET_DB_L=$(echo "$RESET_DB" | tr '[:upper:]' '[:lower:]')
+  if [[ "$RESET_DB_L" == "s" || "$RESET_DB_L" == "si" || "$RESET_DB_L" == "y" ]]; then
+    log "Eliminando volumen wunen_db_data..."
+    if docker volume rm wunen_db_data >/dev/null 2>&1; then
+      ok "Volumen eliminado — la base de datos se creará limpia con la nueva contraseña"
+    else
+      warn "No se pudo eliminar el volumen (¿lo usa un contenedor en marcha?)."
+      warn "Detén Wunen y reintenta: cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v"
+    fi
+  else
+    warn "Conservando el volumen. Si el backend falla con 'password authentication failed',"
+    warn "restaura el docker/.env original o ejecuta: cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v && $COMPOSE_CMD up -d"
+  fi
   echo ""
 fi
 
@@ -391,9 +432,9 @@ ok "Servicios Docker iniciados"
 log "Esperando a que el backend esté listo..."
 MAX_WAIT=60
 WAITED=0
+BACKEND_OK=false
 until curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1; do
   if [[ $WAITED -ge $MAX_WAIT ]]; then
-    warn "El backend tardó más de lo esperado. Continúa y verifica con: docker compose logs backend"
     break
   fi
   printf "."
@@ -402,13 +443,18 @@ until curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1; do
 done
 echo ""
 if curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1; then
+  BACKEND_OK=true
   ok "Backend disponible en http://localhost:${BACKEND_PORT}"
 elif $COMPOSE_CMD logs backend 2>/dev/null | grep -q "password authentication failed"; then
   # Volumen de DB de una instalación previa con OTRA contraseña: el backend no puede conectar.
-  warn "El backend no pudo conectar a la base de datos: la contraseña no coincide."
-  warn "Existe un volumen de Postgres de una instalación anterior con otra contraseña."
+  warn "El backend NO está disponible: la contraseña de Postgres no coincide con el volumen."
+  warn "Existe un volumen de una instalación anterior (wunen_db_data) con otra contraseña."
   echo -e "  ${BOLD}Para resetear la base de datos${RESET} (se borran ofertas/datos previos) ejecuta:"
   echo -e "    ${CYAN}cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v && $COMPOSE_CMD up -d${RESET}"
+else
+  # El backend no respondió y no es un problema de contraseña conocido: apuntar a los logs.
+  warn "El backend no respondió en ${MAX_WAIT}s y no está sano. Revisa los logs:"
+  echo -e "    ${CYAN}cd \"$DOCKER_DIR\" && $COMPOSE_CMD logs backend${RESET}"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -532,9 +578,18 @@ fi
 # 9. Resumen final
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
-echo -e "${GREEN}${BOLD}║         Instalación completada           ║${RESET}"
-echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${RESET}"
+if [[ "${BACKEND_OK:-false}" == "true" ]]; then
+  echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
+  echo -e "${GREEN}${BOLD}║         Instalación completada           ║${RESET}"
+  echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${RESET}"
+else
+  echo -e "${YELLOW}${BOLD}╔══════════════════════════════════════════╗${RESET}"
+  echo -e "${YELLOW}${BOLD}║   Instalación incompleta — backend caído ║${RESET}"
+  echo -e "${YELLOW}${BOLD}╚══════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "  ${YELLOW}Los servicios se levantaron, pero el backend (${BACKEND_PORT}) no responde /health.${RESET}"
+  echo -e "  ${YELLOW}Revisa el aviso de más arriba antes de usar la interfaz web.${RESET}"
+fi
 echo ""
 echo -e "  ${BOLD}Interfaz web:${RESET}  http://localhost:${FRONTEND_PORT}"
 echo -e "  ${BOLD}API / Backend:${RESET} http://localhost:${BACKEND_PORT}"
