@@ -4,6 +4,10 @@
 **Archivo:** `docker/frontend/app/respuestas/page.tsx`
 **API:** `GET/POST/PUT/DELETE /api/answers` (`docker/backend/app/routers/answers.py`)
 
+> **Oculta del menú (24/06/2026):** esta vista quedó **fuera del nav** a la espera de una
+> siguiente iteración. La página `/respuestas` sigue funcionando si se accede por URL, pero no
+> hay enlace en el header. Ver `obsidian/web/header.md`.
+
 ---
 
 ## ¿Qué es?
