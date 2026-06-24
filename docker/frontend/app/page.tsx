@@ -122,22 +122,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Stats banner */}
-      {stats && (
-        <div className="mb-6 p-4 bg-blue-950 border border-blue-800 rounded-xl text-sm text-blue-200">
-          Ya se ha postulado a un total de{" "}
-          <span className="font-bold text-white">{stats.sent_this_week}</span>{" "}
-          oferta{stats.sent_this_week !== 1 ? "s" : ""} laborale{stats.sent_this_week !== 1 ? "s" : ""} durante esta semana
-          {stats.total_sent > 0 && (
-            <span className="text-blue-400">
-              {" "}· {stats.total_sent} total en total
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-bold text-white">Ofertas</h1>
           <p className="text-gray-400 text-sm mt-1">Bandeja de propuestas de trabajo</p>
@@ -150,6 +136,44 @@ export default function Home() {
           {scraping ? "Buscando..." : "Buscar ofertas"}
         </button>
       </div>
+
+      {/* Aviso de postulaciones (bajo el título "Ofertas") */}
+      {stats && stats.total_sent > 0 && (
+        <div className="mb-8 p-4 bg-blue-950 border border-blue-800 rounded-xl text-sm text-blue-200 flex items-center gap-3">
+          {/* Ícono de robot */}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-6 h-6 text-blue-300 shrink-0"
+            aria-hidden="true"
+          >
+            <rect x="4" y="8" width="16" height="11" rx="2" />
+            <path d="M12 8V5" />
+            <circle cx="12" cy="3.5" r="1.2" />
+            <path d="M9 13h.01M15 13h.01" />
+            <path d="M4 13H2M22 13h-2" />
+          </svg>
+          <div>
+            Has postulado a{" "}
+            <span className="font-bold text-white">{stats.total_sent}</span>{" "}
+            postulación{stats.total_sent !== 1 ? "es" : ""}
+            {stats.sent_this_week > 0 && (
+              <span className="text-blue-400"> · {stats.sent_this_week} esta semana</span>
+            )}
+            .{" "}
+            <button
+              onClick={() => setTab("ENVIADA")}
+              className="text-blue-300 underline underline-offset-2 hover:text-white font-medium"
+            >
+              Ver mis postulaciones
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-900 rounded-lg p-1 w-fit">

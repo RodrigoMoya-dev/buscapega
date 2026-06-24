@@ -21,3 +21,18 @@ Antes, "Buscar ofertas" disparaba el scraping y esperaba 5 s fijos sin feedback 
 
 > El scraping real corre asíncrono en el backend; el recorrido portal-por-portal es la
 > representación visible del progreso (no hay aún eventos en tiempo real por portal).
+
+## Aviso de postulaciones (mejoras 24/06/2026)
+- El banner de stats se movió **bajo el título "Ofertas"** (antes estaba arriba del todo).
+- Lleva un **ícono de robot** flat.
+- Texto corregido: **"Has postulado a N postulación(es)"** con pluralización correcta
+  (antes decía "1 oferta laborale.."). Usa `stats.total_sent` (+ "N esta semana" si aplica).
+- Incluye el enlace **"Ver mis postulaciones"** que cambia a la pestaña **Enviadas**.
+- Solo se muestra cuando hay al menos una postulación (`total_sent > 0`).
+
+## Tarjeta de oferta (`OfferCard.tsx`, mejoras 24/06/2026)
+- Se **quitaron los botones "Descartar" y "Bloquear empresa"**.
+- Portales con auto-postulación: botón **"Postular"** (ancho completo).
+- Portales sin auto-postulación: en vez de botón, el texto _"Esta oferta no fue posible
+  postularla de forma automática, aunque puedes hacerlo usando una API KEY de Anthropic."_
+  (el título de la tarjeta sigue enlazando a la oferta).

@@ -23,16 +23,13 @@ Decisiones tomadas:
 - [x] **O3 · "Buscar ofertas" parecía no hacer nada.** Dialog modal con spinner flat "Cargando…"
       y debajo "Buscando en --portal--" recorriendo `GET /api/portals`; cierra al terminar y recarga.
 
-## Rama `feature_ofertas_ui_24062026` — Ofertas (mejoras)
-- [ ] **O1 · Aviso de postulaciones bajo el título "Ofertas"** (mover el banner de stats debajo
-      del encabezado).
-- [ ] **O2 · Ícono de robot** en ese cuadro de aviso.
-- [ ] **O4 · Quitar botones "Descartar" y "Bloquear empresa"** de la tarjeta. Cuando la oferta no
-      se pueda autopostular, mostrar: "Esta oferta no fue posible postularla de forma automática,
-      aunque puedes hacerlo usando una API KEY de Anthropic".
-- [ ] **O5 · Corregir el mensaje** "Ya se ha postulado a un total de 1 oferta laborale..":
-      usar "Has postulado a N postulación(es)" (pluralización correcta) + enlace
-      "Ver mis postulaciones" que cargue la pestaña "Enviadas" en Ofertas.
+## Rama `feature_ofertas_ui_24062026` — Ofertas (mejoras) ✅
+- [x] **O1 · Aviso de postulaciones bajo el título "Ofertas"** (banner movido debajo del encabezado).
+- [x] **O2 · Ícono de robot** flat en ese cuadro de aviso.
+- [x] **O4 · Quitar botones "Descartar" y "Bloquear empresa"** de la tarjeta. Portales sin
+      auto-postulación muestran el texto del mensaje de API KEY de Anthropic.
+- [x] **O5 · Mensaje corregido** → "Has postulado a N postulación(es)" (pluralización) + enlace
+      "Ver mis postulaciones" que abre la pestaña "Enviadas".
 
 ## Rama `feature_portales_ui_24062026` — Portales
 - [ ] **P1 · Fusionar "Validar sitio" y "Portales"** en una sola vista. El bloque "Validar sitio"
