@@ -89,6 +89,11 @@
 - [x] Reinstalación detecta `wunen_db_data` huérfano, ofrece reset, lo elimina y recrea limpio.
 - [x] Backend `/health` → HTTP 200 `{"status":"ok"}`; frontend 200; scraper 200; db healthy.
 - [x] Banner final muestra "Instalación completada" (verde) al estar el backend sano.
+- [x] `./smoke-test.sh` (servicios en vivo) → 6 OK, 0 fallidas.
+
+**Entrega:**
+- [x] Rama `fix_installer_volumen_postgres_24062026` subida a gitea (`origin`) y github.
+- [x] Mergeada a `main` (merge real de 2 padres, **sin `obsidian/`**) y `main` pusheado a ambos remotos (`f6d6fec`).
 
 **Evidencia (entorno de la prueba):**
 - Clon validado: `ddae72c` (= HEAD remoto de GitHub).
