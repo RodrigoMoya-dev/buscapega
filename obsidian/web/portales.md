@@ -1,15 +1,46 @@
 # Vista: Portales
 
-**Ruta web:** `/authenticate`
+**Ruta web:** `/authenticate` (la antigua `/validate` ahora **redirige** aquí)
 **Archivo:** `docker/frontend/app/authenticate/page.tsx`
-**API:** `GET /api/portals` (`docker/backend/app/routers/portals.py`)
+**API:** `GET /api/portals`, `POST /api/portals/validate`, `PATCH /api/portals/toggle`
+(`docker/backend/app/routers/portals.py`)
 
 ---
 
 ## ¿Qué es?
 
-Lista los portales registrados, separados en "con auto-postulación" y "manuales", con el estado
-de la sesión (Activo / Inactivo) y el conteo de postulaciones realizadas.
+Vista unificada que **fusiona "Validar sitio" y "Portales"** (24/06/2026). Tiene dos bloques con
+colores de fondo distintos:
+
+1. **Validar sitio** (fondo índigo destacado): valida si un portal nuevo es automatizable
+   (scraping + Google auth). Incluye un botón de ayuda **(?)** que explica qué hace la validación
+   antes del campo de URL. Ver `obsidian/web/validar-sitio.md`.
+2. **Portales de empleo** (fondo slate): lista los portales registrados en **acordeones**.
+
+## Acordeones por categoría (P4)
+- **Portales con auto-postulación** (`auto_apply = true`) — abierto por defecto.
+- **Portales revisables (sin auto-postulación)** (`auto_apply = false`).
+- **Portales que no permiten scraping** — vacío por ahora (el backend aún no distingue esta
+  categoría; queda como pendiente añadir el dato al catálogo).
+
+Al compactar, cada acordeón muestra la **cantidad de portales** junto al título.
+
+## Fila de portal (P6)
+- **Bandera** del mercado/país (emoji) con el nombre como tooltip (en vez del texto del país).
+- **Switch Activo/Inactivo**: persiste el flag `active` del portal vía `PATCH /api/portals/toggle`
+  (optimista; revierte si la petición falla). _Nota:_ que el scraper respete `active` queda como
+  follow-up.
+  - Si el portal **revisable** (sin auto-postulación) queda activo, se muestra el aviso:
+    "Portal activado. Importante: te llegarán las ofertas pero deberás postular manualmente."
+- Portales **sin auto-postulación**: botón **"Visitar"** (con ícono) que abre el sitio.
+- Botón **"Registrar sesión con Google"** (ícono de Google) que abre un **diálogo persistente**
+  (P5) con: el texto de ayuda, el comando `python3 setup/setup_session.py <slug>`, la alternativa
+  `claude /autentica`, y botones de copiar. El diálogo solo se cierra con la X o "Cerrar".
+
+## Estado de sesión (`session_active`) vs. `active`
+- `session_active`: hay cookies capturadas (`cookies/{session_key}_session.json`). Se muestra como
+  "Sesión activa / Sin sesión" en portales con auto-postulación.
+- `active`: el portal participa de la búsqueda (lo controla el switch). Persistido en `portales.json`.
 
 ## Estado de sesión (`session_active`)
 
@@ -33,3 +64,11 @@ Definido en `documentos/portales.json` (o `DEFAULT_PORTAL_LIST` si no existe). F
 ## Cambios sesión 17/06/2026
 
 - FindJobIT activo por defecto (demo) vía `demo_active` / `DEMO_ACTIVE_KEYS`.
+
+## Cambios sesión 24/06/2026 — fusión Validar+Portales y rediseño
+
+- Se fusionó "Validar sitio" en esta vista (`/validate` redirige a `/authenticate`).
+- Acordeones por categoría con conteo; switch de activación (`PATCH /api/portals/toggle`,
+  nuevo campo `active`); banderas con tooltip; botón "Visitar"; diálogo persistente de
+  registro de sesión con Google.
+- Backend: `list_portals` ahora devuelve `active`; nuevo endpoint `toggle_portal`.

@@ -1,7 +1,11 @@
 # Vista: Validar sitio
 
-**Ruta web:** `/validate`
-**Archivo:** `docker/frontend/app/validate/page.tsx`
+> **Fusionada en Portales (24/06/2026):** desde esta fecha "Validar sitio" es un bloque dentro de
+> la vista **Portales** (`/authenticate`). La ruta `/validate` ahora **redirige** a `/authenticate`.
+> La lógica de validación (criterios, factibilidad) sigue siendo la documentada aquí.
+
+**Ruta web:** `/validate` → redirige a `/authenticate` (bloque "Validar sitio")
+**Archivo:** `docker/frontend/app/authenticate/page.tsx` (componente `ValidateSection`)
 **API:** `POST /api/portals/validate` (`docker/backend/app/routers/portals.py`)
 
 ---

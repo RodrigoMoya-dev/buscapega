@@ -31,26 +31,21 @@ Decisiones tomadas:
 - [x] **O5 · Mensaje corregido** → "Has postulado a N postulación(es)" (pluralización) + enlace
       "Ver mis postulaciones" que abre la pestaña "Enviadas".
 
-## Rama `feature_portales_ui_24062026` — Portales
-- [ ] **P1 · Fusionar "Validar sitio" y "Portales"** en una sola vista. El bloque "Validar sitio"
-      con un color de fondo destacado; "Portales de empleo" con otro color para diferenciarlos.
-      Quitar "Validar sitio" del nav.
-- [ ] **P3 · Explicar qué hace "Validar sitio"** antes del texto "Ingresa la URL de un portal…",
-      con un ícono de info/pregunta.
-- [ ] **P4 · Acordeones por sección** (con auto-postulación / revisables sin auto-postulación /
-      sin scraping). Al compactar, mostrar tras el título la cantidad de portales de esa pestaña.
-      Reemplaza los cuadros de comandos sueltos.
-- [ ] **P5 · Botón "Registrar sesión con Google"** (con ícono) en portales con auto-postulación o
-      revisables. Abre un dialog **persistente** con:
-      - Texto "Registra tu sesión con Google aquí. Esta sesión quedará guardada sólo en tu equipo."
-      - Input con el comando listo (`python3 setup/setup_session.py <login>`).
-      - Alternativa con Claude Code.
-      - Botón "copiar" en cada input.
-- [ ] **P6 · Cambios por fila de portal:**
-      - Bandera del país en vez del nombre (tooltip con el nombre al pasar el mouse).
-      - Switch Activo/Inactivo. Si es autopostulación manual, aviso bajo el cuadro:
-        "Portal activado. Importante: Te llegarán las ofertas pero deberás postular manualmente."
-      - En portales sin auto-postulación, botón "Visitar" (con ícono) que abre la página.
+## Rama `feature_portales_ui_24062026` — Portales ✅
+- [x] **P1 · Fusionar "Validar sitio" y "Portales"** en `/authenticate`. Bloque "Validar sitio"
+      con fondo índigo destacado; "Portales de empleo" con fondo slate. `/validate` redirige.
+      "Validar sitio" ya quitado del nav (rama header).
+- [x] **P3 · Explicación de "Validar sitio"** antes del campo URL, con ícono **(?)** que
+      despliega ayuda.
+- [x] **P4 · Acordeones por sección** (auto-postulación / revisables / sin scraping[vacío]) con
+      conteo al compactar. La 3ª categoría queda vacía: el backend aún no la distingue (follow-up).
+- [x] **P5 · Botón "Registrar sesión con Google"** (ícono Google) → diálogo persistente con el
+      texto, comando `python3 setup/setup_session.py <slug>`, alternativa `claude /autentica` y
+      botones de copiar.
+- [x] **P6 · Fila de portal:** bandera con tooltip; **switch** Activo/Inactivo persistido vía
+      `PATCH /api/portals/toggle` (backend: nuevo campo `active` + endpoint, probado en vivo);
+      aviso de revisión manual al activar portales revisables; botón "Visitar" en los sin
+      auto-postulación.
 
 ## Rama `feature_perfil_ui_24062026` — Configura tu perfil
 - [ ] **C1 · Quitar las pestañas** CV (Español), CV (English) y Perfil. En su lugar: dos input
