@@ -47,9 +47,10 @@ Decisiones tomadas:
       aviso de revisión manual al activar portales revisables; botón "Visitar" en los sin
       auto-postulación.
 
-## Rama `feature_perfil_ui_24062026` — Configura tu perfil
-- [ ] **C1 · Quitar las pestañas** CV (Español), CV (English) y Perfil. En su lugar: dos input
-      file (CV español y CV inglés) y a continuación el formulario de perfil.
+## Rama `feature_perfil_ui_24062026` — Configura tu perfil ✅
+- [x] **C1 · Pestañas eliminadas.** La vista ahora muestra **dos input file** (CV PDF Español e
+      Inglés, componente `CvPdfUpload`) y a continuación el **formulario de perfil** (`ProfileForm`).
+      Se quitó `CvForm` y las constantes/imports de CV ya no usados.
 
 ---
 
