@@ -101,3 +101,47 @@ Claude Code instalado.
   puertos, avisando que es una reinstalación.
 - `check_port` ya no marca como conflicto los puertos ocupados por contenedores de Wunen
   corriendo (reinstalación); solo alerta ante procesos ajenos.
+
+## Cambios sesión 24/06/2026 — volumen Postgres huérfano y falso positivo (fix)
+
+Detectado por el comando `/prueba` (clon limpio de `main` + `install.sh`): el instalador
+terminaba con "Instalación completada" pese a que el backend estaba caído por
+`password authentication failed`. Causa: volumen `wunen_db_data` de una instalación previa
+con otra contraseña, sin `docker/.env` que la conserve.
+
+- **Detección de volumen Postgres huérfano** (`wunen_db_data` sin `.env`): avisa y ofrece
+  resetear la base de datos o conservar el volumen.
+- **Readiness del backend con diagnóstico real** tras el timeout (password vs. logs).
+- **Banner final condicionado a la salud del backend** (verde solo si `/health` responde;
+  amarillo "incompleta" si no) → se elimina el falso positivo de éxito.
+- **Fix en la generación de `POSTGRES_PASSWORD`**: ya no concatena aleatorio + fallback por
+  SIGPIPE.
+
+### Detección de volumen Postgres huérfano (fix 24/06/2026)
+El volumen `wunen_db_data` se inicializa con la contraseña de la PRIMERA instalación y la
+conserva para siempre. Si se hace un **clon nuevo** del repo (o se borra `docker/.env`)
+sobre un volumen viejo, `install.sh` genera una contraseña NUEVA que **no coincide** con la
+del volumen → el backend falla con `password authentication failed for user "wunen"`.
+
+- Cuando **existía** un `docker/.env` al iniciar, su `POSTGRES_PASSWORD` se **reutiliza**
+  (lógica previa) y no hay conflicto.
+- Cuando **NO** existía `.env` pero **sí** está el volumen `wunen_db_data`, el instalador lo
+  detecta antes de `compose up` y ofrece: **a)** resetear la base de datos
+  (`docker volume rm wunen_db_data`, se pierden datos previos) o **b)** conservarla
+  (el usuario debe restaurar el `.env` original a mano). Esto evita el backend caído
+  silencioso en reinstalaciones.
+
+### Verificación de readiness del backend más robusta (fix 24/06/2026)
+- Tras la espera de 60 s, si el backend no responde `/health` se **diagnostica la causa**:
+  si los logs muestran `password authentication failed` se indica la remediación concreta
+  (`compose down -v && up -d`); en otro caso se apunta a `compose logs backend`. Ya no se
+  muestra el warning genérico "tardó más de lo esperado" sin contexto.
+- El banner final **solo muestra "Instalación completada" en verde si el backend respondió
+  `/health`**. Si no, muestra "Instalación incompleta — backend caído" en amarillo, evitando
+  el falso positivo de éxito que se daba antes.
+
+### Generación de `POSTGRES_PASSWORD` (fix 24/06/2026)
+`tr -dc ... < /dev/urandom | head -c 24 || echo "wunen_$(date)"` concatenaba el valor
+aleatorio Y el fallback: `head` cierra el pipe, `tr` recibe SIGPIPE (exit 141) y disparaba
+el `||`. Ahora se captura primero (`... | head -c 24 || true`) y el fallback solo actúa si
+el resultado quedó vacío (`[[ -z ]]`).
