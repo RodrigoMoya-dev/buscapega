@@ -131,6 +131,7 @@ export interface Portal {
   url: string;
   auto_apply: boolean;
   market: string;
+  active: boolean;
   session_active: boolean;
   applications_count: number;
 }
@@ -142,6 +143,19 @@ export async function getPortals(): Promise<Portal[]> {
     return res.json();
   } catch {
     return [];
+  }
+}
+
+export async function togglePortal(name: string, active: boolean): Promise<boolean> {
+  try {
+    const res = await fetch(`${API}/api/portals/toggle`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, active }),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
