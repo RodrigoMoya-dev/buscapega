@@ -1,6 +1,6 @@
 "use client";
 
-import { Offer, applyOffer, discardOffer, blockCompany } from "@/lib/api";
+import { Offer, applyOffer } from "@/lib/api";
 
 interface Props {
   offer: Offer;
@@ -68,19 +68,6 @@ export default function OfferCard({ offer, onAction }: Props) {
     window.open(offer.url, "_blank", "noopener,noreferrer");
     await applyOffer(offer.id);
     onAction();
-  }
-
-  async function handleDiscard() {
-    await discardOffer(offer.id);
-    onAction();
-  }
-
-  async function handleBlock() {
-    if (confirm(`¿Bloquear todas las ofertas de "${offer.company}"?`)) {
-      await blockCompany(offer.company);
-      await discardOffer(offer.id);
-      onAction();
-    }
   }
 
   return (
@@ -151,35 +138,20 @@ export default function OfferCard({ offer, onAction }: Props) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-1 border-t border-gray-800">
+      <div className="pt-1 border-t border-gray-800">
         {PORTAL_AUTO_APPLY.has(offer.portal) ? (
           <button
             onClick={handleApply}
-            className="flex-1 bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+            className="w-full bg-blue-700 hover:bg-blue-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
           >
             Postular
           </button>
         ) : (
-          <button
-            onClick={handleApply}
-            className="flex-1 bg-gray-600 hover:bg-gray-500 text-white text-xs font-semibold py-2 px-2 rounded-lg transition-colors"
-          >
-            Acceder (Abre una ventana nueva)
-          </button>
+          <p className="text-xs text-gray-400 leading-relaxed pt-1">
+            Esta oferta no fue posible postularla de forma automática, aunque puedes hacerlo
+            usando una API KEY de Anthropic.
+          </p>
         )}
-        <button
-          onClick={handleDiscard}
-          className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
-        >
-          Descartar
-        </button>
-        <button
-          onClick={handleBlock}
-          className="bg-red-900 hover:bg-red-800 text-red-300 text-sm font-semibold px-3 py-2 rounded-lg transition-colors"
-          title={`Bloquear ${offer.company}`}
-        >
-          Bloquear empresa
-        </button>
       </div>
     </div>
   );
