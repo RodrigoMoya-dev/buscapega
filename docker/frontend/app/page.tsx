@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Offer, Stats, getOffers, getStats, triggerScraping } from "@/lib/api";
+import { Offer, Stats, getOffers, getStats, triggerScraping, getPortals } from "@/lib/api";
 import OfferCard from "@/components/OfferCard";
 
 const AUTO_APPLY_PORTALS = new Set([
@@ -15,6 +15,7 @@ export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [scraping, setScraping] = useState(false);
+  const [scrapeStatus, setScrapeStatus] = useState<string | null>(null);
   const [tab, setTab] = useState<"PENDIENTE" | "ENVIADA" | "DESCARTADA">("PENDIENTE");
   const [onlyAutoApply, setOnlyAutoApply] = useState(false);
   const [selectedTechs, setSelectedTechs] = useState<Set<string>>(new Set());
@@ -43,11 +44,34 @@ export default function Home() {
 
   async function handleScrape() {
     setScraping(true);
-    await triggerScraping();
-    setTimeout(() => {
-      setScraping(false);
-      load();
-    }, 5000);
+    setScrapeStatus(null);
+
+    // Lista de portales para mostrar el progreso de la búsqueda.
+    let portalNames: string[] = [];
+    try {
+      const portals = await getPortals();
+      portalNames = portals.map((p) => p.name);
+    } catch {
+      /* sin lista: se muestra un progreso genérico */
+    }
+    if (portalNames.length === 0) portalNames = ["los portales configurados"];
+
+    // Dispara el scraping real (corre en segundo plano en el backend).
+    const scrape = triggerScraping().catch(() => {});
+
+    // Anima el progreso portal por portal mientras el backend trabaja.
+    for (const name of portalNames) {
+      setScrapeStatus(name);
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+
+    setScrapeStatus(null); // fase "Finalizando…"
+    await scrape;
+    await new Promise((r) => setTimeout(r, 700));
+
+    setScraping(false);
+    setScrapeStatus(null);
+    await load();
   }
 
   const availableTechs = useMemo(() => {
@@ -80,6 +104,24 @@ export default function Home() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* Diálogo de progreso de búsqueda de ofertas */}
+      {scraping && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl px-10 py-8 mx-4 w-full max-w-sm flex flex-col items-center gap-5 shadow-2xl">
+            {/* Spinner flat */}
+            <div className="w-12 h-12 rounded-full border-4 border-gray-700 border-t-blue-500 animate-spin" />
+            <p className="text-white font-semibold text-lg">Cargando…</p>
+            <p className="text-blue-300 text-sm text-center min-h-[1.25rem]">
+              {scrapeStatus ? (
+                <>Buscando en <span className="font-semibold text-white">{scrapeStatus}</span>…</>
+              ) : (
+                "Finalizando…"
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Stats banner */}
       {stats && (
         <div className="mb-6 p-4 bg-blue-950 border border-blue-800 rounded-xl text-sm text-blue-200">
