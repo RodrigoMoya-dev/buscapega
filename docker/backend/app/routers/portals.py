@@ -83,10 +83,41 @@ def list_portals(db: Session = Depends(get_db)):
         portal_data = {k: v for k, v in p.items() if k not in ("session_key", "demo_active")}
         result.append({
             **portal_data,
+            # 'active' = el portal participa de la búsqueda. Por defecto True; el switch de la
+            # vista Portales lo persiste en portales.json vía PATCH /api/portals/toggle.
+            "active": bool(p.get("active", True)),
             "session_active": cookie_active,
             "applications_count": counts_map.get(key, 0),
         })
     return result
+
+
+@router.patch("/toggle")
+def toggle_portal(body: dict):
+    """Activa/desactiva un portal (persiste el flag 'active' en portales.json)."""
+    name = body.get("name")
+    active = bool(body.get("active", True))
+    if not name:
+        return {"error": "name requerido"}
+
+    portal_list = _load_portal_list()
+    found = False
+    for p in portal_list:
+        if p.get("name") == name:
+            p["active"] = active
+            found = True
+            break
+    if not found:
+        return {"error": "portal no encontrado"}
+
+    try:
+        os.makedirs(os.path.dirname(PORTALES_PATH), exist_ok=True)
+        with open(PORTALES_PATH, "w", encoding="utf-8") as f:
+            json.dump(portal_list, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return {"error": f"no se pudo guardar: {e}"}
+
+    return {"name": name, "active": active}
 
 
 KNOWN_PORTALS_SCRAPING = {
