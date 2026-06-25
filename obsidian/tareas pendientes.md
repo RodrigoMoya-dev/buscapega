@@ -61,16 +61,19 @@ $ python3 setup/setup_session.py <portal>
 ModuleNotFoundError: No module named 'playwright'
 ```
 
-**Causa:** el `python3` del host (3.14.4) **no tiene instalado `playwright`** (ni el navegador
-Chromium). `setup_session.py` corre en el Mac (no en Docker), así que necesita las dependencias en
-el entorno local.
+**Causa raíz (corregida):** el comando que falla usa el `python3` del **sistema**, sin venv. El
+instalador SÍ instala las dependencias, pero (a) solo si aceptas "configurar sesiones" y (b) en un
+venv dedicado (`setup/.venv`). Los puntos de entrada `python3 setup/setup_session.py` y el wrapper
+raíz `setup-sessions.sh` se saltaban ese venv.
 
-**Solución (ejecutar en la terminal, desde la raíz del proyecto):**
+**✅ Resuelto (rama `fix_setup_venv_24062026`, mergeada a `main`):**
+- `setup-sessions.sh` ahora delega en `setup/run_setup.sh`, que crea `setup/.venv` e instala
+  `playwright` + Chromium **automáticamente la primera vez**.
+- El diálogo "Registrar sesión con Google" de la web ahora muestra `./setup-sessions.sh <slug>`
+  (antes `python3 setup/setup_session.py <slug>`, que fallaba).
+
+**Para el usuario:** ya no hace falta instalar nada a mano. Basta ejecutar, desde la raíz:
 ```bash
-pip3 install -r setup/requirements.txt
-playwright install chromium
+./setup-sessions.sh <portal>     # ej: ./setup-sessions.sh chiletrabajos
 ```
-
-> No es un bug del código: es configuración del entorno local. Tras instalarlas,
-> `python3 setup/setup_session.py <portal>` funcionará. Recomendado: usar un virtualenv
-> (`python3 -m venv .venv && source .venv/bin/activate`) para no chocar con el Python del sistema.
+La primera ejecución crea el venv e instala las dependencias sola.

@@ -34,8 +34,14 @@ Al compactar, cada acordeón muestra la **cantidad de portales** junto al títul
     "Portal activado. Importante: te llegarán las ofertas pero deberás postular manualmente."
 - Portales **sin auto-postulación**: botón **"Visitar"** (con ícono) que abre el sitio.
 - Botón **"Registrar sesión con Google"** (ícono de Google) que abre un **diálogo persistente**
-  (P5) con: el texto de ayuda, el comando `python3 setup/setup_session.py <slug>`, la alternativa
+  (P5) con: el texto de ayuda, el comando `./setup-sessions.sh <slug>`, la alternativa
   `claude /autentica`, y botones de copiar. El diálogo solo se cierra con la X o "Cerrar".
+
+  > **Fix venv 24/06/2026:** el comando del diálogo era `python3 setup/setup_session.py <slug>`,
+  > que usaba el Python del sistema (sin venv) → fallaba con `ModuleNotFoundError: No module named
+  > 'playwright'`. Ahora muestra `./setup-sessions.sh <slug>`, y ese wrapper delega en
+  > `setup/run_setup.sh`, que crea `setup/.venv` e instala playwright + Chromium automáticamente la
+  > primera vez. (Rama `fix_setup_venv_24062026`.)
 
 ## Estado de sesión (`session_active`) vs. `active`
 - `session_active`: hay cookies capturadas (`cookies/{session_key}_session.json`). Se muestra como
