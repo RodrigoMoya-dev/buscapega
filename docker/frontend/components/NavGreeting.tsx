@@ -7,9 +7,19 @@ export default function NavGreeting() {
   const [name, setName] = useState<string | null>(null);
 
   useEffect(() => {
-    getSettings().then((s) => {
-      if (s?.user_name) setName(s.user_name);
-    });
+    function refresh() {
+      getSettings().then((s) => setName(s?.user_name || null));
+    }
+    refresh();
+    // La vista de Configuración dispara este evento al guardar el nombre,
+    // para refrescar el saludo sin recargar la página (T9).
+    function onUpdate(e: Event) {
+      const detail = (e as CustomEvent<{ user_name?: string }>).detail;
+      if (detail && typeof detail.user_name === "string") setName(detail.user_name || null);
+      else refresh();
+    }
+    window.addEventListener("wunen:settings-updated", onUpdate);
+    return () => window.removeEventListener("wunen:settings-updated", onUpdate);
   }, []);
 
   if (!name) return null;
