@@ -86,10 +86,81 @@ def list_portals(db: Session = Depends(get_db)):
             # 'active' = el portal participa de la búsqueda. Por defecto True; el switch de la
             # vista Portales lo persiste en portales.json vía PATCH /api/portals/toggle.
             "active": bool(p.get("active", True)),
+            # 'allows_scraping' = el portal permite scraping. Por defecto True (los portales
+            # históricos no lo declaran). Los validados/agregados sí lo guardan.
+            "allows_scraping": bool(p.get("allows_scraping", True)),
             "session_active": cookie_active,
             "applications_count": counts_map.get(key, 0),
         })
     return result
+
+
+def _portal_slug(name: str) -> str:
+    return name.lower().replace(" ", "").replace("-", "").replace(".", "")
+
+
+def _name_from_url(url: str) -> str:
+    """Deriva un nombre legible desde el dominio (ej: https://www.foo-jobs.com → Foo-Jobs)."""
+    host = url.lower().replace("https://", "").replace("http://", "").replace("www.", "")
+    host = host.split("/")[0].split(":")[0]
+    base = host.split(".")[0]
+    return base.replace("-", " ").title().replace(" ", "-") if "-" in base else base.capitalize()
+
+
+@router.post("/add")
+def add_portal(body: dict):
+    """Registra un portal validado en portales.json, determinando su categoría automáticamente.
+
+    Reglas de categoría:
+      - allows_scraping + has_google_auth  → auto-postulación (auto_apply=True, con session_key).
+      - allows_scraping, sin Google auth   → revisable (auto_apply=False).
+      - sin scraping                       → no permite scraping (allows_scraping=False).
+    """
+    url = _normalize_url(body.get("url", ""))
+    if not url or not _has_valid_domain(url):
+        return {"error": "URL inválida"}
+
+    allows_scraping = bool(body.get("allows_scraping", False))
+    has_google_auth = bool(body.get("has_google_auth", False))
+    name = (body.get("name") or _name_from_url(url)).strip()
+    market = (body.get("market") or "Internacional").strip()
+
+    portal_list = _load_portal_list()
+
+    # Evitar duplicados (por nombre o dominio).
+    q_domain = url.lower().replace("https://", "").replace("http://", "").replace("www.", "").rstrip("/").split("/")[0]
+    for p in portal_list:
+        p_domain = p["url"].lower().replace("https://", "").replace("http://", "").replace("www.", "").rstrip("/").split("/")[0]
+        if p.get("name", "").lower() == name.lower() or p_domain == q_domain:
+            return {"error": "Este portal ya está registrado", "name": p.get("name")}
+
+    auto_apply = allows_scraping and has_google_auth
+    if auto_apply:
+        category = "auto_apply"
+    elif allows_scraping:
+        category = "reviewable"
+    else:
+        category = "no_scraping"
+
+    entry = {
+        "name": name,
+        "url": url,
+        "auto_apply": auto_apply,
+        "market": market,
+        "session_key": _portal_slug(name) if auto_apply else None,
+        "active": True,
+        "allows_scraping": allows_scraping,
+    }
+    portal_list.append(entry)
+
+    try:
+        os.makedirs(os.path.dirname(PORTALES_PATH), exist_ok=True)
+        with open(PORTALES_PATH, "w", encoding="utf-8") as f:
+            json.dump(portal_list, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        return {"error": f"no se pudo guardar: {e}"}
+
+    return {"name": name, "category": category, "auto_apply": auto_apply, "allows_scraping": allows_scraping}
 
 
 @router.patch("/toggle")

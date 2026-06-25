@@ -42,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href={REPORT_ISSUE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Reportar un problema en GitHub"
+                title="Se abrirá una página de GitHub para describir y subir el problema"
                 className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white transition-colors"
               >
                 <svg

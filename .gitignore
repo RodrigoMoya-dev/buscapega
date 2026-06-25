@@ -61,3 +61,6 @@ obsidian/
 # valida.md y autentica.md SÍ se versionan (son comandos públicos del proyecto).
 .claude/commands/journal.md
 .claude/commands/prueba.md
+
+# TypeScript incremental build info
+*.tsbuildinfo
