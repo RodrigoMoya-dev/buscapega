@@ -33,5 +33,44 @@
 
 ## Cierre
 - [x] **T14** — Actualizar documentación en `obsidian/web/`.
-- [ ] **T15** — Subir ramas a gitea (`origin`) y github (`github`), mergear a `main` (sin `obsidian/`).
-- [ ] **T16** — Ejecutar `/prueba`.
+- [x] **T15** — Subir ramas a gitea (`origin`) y github (`github`), mergear a `main` (sin `obsidian/`).
+- [x] **T16** — Ejecutar `/prueba`.
+
+---
+
+# Resultado de `/prueba` (24/06/2026)
+
+**Clon fresco de `main` (github) + `install.sh` → EXIT 0.** Todas las imágenes se construyeron y los
+servicios arrancaron sanos. Validado en vivo:
+- `GET /health` → ok · `GET /` (frontend) → HTTP 200.
+- `GET /api/settings` → `user_name: "Test Prueba"` (lo escribió el instalador).
+- `GET /api/portals` → expone `allows_scraping` en todos los portales (cambio de esta sesión).
+- `POST /api/settings/test-whatsapp` → mensaje claro: _"WhatsApp no está vinculado (estado:
+  waiting_qr). Escanea el código QR…"_ (antes solo "error 503"). ✓ T10
+- `POST /api/portals/add` (scraping+Google) → categoría `auto_apply`. ✓ T5
+
+> Contenedores de la demo quedaron arriba en :3000/:8000. Para bajarlos:
+> `cd demo/docker && docker compose down`.
+
+## ⚠️ Problema detectado — librerías de Python del host (a resolver por el usuario)
+
+La validación de librerías (T8) detectó el error que reportaste:
+
+```
+$ python3 setup/setup_session.py <portal>
+ModuleNotFoundError: No module named 'playwright'
+```
+
+**Causa:** el `python3` del host (3.14.4) **no tiene instalado `playwright`** (ni el navegador
+Chromium). `setup_session.py` corre en el Mac (no en Docker), así que necesita las dependencias en
+el entorno local.
+
+**Solución (ejecutar en la terminal, desde la raíz del proyecto):**
+```bash
+pip3 install -r setup/requirements.txt
+playwright install chromium
+```
+
+> No es un bug del código: es configuración del entorno local. Tras instalarlas,
+> `python3 setup/setup_session.py <portal>` funcionará. Recomendado: usar un virtualenv
+> (`python3 -m venv .venv && source .venv/bin/activate`) para no chocar con el Python del sistema.
