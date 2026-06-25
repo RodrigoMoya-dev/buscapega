@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getPortals, Portal, validatePortal, togglePortal } from "@/lib/api";
+import { getPortals, Portal, validatePortal, togglePortal, addPortal } from "@/lib/api";
+
+const GITHUB_REPO = "https://github.com/RodrigoMoya-dev/wunen";
 
 // ── Banderas por mercado ──────────────────────────────────────────────────────
 const MARKET_FLAG: Record<string, { flag: string; country: string }> = {
@@ -45,6 +47,7 @@ interface ValidationResult {
 export default function PortalesPage() {
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   async function load() {
     setLoading(true);
@@ -54,11 +57,16 @@ export default function PortalesPage() {
   }
   useEffect(() => { load(); }, []);
 
-  // Las tres categorías. "Sin scraping" no tiene aún un campo en el backend, por lo que
-  // queda vacía por ahora (se poblará cuando el catálogo distinga scraping permitido).
-  const autoApply = portals.filter((p) => p.auto_apply);
-  const reviewable = portals.filter((p) => !p.auto_apply);
-  const noScraping: Portal[] = [];
+  // Filtro por nombre (buscador de la zona superior).
+  const query = search.trim().toLowerCase();
+  const filtered = query
+    ? portals.filter((p) => p.name.toLowerCase().includes(query) || p.url.toLowerCase().includes(query))
+    : portals;
+
+  // Las tres categorías. "No permite scraping" usa el flag allows_scraping del backend.
+  const autoApply = filtered.filter((p) => p.allows_scraping !== false && p.auto_apply);
+  const reviewable = filtered.filter((p) => p.allows_scraping !== false && !p.auto_apply);
+  const noScraping = filtered.filter((p) => p.allows_scraping === false);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -68,10 +76,34 @@ export default function PortalesPage() {
       </p>
 
       {/* ── Sección: Validar sitio (destacada) ── */}
-      <ValidateSection />
+      <ValidateSection onAdded={load} />
+
+      {/* ── Buscador de portales (entre "Validar sitio" y "Portales de empleo") ── */}
+      <div className="mt-6 relative">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+          className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar un portal por nombre…"
+          className="w-full bg-gray-950 border border-gray-700 text-white rounded-lg pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-600"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            aria-label="Limpiar búsqueda"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-lg leading-none"
+          >
+            ×
+          </button>
+        )}
+      </div>
 
       {/* ── Sección: Portales de empleo (otro color) ── */}
-      <div className="bg-slate-900/60 border border-slate-700 rounded-2xl p-5 mt-6">
+      <div className="bg-slate-900/60 border border-slate-700 rounded-2xl p-5 mt-4">
         <h2 className="text-lg font-semibold text-white mb-1">Portales de empleo</h2>
         <p className="text-gray-400 text-xs mb-5">
           Activa o desactiva portales y registra tu sesión en los que lo permitan.
@@ -79,21 +111,26 @@ export default function PortalesPage() {
 
         {loading ? (
           <div className="text-center py-10 text-gray-500">Cargando portales...</div>
+        ) : query && autoApply.length + reviewable.length + noScraping.length === 0 ? (
+          <p className="text-gray-500 text-sm py-6 text-center">
+            Ningún portal coincide con “{search}”.
+          </p>
         ) : (
           <div className="flex flex-col gap-3">
-            <Accordion title="Portales con auto-postulación" count={autoApply.length} defaultOpen>
+            {/* key con `query` para que los acordeones se reabran al buscar y muestren resultados */}
+            <Accordion key={`auto-${query}`} title="Portales con auto-postulación" count={autoApply.length} defaultOpen>
               {autoApply.map((p) => (
                 <PortalRow key={p.name} portal={p} onToggle={load} />
               ))}
             </Accordion>
 
-            <Accordion title="Portales revisables (sin auto-postulación)" count={reviewable.length}>
+            <Accordion key={`rev-${query}`} title="Portales revisables (sin auto-postulación)" count={reviewable.length} defaultOpen={!!query}>
               {reviewable.map((p) => (
                 <PortalRow key={p.name} portal={p} onToggle={load} />
               ))}
             </Accordion>
 
-            <Accordion title="Portales que no permiten scraping" count={noScraping.length}>
+            <Accordion key={`nos-${query}`} title="Portales que no permiten scraping" count={noScraping.length} defaultOpen={!!query}>
               {noScraping.length === 0 ? (
                 <p className="text-gray-500 text-xs px-1 py-2">
                   Ningún portal en esta categoría por ahora.
@@ -110,13 +147,16 @@ export default function PortalesPage() {
 }
 
 // ── Sección Validar sitio ─────────────────────────────────────────────────────
-function ValidateSection() {
+function ValidateSection({ onAdded }: { onAdded: () => void }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState<{ name: string; category: string } | null>(null);
 
   async function handleValidate() {
+    setAdded(null);
     const normalized = normalizeUrl(url);
     if (!normalized) return;
     if (normalized !== url) setUrl(normalized);
@@ -142,6 +182,35 @@ function ValidateSection() {
     }
     setResult(data);
     setLoading(false);
+  }
+
+  const CATEGORY_LABEL: Record<string, string> = {
+    auto_apply: "Portales con auto-postulación",
+    reviewable: "Portales revisables (sin auto-postulación)",
+    no_scraping: "Portales que no permiten scraping",
+  };
+
+  async function handleAdd() {
+    if (!result) return;
+    setAdding(true);
+    const res = await addPortal({
+      url: result.url,
+      allows_scraping: result.allows_scraping,
+      has_google_auth: result.has_google_auth,
+    });
+    setAdding(false);
+    if (res && res.name && res.category) {
+      setAdded({ name: res.name, category: res.category });
+      onAdded();
+    } else {
+      setResult({ ...result, error: res?.error || "No se pudo agregar el portal." });
+    }
+  }
+
+  // Enlace a GitHub con un issue prellenado para compartir el portal con la comunidad.
+  function shareUrl(): string {
+    const body = `## Portal de empleo propuesto\n\n- **URL:** ${result?.url}\n- **Permite scraping:** ${result?.allows_scraping ? "Sí" : "No"}\n- **Login con Google:** ${result?.has_google_auth ? "Sí" : "No detectado"}\n\n_Compartido desde la vista Validar sitio de Wunen._`;
+    return `${GITHUB_REPO}/issues/new?title=${encodeURIComponent("[Portal] " + (added?.name || result?.url || ""))}&body=${encodeURIComponent(body)}`;
   }
 
   return (
@@ -199,6 +268,12 @@ function ValidateSection() {
         </button>
       </div>
 
+      {/* Atajo con Claude Code (T7) */}
+      <p className="text-indigo-200/60 text-xs mt-2">
+        ¿Tienes Claude Code? También puedes validar desde la terminal con{" "}
+        <code className="text-cyan-300 bg-indigo-900/60 px-1.5 py-0.5 rounded font-mono">claude /valida &lt;sitio&gt;</code>.
+      </p>
+
       {result && result.error && (
         <div className="mt-4 px-4 py-3 bg-red-950 border border-red-800 rounded-lg">
           <p className="text-red-300 text-sm">{result.error}</p>
@@ -245,6 +320,43 @@ function ValidateSection() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Agregar a portales (T5) + compartir en GitHub (T6) */}
+          {added ? (
+            <div className="mt-5 px-4 py-3 bg-green-950 border border-green-800 rounded-lg">
+              <p className="text-green-300 text-sm">
+                ✓ <span className="font-semibold">{added.name}</span> se agregó a{" "}
+                <span className="font-semibold">{CATEGORY_LABEL[added.category] || added.category}</span>.
+              </p>
+              <a
+                href={shareUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrirá una página de GitHub para proponer este portal a la comunidad"
+                className="inline-flex items-center gap-2 mt-3 text-sm text-white bg-gray-800 hover:bg-gray-700 border border-gray-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                  <path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05a9.4 9.4 0 0 1 5 0c1.91-1.32 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.81 0 .27.18.59.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z" />
+                </svg>
+                Compartir en GitHub
+              </a>
+            </div>
+          ) : (
+            result.automatable && !result.already_configured && (
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  onClick={handleAdd}
+                  disabled={adding}
+                  className="bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                >
+                  {adding ? "Agregando..." : "Agregar a mis portales"}
+                </button>
+                <span className="text-gray-500 text-xs">
+                  Se clasificará automáticamente según scraping y login con Google.
+                </span>
+              </div>
+            )
           )}
         </div>
       )}
@@ -335,7 +447,7 @@ function PortalRow({ portal, onToggle }: { portal: Portal; onToggle: () => void 
         <div className="flex items-center gap-3 shrink-0">
           {portal.auto_apply ? (
             <span className={`text-xs ${portal.session_active ? "text-green-400" : "text-gray-500"}`}>
-              {portal.session_active ? "Sesión activa" : "Sin sesión"}
+              {portal.session_active ? "Sesión activa" : "Sesión no iniciada"}
             </span>
           ) : (
             <a
