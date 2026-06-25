@@ -501,7 +501,9 @@ function PortalRow({ portal, onToggle }: { portal: Portal; onToggle: () => void 
 function SessionDialog({ portal, onClose }: { portal: Portal; onClose: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const slug = portalSlug(portal.name);
-  const cmdPython = `python3 setup/setup_session.py ${slug}`;
+  // Wrapper que crea el venv e instala playwright automáticamente la primera vez
+  // (evita el ModuleNotFoundError de ejecutar python3 setup/setup_session.py directo).
+  const cmdPython = `./setup-sessions.sh ${slug}`;
   const cmdClaude = `claude /autentica`;
 
   async function copy(text: string, id: string) {
@@ -522,7 +524,10 @@ function SessionDialog({ portal, onClose }: { portal: Portal; onClose: () => voi
           Registra tu sesión con Google aquí. Esta sesión quedará guardada <strong>solo en tu equipo</strong>.
         </p>
 
-        <p className="text-xs text-gray-500 mb-1">Ejecuta este comando en la terminal del proyecto:</p>
+        <p className="text-xs text-gray-500 mb-1">
+          Ejecuta este comando en la terminal del proyecto (la primera vez instala las dependencias
+          de Python automáticamente):
+        </p>
         <div className="flex items-center gap-2 mb-4">
           <code className="flex-1 text-cyan-400 text-sm font-mono bg-gray-950 px-3 py-2 rounded break-all">{cmdPython}</code>
           <button
