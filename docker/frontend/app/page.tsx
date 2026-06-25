@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Offer, Stats, getOffers, getStats, triggerScraping, getPortals } from "@/lib/api";
+import { Offer, Stats, Portal, getOffers, getStats, triggerScraping, getPortals } from "@/lib/api";
 import OfferCard from "@/components/OfferCard";
 
 const AUTO_APPLY_PORTALS = new Set([
@@ -19,11 +19,21 @@ export default function Home() {
   const [tab, setTab] = useState<"PENDIENTE" | "ENVIADA" | "DESCARTADA">("PENDIENTE");
   const [onlyAutoApply, setOnlyAutoApply] = useState(false);
   const [selectedTechs, setSelectedTechs] = useState<Set<string>>(new Set());
+  const [portals, setPortals] = useState<Portal[]>([]);
+  const [selectedPortals, setSelectedPortals] = useState<Set<string>>(new Set());
 
   function toggleTech(tech: string) {
     setSelectedTechs((prev) => {
       const next = new Set(prev);
       next.has(tech) ? next.delete(tech) : next.add(tech);
+      return next;
+    });
+  }
+
+  function togglePortal(name: string) {
+    setSelectedPortals((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
       return next;
     });
   }
@@ -35,6 +45,11 @@ export default function Home() {
     setStats(statsData);
     setLoading(false);
   }, [tab]);
+
+  // Portales activos para los checkboxes de filtro (se cargan una vez).
+  useEffect(() => {
+    getPortals().then((ps) => setPortals(ps.filter((p) => p.active)));
+  }, []);
 
   useEffect(() => {
     load();
@@ -83,7 +98,15 @@ export default function Home() {
     return Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
   }, [offers]);
 
+  // Resumen: cuántas ofertas se encontraron por portal (en la pestaña actual).
+  const offersByPortal = useMemo(() => {
+    const counts: Record<string, number> = {};
+    offers.forEach((o) => { counts[o.portal] = (counts[o.portal] ?? 0) + 1; });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [offers]);
+
   const visibleOffers = offers.filter((o) => {
+    if (selectedPortals.size > 0 && !selectedPortals.has(o.portal)) return false;
     if (onlyAutoApply && !AUTO_APPLY_PORTALS.has(o.portal)) return false;
     if (selectedTechs.size > 0) {
       const offerTechs: string[] = o.technologies ? JSON.parse(o.technologies) : [];
@@ -175,6 +198,26 @@ export default function Home() {
         </div>
       )}
 
+      {/* Resumen de ofertas encontradas por portal (T2) */}
+      {!loading && offersByPortal.length > 0 && (
+        <div className="mb-6 p-4 bg-gray-900 border border-gray-800 rounded-xl">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-3">
+            Ofertas {tab.toLowerCase()}s por portal
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {offersByPortal.map(([portal, count]) => (
+              <span
+                key={portal}
+                className="flex items-center gap-2 text-sm bg-gray-950 border border-gray-800 rounded-lg px-3 py-1.5"
+              >
+                <span className="text-gray-300">{portal}</span>
+                <span className="text-white font-semibold bg-gray-800 rounded-full px-2 text-xs">{count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-900 rounded-lg p-1 w-fit">
         {tabs.map((t) => (
@@ -210,6 +253,44 @@ export default function Home() {
           </span>
           Solo autopostulación
         </button>
+
+        {/* Portales activos (T1) */}
+        {portals.length > 0 && (
+          <div>
+            <p className="text-gray-500 text-xs mb-2 uppercase tracking-wide">Portal</p>
+            <div className="flex flex-wrap gap-2">
+              {portals.map((p) => {
+                const active = selectedPortals.has(p.name);
+                return (
+                  <button
+                    key={p.name}
+                    onClick={() => togglePortal(p.name)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                      active
+                        ? "bg-blue-700 border-blue-600 text-white"
+                        : "border-gray-700 text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded border flex items-center justify-center text-xs ${
+                      active ? "bg-blue-500 border-blue-400" : "border-gray-500"
+                    }`}>
+                      {active && "✓"}
+                    </span>
+                    {p.name}
+                  </button>
+                );
+              })}
+              {selectedPortals.size > 0 && (
+                <button
+                  onClick={() => setSelectedPortals(new Set())}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  Limpiar
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tecnologías */}
         <div>
@@ -249,11 +330,11 @@ export default function Home() {
       ) : visibleOffers.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-gray-500 text-lg">
-            {onlyAutoApply || selectedTechs.size > 0
+            {onlyAutoApply || selectedTechs.size > 0 || selectedPortals.size > 0
               ? "Ninguna oferta coincide con los filtros aplicados"
               : `No hay ofertas ${tab.toLowerCase()}s`}
           </p>
-          {tab === "PENDIENTE" && !onlyAutoApply && selectedTechs.size === 0 && (
+          {tab === "PENDIENTE" && !onlyAutoApply && selectedTechs.size === 0 && selectedPortals.size === 0 && (
             <p className="text-gray-600 text-sm mt-2">
               Presiona "Buscar ofertas" para traer nuevas propuestas
             </p>
@@ -263,7 +344,7 @@ export default function Home() {
         <div className="flex flex-col gap-4">
           <p className="text-gray-500 text-sm">
             {visibleOffers.length} oferta{visibleOffers.length !== 1 ? "s" : ""}
-            {(onlyAutoApply || selectedTechs.size > 0) && ` (de ${offers.length} total)`}
+            {(onlyAutoApply || selectedTechs.size > 0 || selectedPortals.size > 0) && ` (de ${offers.length} total)`}
           </p>
           {visibleOffers.map((offer) => (
             <OfferCard key={offer.id} offer={offer} onAction={load} />
