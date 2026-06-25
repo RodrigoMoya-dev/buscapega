@@ -132,6 +132,7 @@ export interface Portal {
   auto_apply: boolean;
   market: string;
   active: boolean;
+  allows_scraping: boolean;
   session_active: boolean;
   applications_count: number;
 }
@@ -156,6 +157,24 @@ export async function togglePortal(name: string, active: boolean): Promise<boole
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+export async function addPortal(body: {
+  url: string;
+  name?: string;
+  allows_scraping: boolean;
+  has_google_auth: boolean;
+}): Promise<{ name?: string; category?: string; auto_apply?: boolean; error?: string } | null> {
+  try {
+    const res = await fetch(`${API}/api/portals/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  } catch {
+    return null;
   }
 }
 

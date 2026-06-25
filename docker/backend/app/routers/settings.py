@@ -52,12 +52,47 @@ async def test_whatsapp():
         return {"status": "error", "message": "No hay número de teléfono configurado"}
     try:
         async with httpx.AsyncClient(timeout=10) as client:
+            # 1) Comprobar primero que el servicio WhatsApp esté vinculado/activo.
+            try:
+                health = await client.get(f"{WHATSAPP_URL}/health")
+                hdata = health.json() if health.status_code == 200 else {}
+            except Exception:
+                return {
+                    "status": "error",
+                    "message": "El servicio de WhatsApp no responde. Verifica que el contenedor "
+                               "wunen_whatsapp esté corriendo (docker compose up -d whatsapp).",
+                }
+            if hdata.get("status") != "ok":
+                conexion = hdata.get("connection", "desconocido")
+                return {
+                    "status": "error",
+                    "message": f"WhatsApp no está vinculado (estado: {conexion}). Escanea el código QR "
+                               "con './whatsapp-qr.sh' antes de enviar mensajes.",
+                }
+
+            # 2) Servicio activo → enviar el mensaje de prueba.
             r = await client.post(
                 f"{WHATSAPP_URL}/send",
-                json={"phone": phone, "message": "Wunen: mensaje de prueba de notificaciones ✓"},
+                json={"to": phone, "message": "Wunen: mensaje de prueba de notificaciones ✓"},
             )
             if r.status_code == 200:
                 return {"status": "ok", "message": f"Mensaje enviado a {phone}"}
-            return {"status": "error", "message": f"WhatsApp respondió con error {r.status_code}"}
+            # Intentar extraer el detalle del cuerpo de la respuesta del servicio.
+            detail = ""
+            try:
+                detail = r.json().get("error", "")
+            except Exception:
+                pass
+            if r.status_code == 503:
+                return {
+                    "status": "error",
+                    "message": "WhatsApp no está conectado. Vincula el dispositivo con './whatsapp-qr.sh'"
+                               + (f" (detalle: {detail})" if detail else "") + ".",
+                }
+            return {
+                "status": "error",
+                "message": f"WhatsApp respondió con error {r.status_code}"
+                           + (f": {detail}" if detail else ""),
+            }
     except Exception as e:
         return {"status": "error", "message": f"No se pudo conectar al servicio WhatsApp: {str(e)}"}
