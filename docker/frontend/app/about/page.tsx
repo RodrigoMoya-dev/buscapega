@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { getProfile, saveProfile, uploadCvPdf, cvPdfExists } from "@/lib/api";
 
 const LANG_LEVELS = ["Nativo", "C2", "C1", "B2", "B1", "A2", "A1"];
@@ -54,6 +54,23 @@ export default function AboutPage() {
     setTimeout(() => setSaved(false), 2000);
   }
 
+  // T12: porcentaje de llenado del perfil. Cada criterio aporta una fracción equitativa.
+  const completion = useMemo(() => {
+    const m = profile.work_modality;
+    const s = profile.salary;
+    const items: { label: string; done: boolean }[] = [
+      { label: "CV en español (PDF)", done: pdfEsExists },
+      { label: "CV en inglés (PDF)", done: pdfEnExists },
+      { label: "Stack tecnológico", done: profile.stack.some((t) => t.tech.trim() !== "") },
+      { label: "Modalidad de trabajo", done: !!(m.preference || m.acceptable || m.rejected) },
+      { label: "Expectativa salarial", done: Object.values(s).some((v) => String(v).trim() !== "") },
+      { label: "Idiomas", done: profile.languages.some((l) => l.language.trim() !== "") },
+      { label: "Tipo de contrato", done: profile.contract_type.trim() !== "" },
+    ];
+    const done = items.filter((i) => i.done).length;
+    return { pct: Math.round((done / items.length) * 100), done, total: items.length, items };
+  }, [profile, pdfEsExists, pdfEnExists]);
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold text-white mb-2">Configura tu perfil</h1>
@@ -65,6 +82,32 @@ export default function AboutPage() {
           Entre más completo esté tu perfil, mejores serán los resultados.
         </p>
       </div>
+
+      {/* Indicador de porcentaje de llenado (T12) */}
+      {!loading && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-white">Perfil completado</p>
+            <span className={`text-sm font-bold ${completion.pct === 100 ? "text-green-400" : "text-blue-400"}`}>
+              {completion.pct}%
+            </span>
+          </div>
+          <div className="h-2.5 w-full bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${completion.pct === 100 ? "bg-green-500" : "bg-blue-500"}`}
+              style={{ width: `${completion.pct}%` }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+            {completion.items.map((it) => (
+              <span key={it.label} className={`text-xs flex items-center gap-1 ${it.done ? "text-gray-400" : "text-gray-600"}`}>
+                <span className={it.done ? "text-green-400" : "text-gray-700"}>{it.done ? "✓" : "○"}</span>
+                {it.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-gray-500 text-center py-20">Cargando datos...</div>
