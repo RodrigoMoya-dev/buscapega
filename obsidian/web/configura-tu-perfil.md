@@ -23,3 +23,13 @@ capturar el CV de forma estructurada. Ahora:
 
 > Los formularios estructurados de CV (`CvForm`) y sus endpoints `GET/POST /api/cv/{es|en}` siguen
 > existiendo en el backend, pero ya no se editan desde esta vista: el CV se aporta como PDF.
+
+## Indicador de porcentaje de llenado (T12, 24/06/2026)
+Bajo el recuadro introductorio, una barra de progreso muestra el **% de perfil completado**
+(`completion`, `useMemo`). Cada criterio aporta una fracción equitativa (100% / n criterios):
+
+1. CV en español (PDF) · 2. CV en inglés (PDF) · 3. Stack tecnológico (≥1 con tecnología) ·
+4. Modalidad de trabajo (preferencia/aceptable/no acepto) · 5. Expectativa salarial (≥1 monto) ·
+6. Idiomas (≥1) · 7. Tipo de contrato.
+
+La barra es azul mientras está incompleto y verde al 100%. Debajo lista cada criterio con ✓/○.

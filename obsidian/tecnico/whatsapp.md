@@ -1,17 +1,23 @@
-# Servicio WhatsApp — Baileys
+# Servicio WhatsApp — whatsapp-web.js
 
-**Tecnología:** [Baileys](https://github.com/whiskeysockets/baileys) (librería WhatsApp Web para Node.js)  
-**Directorio:** `docker/whatsapp/`  
-**Puerto:** 3001  
+**Tecnología:** [whatsapp-web.js](https://wwebjs.dev/) (^1.26.0, sobre Chromium/Puppeteer)
+**Directorio:** `docker/whatsapp/`
+**Puerto:** 3001
 **Contenedor:** `wunen_whatsapp`
+
+> **Corrección 24/06/2026:** este servicio **no usa Baileys** (el doc anterior `whatsapp-baileys.md`
+> estaba desactualizado). Usa `whatsapp-web.js` con vinculación por **código QR** (no por código de
+> pairing numérico). Se renombró el archivo a `whatsapp.md`.
 
 ---
 
 ## ¿Qué es?
 
-Servicio HTTP liviano que mantiene una conexión permanente con WhatsApp Web mediante el protocolo oficial de WhatsApp Web (no una API oficial). Expone endpoints REST para enviar mensajes desde otros servicios de Wunen.
+Servicio HTTP liviano que mantiene una conexión permanente con WhatsApp Web (protocolo de WhatsApp
+Web, no la API oficial de Business). Expone endpoints REST para enviar mensajes desde otros servicios
+de Wunen.
 
-**Uso actual:** Notificaciones automáticas de postulaciones en FindJobIT.
+**Uso actual:** Notificaciones automáticas de postulaciones (auto-apply) vía webhook n8n → WhatsApp.
 
 ---
 
@@ -21,87 +27,49 @@ Servicio HTTP liviano que mantiene una conexión permanente con WhatsApp Web med
 Verifica el estado de la conexión.
 
 ```json
-{ "status": "ok", "connection": "connected", "service": "whatsapp" }
+{ "status": "ok", "connection": "connected", "reconnect_attempts": 0, "service": "whatsapp" }
 ```
 
-Estados posibles de `connection`: `connected`, `connecting`, `disconnected`, `waiting_pairing`, `logged_out`
+- `status`: `ok` solo cuando está conectado; `unavailable` en cualquier otro caso.
+- El backend (`/api/settings/test-whatsapp`) consulta primero este endpoint antes de enviar, para dar
+  un mensaje claro si el dispositivo no está vinculado (ver `obsidian/web/configuracion.md`).
 
----
+### `GET /qr`
+Devuelve una página HTML con el **código QR** actual (autorefresca). Se usa desde `./whatsapp-qr.sh`.
+Si ya está conectado, muestra un aviso en vez del QR.
 
 ### `POST /send`
 Envía un mensaje de texto.
 
-**Body:**
-```json
-{
-  "message": "Texto del mensaje",
-  "to": "56912345678"    // opcional — usa DEFAULT_PHONE si se omite
-}
-```
-
-**Respuesta exitosa:**
-```json
-{ "ok": true, "to": "56912345678" }
-```
-
----
+**Body:** `{ "message": "Texto", "to": "56912345678" }` (`to` opcional → usa `DEFAULT_PHONE`).
+**Éxito:** `{ "ok": true, "to": "56912345678" }`.
+**No conectado:** responde **503** con `{ "ok": false, "error": "WhatsApp no está conectado", "status": <estado> }`.
 
 ### `POST /send-bulk`
-Envía múltiples mensajes (con pausa de 500ms entre cada uno).
-
-**Body:**
-```json
-[
-  { "message": "Mensaje 1" },
-  { "message": "Mensaje 2", "to": "56912345678" }
-]
-```
+Envía múltiples mensajes (pausa entre cada uno). Body: arreglo de `{ message, to? }`.
 
 ---
 
-## Primer arranque — Vincular número
-
-Al levantar el servicio por primera vez, Baileys solicitará un **código de pairing** (no QR):
+## Vincular número (código QR)
 
 ```bash
-# Ver el código en los logs
-cd ~/docker/wunen && docker compose logs -f whatsapp
+# Desde la raíz del proyecto (curl al servicio)
+./whatsapp-qr.sh [host] [port]
 ```
 
-Buscar la salida:
-```
-╔════════════════════════════════════════╗
-║   CÓDIGO DE VINCULACIÓN WHATSAPP       ║
-║   Código: XXXX-XXXX                    ║
-╠════════════════════════════════════════╣
-║  1. Abre WhatsApp en tu teléfono       ║
-║  2. Dispositivos vinculados             ║
-║  3. Vincular un dispositivo             ║
-║  4. Ingresa el código de 8 dígitos     ║
-╚════════════════════════════════════════╝
-```
+O manualmente:
+1. `docker compose logs -f whatsapp` y escanear el QR del terminal, **o** abrir `http://<host>:3001/qr`.
+2. En el teléfono: WhatsApp → ⋮ → **Dispositivos vinculados** → Vincular un dispositivo → escanear.
 
-Pasos en el teléfono:
-1. WhatsApp → ⋮ → Dispositivos vinculados
-2. Vincular un dispositivo
-3. Toca "Vincular con número de teléfono"
-4. Ingresar el código de 8 dígitos mostrado en los logs
-
-El estado de autenticación se guarda en el volumen Docker `whatsapp_auth` y persiste entre reinicios.
+El estado de autenticación se guarda en `AUTH_DIR` (`/app/auth`, volumen Docker) y persiste entre
+reinicios.
 
 ---
 
-## Reconexión automática
+## Reconexión
 
-Si la conexión se corta (pérdida de red, reinicio del servidor), Baileys reconecta automáticamente en 5 segundos.
-
-Si la sesión queda inválida (cierre manual desde el teléfono), el servicio mostrará `"logged_out"` y habrá que repetir el proceso de pairing:
-
-```bash
-# Borrar el estado de auth y reiniciar
-docker volume rm wunen_whatsapp_auth
-cd ~/docker/wunen && docker compose up -d whatsapp
-```
+El cliente reconecta automáticamente; `reconnect_attempts` en `/health` refleja los intentos. Si la
+sesión queda inválida (cierre manual desde el teléfono), borrar el volumen de auth y reescanear el QR.
 
 ---
 
@@ -109,14 +77,10 @@ cd ~/docker/wunen && docker compose up -d whatsapp
 
 | Variable | Default | Descripción |
 |----------|---------|-------------|
-| `WHATSAPP_DEFAULT_PHONE` | `56912345678` | Número destino por defecto (sin +) |
-| `WHATSAPP_PAIRING_PHONE` | `56912345678` | Número a vincular (sin +) |
-
-En `~/docker/wunen/.env`:
-```env
-WHATSAPP_DEFAULT_PHONE=56912345678
-WHATSAPP_PAIRING_PHONE=56912345678
-```
+| `PORT` | `3001` | Puerto HTTP del servicio |
+| `AUTH_DIR` | `/app/auth` | Carpeta de estado de autenticación (volumen) |
+| `DEFAULT_PHONE` | `56912345678` | Número destino por defecto (sin +) |
+| `CHROME_PATH` | `/usr/bin/chromium` | Ejecutable de Chromium para Puppeteer |
 
 ---
 
@@ -124,50 +88,25 @@ WHATSAPP_PAIRING_PHONE=56912345678
 
 | Archivo | Descripción |
 |---------|-------------|
-| `docker/whatsapp/server.js` | Servidor HTTP + lógica Baileys |
-| `docker/whatsapp/package.json` | Dependencias Node.js |
-| `docker/whatsapp/Dockerfile` | Imagen Docker |
+| `docker/whatsapp/server.js` | Servidor HTTP + cliente whatsapp-web.js |
+| `docker/whatsapp/package.json` | Dependencias Node.js (whatsapp-web.js, qrcode) |
+| `docker/whatsapp/Dockerfile` | Imagen Docker (incluye Chromium) |
 
 ---
 
-## Comandos útiles
-
-```bash
-# Levantar sólo el servicio WhatsApp
-cd ~/docker/wunen && docker compose up -d whatsapp
-
-# Ver logs en tiempo real (para ver el código de pairing)
-docker compose logs -f whatsapp
-
-# Probar envío de mensaje
-curl -X POST http://localhost:3001/send \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hola desde Wunen! 🤖"}'
-
-# Ver estado de conexión
-curl http://localhost:3001/health
-```
-
----
-
-## Integración desde Python (scraper)
+## Integración desde Python (scraper/backend)
 
 ```python
 import httpx
 
 def send_whatsapp(message: str):
-    httpx.post(
-        "http://whatsapp:3001/send",
-        json={"message": message},
-        timeout=10.0
-    )
+    httpx.post("http://whatsapp:3001/send", json={"message": message}, timeout=10.0)
 ```
 
 ---
 
-## Notas importantes
+## Notas
 
-- Baileys usa el protocolo de WhatsApp Web, **no la API oficial de WhatsApp Business**
-- Un número sólo puede estar conectado en un dispositivo web a la vez
-- Si el teléfono no tiene internet, los mensajes se pueden perder
-- El servicio es para uso **personal** — no para envío masivo
+- Protocolo de WhatsApp Web, **no** la API oficial de WhatsApp Business.
+- Un número solo puede estar en un dispositivo web a la vez.
+- Servicio para uso **personal**, no para envío masivo.

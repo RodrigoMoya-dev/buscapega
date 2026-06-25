@@ -65,6 +65,36 @@ Definido en `documentos/portales.json` (o `DEFAULT_PORTAL_LIST` si no existe). F
 
 - FindJobIT activo por defecto (demo) vía `demo_active` / `DEMO_ACTIVE_KEYS`.
 
+## Mejoras 24/06/2026 — buscador, agregar/compartir portal y estados
+
+### Buscador de portales (entre "Validar sitio" y "Portales de empleo")
+Input de búsqueda que filtra los portales por **nombre o URL** (`search`). Al escribir, los
+acordeones se reabren (su `key` incluye el query) para mostrar los resultados; si nada coincide,
+muestra "Ningún portal coincide con …".
+
+### Texto de sesión
+"Sin sesión" → **"Sesión no iniciada"** en la fila de portal.
+
+### Agregar un sitio validado a los portales (Validar sitio)
+Si la validación da **automatizable** y el sitio **no está ya registrado**, aparece el botón
+**"Agregar a mis portales"** → `POST /api/portals/add`. El backend determina la categoría
+automáticamente:
+- `allows_scraping` + Google auth → **auto-postulación** (`auto_apply=true`, con `session_key`).
+- `allows_scraping` sin Google auth → **revisable** (`auto_apply=false`).
+- sin scraping → **no permite scraping** (`allows_scraping=false`).
+
+El listado (`GET /api/portals`) ahora expone `allows_scraping`; la vista usa ese flag para poblar
+el acordeón "Portales que no permiten scraping".
+
+### Compartir en GitHub (T6)
+Tras agregar el portal, un botón **"Compartir en GitHub"** abre un issue prellenado en el repo
+público (`RodrigoMoya-dev/wunen`) con la URL y los resultados de la validación, para proponerlo a
+la comunidad. Lleva tooltip que avisa que abrirá GitHub.
+
+### Atajo Claude Code (T7)
+Bajo el campo de URL: aviso de que con Claude Code se puede validar desde la terminal con
+`claude /valida <sitio>`.
+
 ## Cambios sesión 24/06/2026 — fusión Validar+Portales y rediseño
 
 - Se fusionó "Validar sitio" en esta vista (`/validate` redirige a `/authenticate`).

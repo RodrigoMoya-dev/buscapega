@@ -23,3 +23,7 @@ A la derecha del nav hay un enlace **"Reportar problema"** (ícono de alerta) qu
 (plantilla de descripción / pasos / esperado-vs-obtenido). No usa token: el usuario confirma y
 envía el issue desde GitHub. Decisión: enlace directo en vez de integración por API (sin
 secretos en el frontend).
+
+**Tooltip (T13, 24/06/2026):** el enlace tiene `title="Se abrirá una página de GitHub para
+describir y subir el problema"`, avisando al usuario que la acción abre GitHub (antes solo decía
+"Reportar un problema en GitHub").

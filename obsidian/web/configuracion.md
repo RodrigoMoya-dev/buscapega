@@ -34,6 +34,28 @@ sirviendo un build viejo.
 - La API key de Anthropic **es opcional**: la web no la pide. La evaluación funciona con scoring
   por keywords o con Claude Code.
 
+## Mejoras 24/06/2026
+
+### Saludo se refresca al guardar el nombre (T9)
+Antes había que recargar la página para que el saludo "Hola, {nombre}" del menú se actualizara.
+Ahora, al guardar, la vista dispara el evento `window` `wunen:settings-updated` con el nuevo
+`user_name`; `components/NavGreeting.tsx` lo escucha y refresca el saludo **sin recargar**.
+
+### Mensaje claro cuando WhatsApp no está vinculado (T10)
+`POST /api/settings/test-whatsapp` ahora consulta primero `GET {whatsapp}/health`:
+- Si el servicio no responde → "El servicio de WhatsApp no responde…".
+- Si `status != ok` (no vinculado) → "WhatsApp no está vinculado (estado: …). Escanea el QR con
+  './whatsapp-qr.sh'…".
+- Solo si está activo envía el mensaje. Un 503 al enviar también devuelve un mensaje de vinculación
+  con el detalle del servicio (antes solo decía "WhatsApp respondió con error 503").
+
+  También se corrigió el cuerpo enviado a `/send`: usa `to` (el servicio ignoraba `phone`).
+
+### Checkbox reply-to (T11)
+El campo "Correo de respuesta (reply-to)" tiene un checkbox **"Usar el mismo correo de envío"**.
+Al activarlo, el reply-to replica `notification_email` (campo deshabilitado) y se persiste así al
+guardar. Se inicia marcado si el reply-to está vacío o coincide con el correo de envío.
+
 ## Cambios sesión 17/06/2026
 
 - Documentado que teléfono/correo provienen del instalador (settings.json) y editables aquí.

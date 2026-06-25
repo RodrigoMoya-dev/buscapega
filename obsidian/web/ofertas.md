@@ -30,6 +30,15 @@ Antes, "Buscar ofertas" disparaba el scraping y esperaba 5 s fijos sin feedback 
 - Incluye el enlace **"Ver mis postulaciones"** que cambia a la pestaña **Enviadas**.
 - Solo se muestra cuando hay al menos una postulación (`total_sent > 0`).
 
+## Filtro por portal y resumen por portal (mejoras 24/06/2026)
+- **Resumen por portal (bajo el título):** una tarjeta muestra cuántas ofertas hay en la pestaña
+  actual desglosadas por portal (`offersByPortal`, contadas desde la lista cargada). Se actualiza
+  con la pestaña (Pendientes / Enviadas / Descartadas).
+- **Checkboxes de portales activos (filtro):** en el bloque de filtros, además de
+  "Solo autopostulación" y Tecnología, hay una fila **Portal** con un checkbox por cada portal
+  **activo** (`getPortals()` filtrado por `active`). Seleccionar uno o varios filtra las ofertas a
+  esos portales (`selectedPortals`). El botón "Limpiar" deselecciona todos.
+
 ## Tarjeta de oferta (`OfferCard.tsx`, mejoras 24/06/2026)
 - Se **quitaron los botones "Descartar" y "Bloquear empresa"**.
 - Portales con auto-postulación: botón **"Postular"** (ancho completo).
