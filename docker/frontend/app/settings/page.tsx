@@ -15,19 +15,32 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [testingWa, setTestingWa] = useState(false);
   const [waTestResult, setWaTestResult] = useState<{ status: string; message: string } | null>(null);
+  // T11: cuando está activo, el reply-to replica el correo de envío.
+  const [sameReply, setSameReply] = useState(false);
 
   useEffect(() => {
     getSettings().then((data) => {
-      if (data) setForm((prev) => ({ ...prev, ...data }));
+      if (data) {
+        setForm((prev) => ({ ...prev, ...data }));
+        // Si reply == envío (o no hay reply), inicia el checkbox marcado.
+        if (!data.reply_email || data.reply_email === data.notification_email) setSameReply(true);
+      }
       setLoading(false);
     });
   }, []);
 
   async function handleSave() {
     setSaving(true);
-    await saveSettings(form);
+    // Si el checkbox está activo, el reply-to replica el correo de envío.
+    const payload = sameReply ? { ...form, reply_email: form.notification_email } : form;
+    if (sameReply && form.reply_email !== form.notification_email) {
+      setForm(payload);
+    }
+    await saveSettings(payload);
     setSaving(false);
     setSaved(true);
+    // T9: refrescar el saludo del menú sin recargar la página.
+    window.dispatchEvent(new CustomEvent("wunen:settings-updated", { detail: { user_name: payload.user_name } }));
     setTimeout(() => setSaved(false), 2000);
   }
 
@@ -137,12 +150,26 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Correo de respuesta (reply-to)</label>
+                <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={sameReply}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setSameReply(checked);
+                      if (checked) set("reply_email", form.notification_email);
+                    }}
+                    className="accent-blue-500 w-4 h-4"
+                  />
+                  <span className="text-xs text-gray-400">Usar el mismo correo de envío</span>
+                </label>
                 <input
                   type="email"
-                  value={form.reply_email}
+                  value={sameReply ? form.notification_email : form.reply_email}
                   onChange={(e) => set("reply_email", e.target.value)}
+                  disabled={sameReply}
                   placeholder="respuesta@ejemplo.com"
-                  className="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-600"
+                  className="w-full bg-gray-950 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
