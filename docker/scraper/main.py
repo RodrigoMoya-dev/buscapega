@@ -247,6 +247,54 @@ def apply_to_offer(req: ApplyRequest):
     return result.to_dict(offer)
 
 
+# ── Prueba de correo ──────────────────────────────────────────────────────────
+
+class TestEmailRequest(BaseModel):
+    to: str
+
+
+@app.post("/test-email")
+def test_email(req: TestEmailRequest):
+    """Envía un correo de prueba para validar que el correo de postulaciones funciona.
+
+    Reutiliza el mismo mecanismo de envío de las postulaciones (webhook de Google
+    Apps Script con respaldo de Gmail SMTP).
+    """
+    to = (req.to or "").strip()
+    if not to:
+        return {"status": "error", "message": "No hay correo configurado"}
+
+    tiene_gas = bool(findjobit_applicator.GAS_WEBHOOK_URL)
+    tiene_smtp = bool(findjobit_applicator.GMAIL_USER and findjobit_applicator.GMAIL_APP_PASSWORD)
+    if not tiene_gas and not tiene_smtp:
+        return {
+            "status": "error",
+            "message": "No hay método de envío configurado. Define GMAIL_USER y "
+                       "GMAIL_APP_PASSWORD en docker/.env (o ejecuta ./setup-gmail.sh).",
+        }
+
+    try:
+        ok = findjobit_applicator._send_email(
+            to_email=to,
+            subject="Wunen — correo de prueba ✓",
+            body_text="Este es un correo de prueba de Wunen. Si lo recibiste, el correo "
+                      "de postulaciones está funcionando correctamente.",
+            body_html="<p>Este es un <strong>correo de prueba</strong> de Wunen. Si lo "
+                      "recibiste, el correo de postulaciones está funcionando correctamente. ✓</p>",
+            cv_url=None,
+        )
+    except Exception as e:
+        return {"status": "error", "message": f"Error al enviar el correo: {e}"}
+
+    if ok:
+        return {"status": "ok", "message": f"Correo de prueba enviado a {to}"}
+    return {
+        "status": "error",
+        "message": "No se pudo enviar el correo. Revisa GMAIL_USER/GMAIL_APP_PASSWORD "
+                   "(o el webhook de Google Apps Script) en docker/.env.",
+    }
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
