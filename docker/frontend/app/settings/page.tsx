@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSettings, saveSettings, testWhatsapp } from "@/lib/api";
+import { getSettings, saveSettings, testWhatsapp, testEmail } from "@/lib/api";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [testingWa, setTestingWa] = useState(false);
   const [waTestResult, setWaTestResult] = useState<{ status: string; message: string } | null>(null);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<{ status: string; message: string } | null>(null);
   // T11: cuando está activo, el reply-to replica el correo de envío.
   const [sameReply, setSameReply] = useState(false);
 
@@ -51,6 +53,18 @@ export default function SettingsPage() {
     setWaTestResult(result ?? { status: "error", message: "Sin respuesta del servidor" });
     setTestingWa(false);
     setTimeout(() => setWaTestResult(null), 5000);
+  }
+
+  async function handleTestEmail() {
+    setTestingEmail(true);
+    setEmailTestResult(null);
+    // Guardar antes de probar para que el backend lea el correo actual del formulario.
+    const payload = sameReply ? { ...form, reply_email: form.notification_email } : form;
+    await saveSettings(payload);
+    const result = await testEmail();
+    setEmailTestResult(result ?? { status: "error", message: "Sin respuesta del servidor" });
+    setTestingEmail(false);
+    setTimeout(() => setEmailTestResult(null), 6000);
   }
 
   function set(field: string, val: string) {
@@ -173,6 +187,25 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
+
+            {/* Validar correo: envía un correo de prueba al correo de envío */}
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={handleTestEmail}
+                disabled={testingEmail || !form.notification_email.trim()}
+                className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors border border-gray-700"
+              >
+                {testingEmail ? "Enviando..." : "Enviar correo de prueba"}
+              </button>
+              {emailTestResult && (
+                <span className={`text-sm ${emailTestResult.status === "ok" ? "text-green-400" : "text-red-400"}`}>
+                  {emailTestResult.message}
+                </span>
+              )}
+            </div>
+            <p className="text-gray-600 text-xs mt-1.5">
+              Envía un correo de prueba al “Correo de envío” para validar que funciona.
+            </p>
 
             {/* Setup Gmail */}
             <div className="mt-6 border-t border-gray-800 pt-5">
