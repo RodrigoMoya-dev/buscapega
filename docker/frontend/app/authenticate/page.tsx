@@ -501,7 +501,9 @@ function PortalRow({ portal, onToggle }: { portal: Portal; onToggle: () => void 
 function SessionDialog({ portal, onClose }: { portal: Portal; onClose: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const slug = portalSlug(portal.name);
-  const cmdPython = `python3 setup/setup_session.py ${slug}`;
+  // Wrapper que crea el venv e instala playwright automáticamente la primera vez
+  // (evita el ModuleNotFoundError de ejecutar python3 setup/setup_session.py directo).
+  const cmdPython = `./setup-sessions.sh ${slug}`;
   const cmdClaude = `claude /autentica ${slug}`;
 
   async function copy(text: string, id: string) {
