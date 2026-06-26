@@ -17,7 +17,8 @@ Rama feature (`feature_setup_vistas_26062026`):
 Cierre:
 - [x] Actualizar documentación en `obsidian/` (web + técnico).
 - [x] Push a gitea (`origin`) y github; merge de ambas ramas a `main` (sin `obsidian/`). main en `a401eed`.
-- [ ] Ejecutar `/prueba`.
+- [x] Ejecutar `/prueba`. ✅ Clon limpio de `main`, `install.sh` EXIT 0, banner "Instalación completada", backend `/health` OK, 5 contenedores arriba. Endpoints nuevos verificados: `test-email` (backend/scraper) y `/pair` (WhatsApp, devolvió código). `./setup-sessions.sh --lista` en clon limpio creó el venv, instaló Playwright + Chromium y listó portales sin `ModuleNotFoundError`. Sin problemas detectados.
+- [ ] (Pendiente, requiere confirmación) Deploy a Presto (`~/docker/wunen/`, puertos propios; ver [[project-presto-deploy]]).
 
 ---
 
