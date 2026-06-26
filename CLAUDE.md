@@ -41,7 +41,7 @@ playwright install chromium
 ```
 After capturing, the script auto-rsync's cookies to `rodrigo@presto:~/docker/wunen/cookies/`.
 
-**WhatsApp QR linking**: `./whatsapp-qr.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
+**WhatsApp QR linking**: `./vincular-whatsapp.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
 
 **API docs** (when backend is running): http://localhost:8000/docs  
 **Frontend**: http://localhost:3000

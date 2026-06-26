@@ -301,3 +301,11 @@ export async function testWhatsapp(): Promise<{ status: string; message: string 
     return res.json();
   } catch { return null; }
 }
+
+export async function testEmail(): Promise<{ status: string; message: string } | null> {
+  try {
+    const res = await fetch(`${API}/api/settings/test-email`, { method: "POST" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
