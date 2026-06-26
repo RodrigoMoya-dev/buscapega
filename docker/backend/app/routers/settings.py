@@ -8,6 +8,7 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
 SETTINGS_PATH = os.path.join(WUNEN_DIR, "documentos", "settings.json")
 WHATSAPP_URL = os.getenv("WHATSAPP_URL", "http://whatsapp:3001")
+SCRAPER_URL = os.getenv("SCRAPER_URL", "http://scraper:8001")
 
 DEFAULT_SETTINGS = {
     "user_name": "",
@@ -96,3 +97,27 @@ async def test_whatsapp():
             }
     except Exception as e:
         return {"status": "error", "message": f"No se pudo conectar al servicio WhatsApp: {str(e)}"}
+
+
+@router.post("/test-email")
+async def test_email():
+    """Valida el correo de postulaciones enviando un correo de prueba.
+
+    Delega en el servicio scraper, que tiene configuradas las credenciales de
+    envío (GMAIL_USER/GMAIL_APP_PASSWORD y el webhook de Google Apps Script).
+    """
+    settings = _read()
+    email = settings.get("notification_email", "").strip()
+    if not email:
+        return {"status": "error", "message": "No hay correo de postulaciones configurado"}
+    try:
+        async with httpx.AsyncClient(timeout=45) as client:
+            r = await client.post(f"{SCRAPER_URL}/test-email", json={"to": email})
+            if r.status_code == 200:
+                return r.json()
+            return {
+                "status": "error",
+                "message": f"El servicio de envío respondió con error {r.status_code}",
+            }
+    except Exception as e:
+        return {"status": "error", "message": f"No se pudo conectar al servicio de envío: {str(e)}"}
