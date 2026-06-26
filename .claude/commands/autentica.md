@@ -5,18 +5,23 @@ Automatiza el proceso de obtención de cookies de autenticación para los portal
 ## Uso
 
 ```
-claude /autentica
+claude /autentica            # autentica todos los portales sin sesión
+claude /autentica <portal>   # autentica solo ese portal (ej: claude /autentica getonbrd)
 ```
 
 ## Descripción
 
-Lee los portales registrados en `obsidian/persona/portales de trabajo.md` y ejecuta el proceso de autenticación para cada portal que no tenga una sesión activa.
+Lee los portales registrados en `obsidian/persona/portales de trabajo.md` y ejecuta el proceso de autenticación.
+
+Si se pasa un `<portal>` como argumento (su `key`/slug, ej: `getonbrd`, `tecnoempleo`), autentica **solo** ese portal. Sin argumento, procesa cada portal que no tenga una sesión activa.
 
 El proceso de autenticación captura las cookies de la sesión autenticada con Google y las almacena en `setup/cookies/<portal>.json`, que luego son sincronizadas al servidor Presto.
 
 ## Instrucciones para Claude
 
 Cuando se invoque este comando:
+
+0. Si se recibió un argumento `<portal>`, trabaja **solo** con ese portal (su `key`/slug): salta directamente al paso 4 ejecutando `cd setup && python3 setup_session.py <portal>`. Si no se recibió argumento, continúa con el flujo completo desde el paso 1.
 
 1. Lee el archivo `obsidian/persona/portales de trabajo.md` y extrae la lista de portales con auto-postulación (columna "Autopostulación" = ✅).
 

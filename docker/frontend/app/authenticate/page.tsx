@@ -446,8 +446,8 @@ function PortalRow({ portal, onToggle }: { portal: Portal; onToggle: () => void 
 
         <div className="flex items-center gap-3 shrink-0">
           {portal.auto_apply ? (
-            <span className={`text-xs ${portal.session_active ? "text-green-400" : "text-gray-500"}`}>
-              {portal.session_active ? "Sesión activa" : "Sesión no iniciada"}
+            <span className={`text-xs ${active ? "text-green-400" : "text-gray-500"}`}>
+              {active ? "Incluido en búsquedas" : "No incluido en búsquedas"}
             </span>
           ) : (
             <a
@@ -504,7 +504,7 @@ function SessionDialog({ portal, onClose }: { portal: Portal; onClose: () => voi
   // Wrapper que crea el venv e instala playwright automáticamente la primera vez
   // (evita el ModuleNotFoundError de ejecutar python3 setup/setup_session.py directo).
   const cmdPython = `./setup-sessions.sh ${slug}`;
-  const cmdClaude = `claude /autentica`;
+  const cmdClaude = `claude /autentica ${slug}`;
 
   async function copy(text: string, id: string) {
     await navigator.clipboard.writeText(text);

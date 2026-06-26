@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# Muestra el código QR de WhatsApp para vincular el número.
-# Uso: ./setup/whatsapp-qr.sh [host] [puerto]
-#   host    IP o hostname del servidor donde corre Wunen (default: localhost)
-#   puerto  Puerto del servicio WhatsApp (default: 3001)
+# Vincula el número de WhatsApp: muestra el QR o genera un código de vinculación.
+# Uso: ./vincular-whatsapp.sh [host] [puerto] [telefono]
+#   host      IP o hostname del servidor donde corre Wunen (default: localhost)
+#   puerto    Puerto del servicio WhatsApp (default: 3001)
+#   telefono  (opcional) Número con código de país (solo dígitos, ej: 56962075019).
+#             Si se indica, genera un CÓDIGO de vinculación en vez del QR —
+#             útil si el QR falla con "No se pueden vincular dispositivos nuevos".
 
 set -euo pipefail
 
 HOST="${1:-localhost}"
 PORT="${2:-3001}"
+PHONE="${3:-}"
 QR_URL="http://${HOST}:${PORT}/qr"
 HEALTH_URL="http://${HOST}:${PORT}/health"
+PAIR_URL="http://${HOST}:${PORT}/pair"
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -47,6 +52,36 @@ fi
 echo -e "${YELLOW}!${RESET} Estado: ${STATUS}"
 echo ""
 
+# ── Alternativa: vinculación por código (sin QR) ──────────────────────────────
+# Si se pasó un teléfono como 3er argumento, pide un código de vinculación.
+if [[ -n "$PHONE" ]]; then
+  CLEAN_PHONE="${PHONE//[^0-9]/}"
+  echo -e "${CYAN}▶${RESET} Generando código de vinculación para ${CLEAN_PHONE}..."
+  RESP=$(curl -sf --max-time 15 -X POST "$PAIR_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"phone\":\"${CLEAN_PHONE}\"}" 2>/dev/null || echo "")
+  CODE=$(echo "$RESP" | grep -o '"code":"[^"]*"' | cut -d'"' -f4 || echo "")
+  if [[ -n "$CODE" ]]; then
+    echo ""
+    echo -e "${GREEN}${BOLD}  Código de vinculación: ${CODE}${RESET}"
+    echo ""
+    echo -e "${BOLD}Pasos en el teléfono:${RESET}"
+    echo -e "  1. Abre WhatsApp → ⋮ → ${BOLD}Dispositivos vinculados${RESET}"
+    echo -e "  2. Toca ${BOLD}Vincular un dispositivo${RESET}"
+    echo -e "  3. Toca ${BOLD}Vincular con número de teléfono${RESET} (abajo)"
+    echo -e "  4. Ingresa el código mostrado arriba"
+    echo ""
+    echo -e "  Una vez vinculado, el estado cambiará a 'connected' automáticamente."
+    echo ""
+    exit 0
+  else
+    ERRMSG=$(echo "$RESP" | grep -o '"error":"[^"]*"' | cut -d'"' -f4 || echo "")
+    echo -e "${RED}✗${RESET} No se pudo generar el código${ERRMSG:+: $ERRMSG}"
+    echo -e "  Reintenta en unos segundos o usa el QR (abajo)."
+    echo ""
+  fi
+fi
+
 # Intentar mostrar el QR en el terminal si qrencode está disponible
 if command -v qrencode &>/dev/null; then
   echo -e "${CYAN}▶${RESET} Obteniendo QR del servidor..."
@@ -73,6 +108,11 @@ if [[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]]; then
 else
   echo -e "     ${CYAN}ssh ${HOST} 'cd ~/docker/wunen && docker compose logs -f whatsapp'${RESET}"
 fi
+echo ""
+echo -e "  ${BOLD}3. ¿El QR falla? Vincula con un código (sin QR):${RESET}"
+echo -e "     ${CYAN}./vincular-whatsapp.sh ${HOST} ${PORT} <tu_numero>${RESET}"
+echo -e "     (ej: ./vincular-whatsapp.sh ${HOST} ${PORT} 56962075019)"
+echo -e "     Útil si aparece \"No se pueden vincular dispositivos nuevos en este momento\"."
 echo ""
 echo -e "${BOLD}Pasos en el teléfono:${RESET}"
 echo -e "  1. Abre WhatsApp"
