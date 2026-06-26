@@ -188,7 +188,7 @@ echo ""
 while true; do
   ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
   echo -e "  ${CYAN}Aquí solo se guarda el número. La vinculación se hace DESPUÉS escaneando${RESET}"
-  echo -e "  ${CYAN}un QR: al terminar la instalación ejecuta ./whatsapp-qr.sh y escanéalo.${RESET}"
+  echo -e "  ${CYAN}un QR: al terminar la instalación ejecuta ./vincular-whatsapp.sh y escanéalo.${RESET}"
   read -r -p "  [56912345678] > " WHATSAPP_PHONE
   WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
   WHATSAPP_PHONE_CLEAN=$(echo "$WHATSAPP_PHONE" | tr -dc '0-9')
@@ -503,7 +503,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
         if ! "$VENV_PY" -m pip install -q --upgrade pip 2>/dev/null; then :; fi
         if ! "$VENV_PY" -m pip install -q -r requirements.txt 2>/tmp/wunen_pip_err.log; then
           warn "Falló pip install. Detalle: $(tail -n 1 /tmp/wunen_pip_err.log)"
-          warn "Intenta manualmente: cd setup && ./run_setup.sh --lista"
+          warn "Intenta manualmente: ./instalar_dependencias_python.sh"
           SETUP_DEPS_OK=false
         fi
       fi
@@ -515,7 +515,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
       if $SETUP_DEPS_OK && ! "$VENV_PY" -m playwright install chromium 2>/tmp/wunen_pw_err.log; then
         warn "Falló playwright install. Detalle: $(tail -n 1 /tmp/wunen_pw_err.log)"
-        warn "Intenta manualmente: cd setup && ./run_setup.sh --lista"
+        warn "Intenta manualmente: ./instalar_dependencias_python.sh"
         SETUP_DEPS_OK=false
       fi
 
@@ -617,8 +617,8 @@ echo ""
 echo -e "  ${BOLD}Vincular WhatsApp (Baileys — notificaciones):${RESET}"
 echo -e "    WhatsApp NO se configura en el instalador: requiere escanear un QR."
 echo -e "    Ejecuta este script y escanea el QR con tu teléfono:"
-echo -e "    ${CYAN}./whatsapp-qr.sh${RESET}              (local)"
-echo -e "    ${CYAN}./whatsapp-qr.sh presto 3001${RESET}  (servidor remoto Presto)"
+echo -e "    ${CYAN}./vincular-whatsapp.sh${RESET}              (local)"
+echo -e "    ${CYAN}./vincular-whatsapp.sh presto 3001${RESET}  (servidor remoto Presto)"
 echo ""
 echo -e "  ${BOLD}Correo Gmail de postulaciones:${RESET}"
 echo -e "    Se pidió en este instalador. Para cambiarlo más tarde:"
@@ -628,7 +628,7 @@ echo -e "  ${BOLD}Comandos útiles:${RESET}"
 echo -e "    cd docker && docker compose logs -f"
 echo -e "    cd docker && docker compose down"
 echo -e "    ./setup-sessions.sh --lista          # estado de sesiones de portales"
-echo -e "    ./whatsapp-qr.sh                     # vincular WhatsApp"
+echo -e "    ./vincular-whatsapp.sh                     # vincular WhatsApp"
 echo ""
 
 # La API key de Anthropic es OPCIONAL — recordatorio amable, no una advertencia de error
