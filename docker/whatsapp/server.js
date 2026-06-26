@@ -213,6 +213,43 @@ app.get("/qr", async (_req, res) => {
 });
 
 /**
+ * POST /pair
+ * Body: { phone: string }  (número con código de país, solo dígitos)
+ *
+ * Alternativa al QR: genera un código de 8 caracteres que se ingresa en
+ * WhatsApp → Dispositivos vinculados → "Vincular con número de teléfono".
+ * Útil cuando el escaneo del QR falla con "No se pueden vincular dispositivos
+ * nuevos en este momento".
+ */
+app.post("/pair", async (req, res) => {
+  if (isConnected) {
+    return res.status(409).json({ ok: false, error: "WhatsApp ya está conectado" });
+  }
+  if (!waClient) {
+    return res.status(503).json({
+      ok: false,
+      error: "El cliente aún no está listo. Espera unos segundos y vuelve a intentar.",
+    });
+  }
+  const phone = String(req.body?.phone || "").replace(/[^0-9]/g, "");
+  if (!phone) {
+    return res.status(400).json({
+      ok: false,
+      error: "Falta 'phone' (número con código de país, solo dígitos)",
+    });
+  }
+  try {
+    // requestPairingCode está disponible en whatsapp-web.js >= 1.23
+    const code = await waClient.requestPairingCode(phone);
+    console.log(`[WhatsApp] Código de vinculación para ${phone}: ${code}`);
+    res.json({ ok: true, code, phone });
+  } catch (err) {
+    console.error("[WhatsApp] ❌ Error al generar código de vinculación:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
  * POST /send
  * Body: { message: string, to?: string }
  */
