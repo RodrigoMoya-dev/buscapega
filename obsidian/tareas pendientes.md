@@ -16,7 +16,7 @@ Rama feature (`feature_setup_vistas_26062026`):
 
 Cierre:
 - [x] Actualizar documentación en `obsidian/` (web + técnico).
-- [ ] Push a gitea (`origin`) y github; merge de ambas ramas a `main` (sin `obsidian/`).
+- [x] Push a gitea (`origin`) y github; merge de ambas ramas a `main` (sin `obsidian/`). main en `a401eed`.
 - [ ] Ejecutar `/prueba`.
 
 ---
