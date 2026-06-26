@@ -2,7 +2,7 @@
 
 **Ruta web:** `/settings`
 **Archivo:** `docker/frontend/app/settings/page.tsx`
-**API:** `GET/POST /api/settings`, `POST /api/settings/test-whatsapp` (`docker/backend/app/routers/settings.py`)
+**API:** `GET/POST /api/settings`, `POST /api/settings/test-whatsapp`, `POST /api/settings/test-email` (`docker/backend/app/routers/settings.py`)
 
 ---
 
@@ -26,9 +26,11 @@ El componente `components/NavGreeting.tsx` lee `settings.user_name` y muestra "H
 en el menú superior. Si no aparece, es porque `settings.json` no tiene `user_name` o se está
 sirviendo un build viejo.
 
-## WhatsApp (Baileys) y Gmail
+## WhatsApp (whatsapp-web.js) y Gmail
 
-- **WhatsApp:** no se configura en el instalador (requiere escanear un QR). Usar `./whatsapp-qr.sh`.
+- **WhatsApp:** no se configura en el instalador (requiere escanear un QR). Usar
+  `./vincular-whatsapp.sh` (o `./vincular-whatsapp.sh <host> <port> <telefono>` para vincular por
+  código sin QR).
 - **Gmail:** el correo y la contraseña de aplicación se piden en el instalador y se guardan en
   `docker/.env`. Para cambiarlos luego: `./setup-gmail.sh`.
 - La API key de Anthropic **es opcional**: la web no la pide. La evaluación funciona con scoring
@@ -56,7 +58,19 @@ El campo "Correo de respuesta (reply-to)" tiene un checkbox **"Usar el mismo cor
 Al activarlo, el reply-to replica `notification_email` (campo deshabilitado) y se persiste así al
 guardar. Se inicia marcado si el reply-to está vacío o coincide con el correo de envío.
 
+## Mejoras 26/06/2026 — validar correo de postulaciones (T6)
+
+La sección "Correo de postulaciones" tiene un botón **"Enviar correo de prueba"** que valida que el
+correo funcione. Flujo:
+- La vista guarda primero el correo del formulario y llama `POST /api/settings/test-email`.
+- El backend lee `notification_email` de `settings.json` y delega en el scraper
+  (`POST {scraper}/test-email`), que tiene las credenciales de envío.
+- El scraper reutiliza el mecanismo real de envío (`findjobit._send_email`: webhook de Google Apps
+  Script con respaldo de Gmail SMTP) y manda un correo de prueba al "Correo de envío".
+- El resultado (✓ enviado / mensaje de error) se muestra junto al botón.
+
 ## Cambios sesión 17/06/2026
 
 - Documentado que teléfono/correo provienen del instalador (settings.json) y editables aquí.
-- Scripts de configuración en la raíz: `whatsapp-qr.sh` (WhatsApp) y `setup-gmail.sh` (Gmail).
+- Scripts de configuración en la raíz: `vincular-whatsapp.sh` (WhatsApp, antes `whatsapp-qr.sh`) y
+  `setup-gmail.sh` (Gmail).

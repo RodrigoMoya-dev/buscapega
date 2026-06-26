@@ -31,6 +31,7 @@ La captura de sesiones (Playwright) **siempre** instala dependencias dentro de u
 `setup/.venv`. Esto evita el error PEP 668 *externally-managed-environment* que rompía
 `pip install` y derivaba en `ModuleNotFoundError: No module named 'playwright'` en macOS/Homebrew
 y Linux moderno. Todas las llamadas usan `setup/.venv/bin/python` (mismo enfoque que
+`./instalar_dependencias_python.sh`, el instalador de dependencias de la raíz —antes
 `setup/run_setup.sh`).
 
 ### Detección de Docker y de instalaciones previas
@@ -59,7 +60,8 @@ instalador no toca Presto.
 
 ### Vinculación de WhatsApp se hace después por QR
 En el prompt del teléfono se aclara que ahí **solo se guarda el número**; la vinculación
-real se hace al terminar la instalación ejecutando `./whatsapp-qr.sh` y escaneando el QR.
+real se hace al terminar la instalación ejecutando `./vincular-whatsapp.sh` y escaneando el QR
+(o vinculando por código: `./vincular-whatsapp.sh <host> <port> <telefono>`).
 
 ### Comandos de Claude Code siempre visibles
 El resumen muestra siempre `claude /valida <url>` y `claude /autentica`, por si el usuario tiene
@@ -69,9 +71,10 @@ Claude Code instalado.
 
 | Script | Propósito |
 |---|---|
-| `whatsapp-qr.sh` | Vincular WhatsApp (Baileys) escaneando un QR. No se hace en el instalador. |
+| `vincular-whatsapp.sh` | Vincular WhatsApp (whatsapp-web.js) por QR o por código. No se hace en el instalador. |
 | `setup-gmail.sh` | Configurar/cambiar el correo Gmail de postulaciones (actualiza `docker/.env` y reinicia el scraper). |
-| `setup-sessions.sh` | Estado y captura de sesiones de portales. |
+| `instalar_dependencias_python.sh` | Instalar dependencias de Python (venv + Playwright + Chromium) para la captura de sesiones. |
+| `setup-sessions.sh` | Estado y captura de sesiones de portales (usa `setup/.venv`). |
 
 ## Cambios sesión 17/06/2026
 
@@ -145,3 +148,12 @@ del volumen → el backend falla con `password authentication failed for user "w
 aleatorio Y el fallback: `head` cierra el pipe, `tr` recibe SIGPIPE (exit 141) y disparaba
 el `||`. Ahora se captura primero (`... | head -c 24 || true`) y el fallback solo actúa si
 el resultado quedó vacío (`[[ -z ]]`).
+
+## Cambios sesión 26/06/2026 — scripts de setup
+
+- `setup-sessions.sh` ahora valida que **Python 3** esté instalado y usa `setup/.venv`
+  (creándolo e instalando Playwright/Chromium si faltan). Antes invocaba `python3` del sistema y
+  fallaba con `ModuleNotFoundError: No module named 'playwright'`. (fix)
+- `setup/run_setup.sh` se movió a la raíz como `instalar_dependencias_python.sh` (instalador de
+  dependencias dedicado, con validación de Python). (feature)
+- `whatsapp-qr.sh` se renombró a `vincular-whatsapp.sh`. (feature)

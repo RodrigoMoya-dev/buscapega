@@ -34,19 +34,26 @@ Al compactar, cada acordeón muestra la **cantidad de portales** junto al títul
     "Portal activado. Importante: te llegarán las ofertas pero deberás postular manualmente."
 - Portales **sin auto-postulación**: botón **"Visitar"** (con ícono) que abre el sitio.
 - Botón **"Registrar sesión con Google"** (ícono de Google) que abre un **diálogo persistente**
-  (P5) con: el texto de ayuda, el comando `./setup-sessions.sh <slug>`, la alternativa
-  `claude /autentica`, y botones de copiar. El diálogo solo se cierra con la X o "Cerrar".
+  (P5) con: el texto de ayuda, el comando `python3 setup/setup_session.py <slug>`, la alternativa
+  `claude /autentica <slug>`, y botones de copiar. El diálogo solo se cierra con la X o "Cerrar".
 
-  > **Fix venv 24/06/2026:** el comando del diálogo era `python3 setup/setup_session.py <slug>`,
-  > que usaba el Python del sistema (sin venv) → fallaba con `ModuleNotFoundError: No module named
-  > 'playwright'`. Ahora muestra `./setup-sessions.sh <slug>`, y ese wrapper delega en
-  > `setup/run_setup.sh`, que crea `setup/.venv` e instala playwright + Chromium automáticamente la
-  > primera vez. (Rama `fix_setup_venv_24062026`.)
+  > **Fix 26/06/2026:** el comando de Claude Code se copiaba como `claude /autentica` (sin el
+  > portal). Ahora incluye el slug: `claude /autentica <slug>`, y el skill `/autentica` acepta ese
+  > argumento para autenticar solo ese portal. (Rama `feature_setup_vistas_26062026`.)
+
+  > **Fix venv 26/06/2026:** `./setup-sessions.sh` fallaba con `ModuleNotFoundError: No module
+  > named 'playwright'` porque el wrapper de la raíz invocaba `python3` del sistema (sin venv).
+  > Ahora `setup-sessions.sh` valida que Python 3 exista, usa/crea `setup/.venv` e instala
+  > playwright + Chromium automáticamente si faltan, y ejecuta `setup_session.py` con el Python del
+  > venv. (Rama `fix_setup_sessions_venv_26062026`.) El instalador de dependencias se movió a la
+  > raíz como `./instalar_dependencias_python.sh` (antes `setup/run_setup.sh`).
 
 ## Estado de sesión (`session_active`) vs. `active`
-- `session_active`: hay cookies capturadas (`cookies/{session_key}_session.json`). Se muestra como
-  "Sesión activa / Sin sesión" en portales con auto-postulación.
+- `session_active`: hay cookies capturadas (`cookies/{session_key}_session.json`).
 - `active`: el portal participa de la búsqueda (lo controla el switch). Persistido en `portales.json`.
+  En portales con auto-postulación, el texto junto al switch refleja **`active`**: "Incluido en
+  búsquedas / No incluido en búsquedas" (antes mostraba "Sesión activa / no iniciada", cambiado el
+  26/06/2026 para describir lo que hace el switch).
 
 ## Estado de sesión (`session_active`)
 

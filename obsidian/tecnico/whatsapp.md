@@ -6,8 +6,11 @@
 **Contenedor:** `wunen_whatsapp`
 
 > **Corrección 24/06/2026:** este servicio **no usa Baileys** (el doc anterior `whatsapp-baileys.md`
-> estaba desactualizado). Usa `whatsapp-web.js` con vinculación por **código QR** (no por código de
-> pairing numérico). Se renombró el archivo a `whatsapp.md`.
+> estaba desactualizado). Usa `whatsapp-web.js`. Se renombró el archivo a `whatsapp.md`.
+>
+> **Actualización 26/06/2026:** además del QR, ahora soporta vinculación por **código de pairing**
+> (`requestPairingCode`) vía `POST /pair`, alternativa cuando el QR falla con "No se pueden vincular
+> dispositivos nuevos en este momento".
 
 ---
 
@@ -35,8 +38,19 @@ Verifica el estado de la conexión.
   un mensaje claro si el dispositivo no está vinculado (ver `obsidian/web/configuracion.md`).
 
 ### `GET /qr`
-Devuelve una página HTML con el **código QR** actual (autorefresca). Se usa desde `./whatsapp-qr.sh`.
-Si ya está conectado, muestra un aviso en vez del QR.
+Devuelve una página HTML con el **código QR** actual (autorefresca). Se usa desde
+`./vincular-whatsapp.sh`. Si ya está conectado, muestra un aviso en vez del QR.
+
+### `POST /pair`
+Alternativa al QR: genera un **código de vinculación** de 8 caracteres (`requestPairingCode`).
+
+**Body:** `{ "phone": "56912345678" }` (número con código de país, solo dígitos).
+**Éxito:** `{ "ok": true, "code": "ABCD-1234", "phone": "56912345678" }`.
+**Ya conectado:** **409**. **Cliente no listo:** **503**. **Falta phone:** **400**.
+
+En el teléfono: WhatsApp → ⋮ → Dispositivos vinculados → Vincular un dispositivo → **Vincular con
+número de teléfono** → ingresar el código. Útil si el QR falla con "No se pueden vincular
+dispositivos nuevos en este momento".
 
 ### `POST /send`
 Envía un mensaje de texto.
@@ -50,16 +64,18 @@ Envía múltiples mensajes (pausa entre cada uno). Body: arreglo de `{ message, 
 
 ---
 
-## Vincular número (código QR)
+## Vincular número (QR o código)
 
 ```bash
 # Desde la raíz del proyecto (curl al servicio)
-./whatsapp-qr.sh [host] [port]
+./vincular-whatsapp.sh [host] [port]              # QR
+./vincular-whatsapp.sh [host] [port] <telefono>   # código de vinculación (sin QR)
 ```
 
 O manualmente:
 1. `docker compose logs -f whatsapp` y escanear el QR del terminal, **o** abrir `http://<host>:3001/qr`.
 2. En el teléfono: WhatsApp → ⋮ → **Dispositivos vinculados** → Vincular un dispositivo → escanear.
+3. Alternativa sin QR: `curl -X POST http://<host>:3001/pair -H 'Content-Type: application/json' -d '{"phone":"56912345678"}'` y usar "Vincular con número de teléfono".
 
 El estado de autenticación se guarda en `AUTH_DIR` (`/app/auth`, volumen Docker) y persiste entre
 reinicios.
