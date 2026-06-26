@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Muestra el código QR de WhatsApp para vincular el número.
-# Uso: ./setup/whatsapp-qr.sh [host] [puerto]
+# Uso: ./setup/vincular-whatsapp.sh [host] [puerto]
 #   host    IP o hostname del servidor donde corre Wunen (default: localhost)
 #   puerto  Puerto del servicio WhatsApp (default: 3001)
 

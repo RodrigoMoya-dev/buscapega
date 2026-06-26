@@ -67,7 +67,7 @@ async def test_whatsapp():
                 return {
                     "status": "error",
                     "message": f"WhatsApp no está vinculado (estado: {conexion}). Escanea el código QR "
-                               "con './whatsapp-qr.sh' antes de enviar mensajes.",
+                               "con './vincular-whatsapp.sh' antes de enviar mensajes.",
                 }
 
             # 2) Servicio activo → enviar el mensaje de prueba.
@@ -86,7 +86,7 @@ async def test_whatsapp():
             if r.status_code == 503:
                 return {
                     "status": "error",
-                    "message": "WhatsApp no está conectado. Vincula el dispositivo con './whatsapp-qr.sh'"
+                    "message": "WhatsApp no está conectado. Vincula el dispositivo con './vincular-whatsapp.sh'"
                                + (f" (detalle: {detail})" if detail else "") + ".",
                 }
             return {
