@@ -49,9 +49,38 @@ failed to solve: failed to prepare extraction snapshot "extract-970252435-hqvG s
       (cabeza pegada al cuerpo, brazos adosados, piernas debajo), menos "infantil".
 
 ### Cierre ronda 2
-- [ ] Push de ambas ramas a `origin` (gitea) y `github`
-- [ ] Merge a `main` sin `obsidian/`
-- [ ] Re-ejecutar `/prueba`
+- [x] Push de ambas ramas a `origin` (gitea) y `github`
+- [x] Merge a `main` sin `obsidian/`
+- [x] Re-ejecutar `/prueba` — **EXITOSO** (ver nota abajo)
+
+### Resultado de `/prueba` (ronda 2)
+- [x] Clonar `main` desde GitHub (`RodrigoMoya-dev/buscapega`) — versión al día
+- [x] Python 3 + `playwright` (venv) + Chromium: instalados y **Chromium arranca OK**
+- [x] Fase interactiva de `install.sh` y paso `apt-get` (el que fallaba por red): OK
+- [x] Build de `db` (pull) y `backend`: OK
+- [!] Build de `scraper` (Playwright): **falló por MEMORIA** (`cannot allocate memory`
+      al hacer `playwright install --with-deps chromium`).
+      - **No es defecto del código:** el Dockerfile del scraper es el mismo que corrió
+        22 h sin problemas. Fue contención de memoria: Docker tiene 7.7 GB y había ~10
+        contenedores de otros 3 proyectos corriendo (magnavida, juberbox, pewma) +
+        descarga local de Chromium en paralelo.
+      - **Validación positiva:** el diagnóstico de la ronda 2 detectó y explicó el OOM
+        correctamente (no cayó en "no reconocida").
+      - El reintento aislado TAMBIÉN falló por OOM: pausar no libera RAM (los
+        contenedores pausados siguen reservándola). Se **detuvieron** (`docker stop`)
+        los 10 contenedores ajenos (juberbox, magnavida, pewma) → la VM de Docker pasó
+        de ~1-2 GB a **7.2 GB disponibles**.
+- [x] Con la RAM libre, **las 4 imágenes construyeron OK** (backend, scraper, frontend,
+      whatsapp) y el stack levantó: `db` healthy, `/health` OK, `/api/settings/email-status`
+      responde, frontend HTTP 200. **`/prueba` end-to-end validado.**
+
+> **Incidente Docker (20/07/2026):** durante los builds del `/prueba`, la presión de
+> memoria hizo que la VM de Docker Desktop **perdiera TODOS los contenedores** (los de
+> buscapega y los 3 proyectos ajenos). **Sin pérdida de datos:** imágenes y volúmenes
+> quedaron intactos. Se restauraron los 3 proyectos (juberbox, magnavida, pewma) con
+> `docker compose up -d` desde sus compose files. Lección: no construir imágenes pesadas
+> (Playwright/Chromium) con muchos otros contenedores corriendo en un Docker de 7.7 GB;
+> conviene subir la RAM de Docker Desktop o detener temporalmente lo que no se use.
 
 ## Checklist de la sesión (20/07/2026)
 
