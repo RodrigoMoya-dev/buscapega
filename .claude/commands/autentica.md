@@ -1,6 +1,6 @@
 # Comando /autentica
 
-Automatiza el proceso de obtención de cookies de autenticación para los portales de empleo registrados en Wunen.
+Automatiza el proceso de obtención de cookies de autenticación para los portales de empleo registrados en Buscapega.
 
 ## Uso
 

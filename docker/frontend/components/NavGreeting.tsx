@@ -18,8 +18,8 @@ export default function NavGreeting() {
       if (detail && typeof detail.user_name === "string") setName(detail.user_name || null);
       else refresh();
     }
-    window.addEventListener("wunen:settings-updated", onUpdate);
-    return () => window.removeEventListener("wunen:settings-updated", onUpdate);
+    window.addEventListener("buscapega:settings-updated", onUpdate);
+    return () => window.removeEventListener("buscapega:settings-updated", onUpdate);
   }, []);
 
   if (!name) return null;
