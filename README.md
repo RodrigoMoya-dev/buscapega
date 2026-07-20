@@ -1,4 +1,4 @@
-# Wunen
+# Buscapega
 
 Sistema personal de automatización de búsqueda de empleo. Scraping de ofertas, evaluación con IA, interfaz de revisión y postulación automática en múltiples portales.
 
@@ -7,8 +7,8 @@ Sistema personal de automatización de búsqueda de empleo. Scraping de ofertas,
 ## Instalación
 
 ```bash
-git clone http://gitea.presto/moya.dev/wunen.git
-cd wunen
+git clone http://gitea.presto/moya.dev/buscapega.git
+cd buscapega
 bash install.sh
 ```
 
@@ -30,11 +30,11 @@ El servicio WhatsApp usa un código QR para vincular tu número. Hay tres formas
 ### Opción 1 — Script (recomendado)
 
 ```bash
-# Si Wunen corre en local
-bash vincular-whatsapp.sh
+# Si Buscapega corre en local
+bash configuraciones/vincular-whatsapp.sh
 
-# Si Wunen corre en un servidor remoto (ej: presto)
-bash vincular-whatsapp.sh presto 3001
+# Si Buscapega corre en un servidor remoto (ej: presto)
+bash configuraciones/vincular-whatsapp.sh presto 3001
 ```
 
 El script muestra la URL del QR y los pasos a seguir.
@@ -77,7 +77,7 @@ cd ~/docker/wunen
 docker volume rm wunen_whatsapp_auth
 docker compose up -d whatsapp
 # Espera ~30 segundos y repite el proceso de vinculación
-bash ~/wunen/vincular-whatsapp.sh presto 3001
+bash ~/wunen/configuraciones/vincular-whatsapp.sh presto 3001
 ```
 
 ---
@@ -96,7 +96,7 @@ cd ~/docker/wunen && docker compose restart backend
 cd ~/docker/wunen && docker compose down
 
 # Configurar sesiones de portales
-./setup-sessions.sh --lista
+./configuraciones/setup-sessions.sh --lista
 ```
 
 ---

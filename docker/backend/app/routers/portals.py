@@ -256,14 +256,14 @@ async def validate_portal(body: dict):
         q_domain = url.lower().replace("https://", "").replace("http://", "").replace("www.", "").rstrip("/")
         if p_domain and (q_domain.startswith(p_domain) or p_domain.startswith(q_domain.split("/")[0])):
             result["already_configured"] = True
-            result["notes"].append(f"Este sitio ya está registrado en Wunen como '{p['name']}'")
+            result["notes"].append(f"Este sitio ya está registrado en Buscapega como '{p['name']}'")
             break
 
     known = _match_known_portal(url)
     if known:
         result["allows_scraping"] = known["allows_scraping"]
         result["has_google_auth"] = known["has_google_auth"]
-        result["notes"].append("Portal conocido — datos obtenidos del registro interno de Wunen")
+        result["notes"].append("Portal conocido — datos obtenidos del registro interno de Buscapega")
         result["automatable"] = result["allows_scraping"]
         return result
 

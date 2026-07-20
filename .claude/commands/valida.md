@@ -1,6 +1,6 @@
 # Comando /valida
 
-Evalúa si un portal de búsqueda de empleo puede ser automatizado por Wunen.
+Evalúa si un portal de búsqueda de empleo puede ser automatizado por Buscapega.
 
 ## Uso
 

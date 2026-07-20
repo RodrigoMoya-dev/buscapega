@@ -2,12 +2,13 @@
 # Wrapper en la raíz para setup/setup_session.py (login en portales con auto-postulación).
 # Usa el entorno virtual de setup/.venv para que Playwright esté disponible: si se llama
 # a python3 del sistema sin el venv, falla con "ModuleNotFoundError: No module named 'playwright'".
-# Uso: ./setup-sessions.sh [--lista | <portal>]
+# Uso: ./configuraciones/setup-sessions.sh [--lista | <portal>]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SETUP_DIR="$SCRIPT_DIR/setup"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SETUP_DIR="$PROJECT_ROOT/setup"
 VENV_DIR="$SETUP_DIR/.venv"
 
 # 1) Validar que Python 3 esté instalado en el sistema.
