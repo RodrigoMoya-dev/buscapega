@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Wunen — Configurar / reconfigurar el correo Gmail de postulaciones
+# Buscapega — Configurar / reconfigurar el correo Gmail de postulaciones
 #
 # Gmail se pide durante install.sh, pero puedes configurarlo o cambiarlo en
 # cualquier momento con este script. Actualiza docker/.env y reinicia el scraper.
 #
-# Uso: ./setup-gmail.sh
+# Uso: ./configuraciones/setup-gmail.sh
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -18,10 +18,11 @@ warn()  { echo -e "${YELLOW}!${RESET} $1"; }
 error() { echo -e "${RED}✗ ERROR:${RESET} $1"; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/docker/.env"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/docker/.env"
 
 echo ""
-echo -e "${BOLD}Wunen — Configurar correo Gmail de postulaciones${RESET}"
+echo -e "${BOLD}Buscapega — Configurar correo Gmail de postulaciones${RESET}"
 echo ""
 
 [[ -f "$ENV_FILE" ]] || error "No se encontró $ENV_FILE. Ejecuta primero ./install.sh"
@@ -64,7 +65,7 @@ ok "Credenciales guardadas en docker/.env"
 
 log "Reiniciando el servicio scraper para aplicar los cambios..."
 if docker compose version &>/dev/null 2>&1; then
-  ( cd "$SCRIPT_DIR/docker" && docker compose up -d scraper )
+  ( cd "$PROJECT_ROOT/docker" && docker compose up -d scraper )
   ok "Scraper reiniciado"
 else
   warn "No se detectó docker compose. Reinicia manualmente: cd docker && docker compose up -d scraper"
