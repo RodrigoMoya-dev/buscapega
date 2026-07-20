@@ -24,9 +24,33 @@
 - [x] Reanudar la instalación desde donde falló
 
 ### Cierre
-- [ ] Push de ambas ramas a gitea (`origin`) y github (`github`)
-- [ ] Merge a `main` sin incluir `obsidian/`
+- [x] Push de ambas ramas a gitea (`origin`) y github (`github`)
+- [x] Merge a `main` sin incluir `obsidian/` (verificado: `git ls-files obsidian` vacío)
 - [ ] Ejecutar `/prueba`
+
+### Pendiente de Rodrigo
+- [ ] **Renombrar el repo a `buscapega` en Gitea y en GitHub.** Al 20/07/2026 ambos
+      siguen llamándose `wunen` (verificado con `git ls-remote`). Después actualizar
+      los remotos locales:
+      `git remote set-url origin http://.../moya.dev/buscapega.git` e ídem `github`.
+- [ ] Decidir si se toma la organización `buscapega` en GitHub — está **libre** al
+      20/07/2026. Ver [[Manual de creación]].
+
+### Deuda consciente (no se tocó a propósito)
+Renombrarlo rompería la instalación de Presto (el volumen de Postgres quedaría
+huérfano con una contraseña irrecuperable), así que sigue diciendo `wunen`:
+- `container_name` de los 5 servicios y el volumen `wunen_db_data`.
+- `POSTGRES_DB` / `POSTGRES_USER`.
+- Ruta de montaje `/wunen` y variable `WUNEN_DIR`.
+- Webhook de n8n `wunen-apply-result`.
+- En Presto: `~/docker/wunen`, `/var/log/wunen`, `http://wunen.presto`.
+- Nombre del archivo `setup/wunen-daily.sh` (el crontab apunta a una copia en
+  `/home/rodrigo/scripts/`).
+
+> **Aviso operativo:** `obsidian/` está rastreado en las ramas feature/fix pero NO en
+> `main`. Al hacer `git checkout main` las notas **desaparecen del disco** y hay que
+> recuperarlas con `git checkout <rama> -- obsidian/`. Pasó en esta sesión.
+> Ojo: `git stash -u` NO las protege porque están en `.gitignore` — se necesita `-a`.
 
 ---
 
