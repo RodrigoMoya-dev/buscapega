@@ -18,10 +18,10 @@
 - [x] Actualizar documentación en obsidian/
 
 ### Rama `fix_install_errores_reanudable_20072026`
-- [ ] Contraseña de aplicación Gmail opcional (Enter para continuar)
-- [ ] Aviso en la web cuando falta la contraseña Gmail
-- [ ] Manejo de errores del instalador (red, disco, memoria, versiones de Python)
-- [ ] Reanudar la instalación desde donde falló
+- [x] Contraseña de aplicación Gmail opcional (Enter para continuar)
+- [x] Aviso en la web cuando falta la contraseña Gmail
+- [x] Manejo de errores del instalador (red, disco, memoria, permisos, daemon)
+- [x] Reanudar la instalación desde donde falló
 
 ### Cierre
 - [ ] Push de ambas ramas a gitea (`origin`) y github (`github`)

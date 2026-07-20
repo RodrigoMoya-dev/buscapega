@@ -15,7 +15,76 @@
 6. Opcional: captura de sesiones de portales con Playwright.
 7. Resumen final con próximos pasos.
 
+## Resiliencia: diagnóstico y reanudación (20/07/2026)
+
+### El problema
+
+Un build fallaba y el usuario solo veía el volcado crudo de `apt-get` con cientos de
+líneas, terminando en `exit code: 100`. Imposible saber si era culpa del proyecto o del
+equipo. El caso real que motivó esto era **puramente de red** (`Unable to connect to
+deb.debian.org`), no un error de código.
+
+### Diagnóstico automático
+
+`diagnosticar_error()` analiza el log del build fallido y clasifica la causa:
+
+| Causa detectada | Patrones que la disparan |
+|---|---|
+| **Red** | `unable to connect`, `could not resolve`, `connection timed out`, `failed to fetch`, `i/o timeout` |
+| **Disco lleno** | `no space left on device`, `disk quota exceeded` |
+| **Memoria** | `killed`, `out of memory`, `exit code: 137` |
+| **Permisos** | `permission denied`, `eacces` |
+| **Daemon caído** | `cannot connect to the docker daemon` |
+| **No reconocida** | *(fallback)* muestra las últimas 12 líneas del log |
+
+Cada caso imprime pasos concretos de solución. La causa "no reconocida" avisa
+explícitamente que probablemente sea un error real del proyecto y no del equipo del
+usuario — esa distinción era justamente lo que faltaba.
+
+### Reanudación
+
+- Cada build exitoso se anota en `.install-state` (gitignored).
+- Al arrancar, si el archivo existe, se ofrece **continuar** o **empezar de cero**.
+- `omitir_paso()` solo salta un paso si está marcado **y** el usuario aceptó reanudar.
+- Los logs de cada build quedan en `.install-logs/` (gitignored).
+- Al terminar con el backend sano se borran ambos, para que la próxima ejecución sea
+  limpia y no ofrezca reanudar una instalación que sí terminó.
+
+> **Detalle:** los builds se ejecutan con `| tee` para mostrar progreso en vivo y a la vez
+> guardar el log. Se lee `${PIPESTATUS[0]}` y no `$?`, porque con una tubería `$?` sería el
+> estado de `tee` (siempre 0) y **todos los fallos de build pasarían desapercibidos**.
+
+### Verificaciones previas de recursos
+
+Antes de empezar (un build que muere a los 10 minutos es mucho más caro de diagnosticar):
+
+- **Disco:** < 5 GB libres pide confirmación; < 10 GB advierte. Las imágenes ocupan ~6 GB.
+  Se usa `df -Pk` (POSIX) y no `df -Pg`, que solo existe en BSD/macOS.
+- **Memoria de Docker:** < 2 GB advierte sobre posibles OOM (exit 137) en frontend/WhatsApp.
+
 ## Decisiones importantes
+
+### Contraseña de aplicación de Gmail es OPCIONAL (20/07/2026)
+
+Antes se pedía sin indicar que se podía omitir. Ahora:
+
+- Se marca `[OPCIONAL — Enter para omitir]` y se explica cómo agregarla después.
+- Si se omite, se advierte que las postulaciones por correo quedan desactivadas.
+- Si se ingresa, **se le quitan los espacios**: Google la muestra en bloques de 4
+  (`abcd efgh ijkl mnop`) y al pegarla tal cual el login SMTP falla con
+  *"Username and Password not accepted"*. Si tras limpiarla no mide 16 caracteres, avisa.
+
+**Aviso en la web:** como se puede terminar la instalación sin contraseña, el correo
+fallaría en silencio. Por eso:
+
+- `GET /email-status` en el **scraper** (es quien tiene las credenciales; el backend no las
+  recibe) informa si el envío está configurado, **sin exponer la credencial**.
+- `GET /api/settings/email-status` en el backend lo proxea.
+- La vista Configuración muestra un banner naranja cuando falta.
+
+> Si el scraper no responde, el endpoint del backend devuelve `configurado: true` a
+> propósito: es preferible no mostrar aviso a mostrar una alarma falsa por un servicio
+> momentáneamente caído.
 
 ### Anthropic API key es OPCIONAL
 El instalador deja claro (en el prompt y en el resumen final) que la key es opcional. Sin ella,
