@@ -175,7 +175,8 @@ buscapega/
 ├── setup/            # Scripts de captura de sesiones (ejecutar en local)
 ├── documentos/       # Datos en tiempo de ejecución: portales.json, CV, configuración
 ├── perfil.md         # Tu perfil de candidato — lo lee el evaluador de IA
-└── install.sh        # Instalador interactivo
+├── install.sh        # Instalador interactivo
+└── sync-github.sh    # Sincronización con GitHub (uso del mantenedor)
 ```
 
 ## Solución de problemas
