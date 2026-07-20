@@ -309,3 +309,17 @@ export async function testEmail(): Promise<{ status: string; message: string } |
     return res.json();
   } catch { return null; }
 }
+
+export type EmailStatus = {
+  configurado: boolean;
+  motivo: "falta_password" | "falta_usuario" | "sin_metodo" | null;
+  mensaje: string | null;
+};
+
+export async function getEmailStatus(): Promise<EmailStatus | null> {
+  try {
+    const res = await fetch(`${API}/api/settings/email-status`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
