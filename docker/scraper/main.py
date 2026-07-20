@@ -295,6 +295,41 @@ def test_email(req: TestEmailRequest):
     }
 
 
+@app.get("/email-status")
+def email_status():
+    """Informa si el envío de correos está configurado, sin exponer credenciales.
+
+    Lo consume la web (vía el backend) para avisar cuando falta la contraseña de
+    aplicación de Gmail: en el instalador es opcional, así que se puede terminar la
+    instalación sin ella y sin enterarse de que las postulaciones por correo no salen.
+    """
+    tiene_gas = bool(findjobit_applicator.GAS_WEBHOOK_URL)
+    tiene_usuario = bool(findjobit_applicator.GMAIL_USER)
+    tiene_password = bool(findjobit_applicator.GMAIL_APP_PASSWORD)
+
+    if tiene_gas or (tiene_usuario and tiene_password):
+        return {"configurado": True, "motivo": None, "mensaje": None}
+
+    if tiene_usuario and not tiene_password:
+        motivo = "falta_password"
+        mensaje = (
+            "Falta la contraseña de aplicación de Gmail. Las postulaciones por correo "
+            "no se enviarán. Agrégala con ./configuraciones/setup-gmail.sh o en "
+            "docker/.env (GMAIL_APP_PASSWORD)."
+        )
+    elif not tiene_usuario:
+        motivo = "falta_usuario"
+        mensaje = (
+            "No hay correo de postulaciones configurado. Configúralo con "
+            "./configuraciones/setup-gmail.sh."
+        )
+    else:
+        motivo = "sin_metodo"
+        mensaje = "No hay ningún método de envío de correo configurado."
+
+    return {"configurado": False, "motivo": motivo, "mensaje": mensaje}
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
