@@ -24,23 +24,22 @@ BLUSH='\033[38;2;250;216;214m'    # $soft-blush  #fad8d6
 CL_RED='\033[38;2;213;43;30m'
 CL_BLUE='\033[38;2;0;57;166m'
 
-# El robot se dibuja sobre una grilla fija: la cabeza y el cuerpo ocupan las columnas
-# 14-24 (centro en la 19), donde se alinean antena y piernas. Se usan solo caracteres
-# de ancho 1 — se evitan ● ★ ▪ y similares porque son "East Asian Ambiguous" y muchos
-# terminales los pintan a doble ancho, lo que descuadra todo el dibujo.
+# Robot compacto: cabeza, cuerpo y piernas apilados y CONECTADOS (los hombros ┴ nacen
+# bajo los lados de la cabeza; las piernas ┬ bajo el cuerpo; los brazos █ se adosan al
+# cuerpo con ┤├). El pecho lleva la bandera chilena (azul+blanco / rojo). Solo caracteres
+# de ancho 1 — se evitan ● ★ ▪ (East Asian Ambiguous), que muchos terminales pintan a
+# doble ancho y descuadran el dibujo.
 print_header() {
   echo ""
-  echo -e "                   ${PINE}▄${RESET}"
-  echo -e "                   ${PINE}│${RESET}"
-  echo -e "              ${PINE}╭─────────╮${RESET}"
-  echo -e "      ${PINE}╭─╮${RESET}     ${PINE}│${RESET}  ${CELADON}o${RESET}   ${CELADON}o${RESET}  ${PINE}│${RESET}     ${PINE}╭─╮${RESET}"
-  echo -e "      ${PINE}│${RESET} ${PINE}│${RESET}     ${PINE}│${RESET}    ${BLUSH}‿${RESET}    ${PINE}│${RESET}     ${PINE}│${RESET} ${PINE}│${RESET}"
-  echo -e "      ${PINE}╰─╯${RESET}     ${PINE}╰─────────╯${RESET}     ${PINE}╰─╯${RESET}"
-  echo -e "              ${PINE}╭─────────╮${RESET}"
-  echo -e "   ${ORANGE}┌────┐${RESET}     ${PINE}│${RESET}  ${CL_BLUE}██${RESET}${BLUSH}▀▀▀${RESET}  ${PINE}│${RESET}"
-  echo -e "   ${ORANGE}│${RESET} ${ORANGE}══${RESET} ${ORANGE}│${RESET}     ${PINE}│${RESET}  ${CL_RED}▄▄▄▄▄${RESET}  ${PINE}│${RESET}"
-  echo -e "   ${ORANGE}└────┘${RESET}     ${PINE}╰─────────╯${RESET}"
-  echo -e "                ${PINE}▀▀${RESET}   ${PINE}▀▀${RESET}"
+  echo -e "         ${PINE}╻${RESET}"
+  echo -e "      ${PINE}╭──┴──╮${RESET}"
+  echo -e "      ${PINE}│${RESET} ${CELADON}o${RESET} ${CELADON}o${RESET} ${PINE}│${RESET}"
+  echo -e "      ${PINE}│${RESET}  ${BLUSH}‿${RESET}  ${PINE}│${RESET}"
+  echo -e "     ${PINE}╭┴─────┴╮${RESET}"
+  echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_BLUE}██${BLUSH}▀▀▀${RESET} ${PINE}├${ORANGE}█${RESET}"
+  echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_RED}▄▄▄▄▄${RESET} ${PINE}├${ORANGE}█${RESET}"
+  echo -e "     ${PINE}╰─┬───┬─╯${RESET}"
+  echo -e "       ${PINE}╹${RESET}   ${PINE}╹${RESET}"
   echo ""
   echo -e "          ${ORANGE}${BOLD}B U S C A P E G A${RESET}"
   echo -e "   ${CYAN}Automatización de búsqueda de empleo${RESET}"
@@ -69,12 +68,27 @@ SETUP_DIR="$SCRIPT_DIR/setup"
 # ofrece saltarse lo ya hecho en vez de repetir 15 minutos de descargas.
 STATE_FILE="$SCRIPT_DIR/.install-state"
 LOG_DIR="$SCRIPT_DIR/.install-logs"
+# Datos que el usuario ingresó (nombre, teléfono, correo, puertos…). Se guardan aquí para
+# que al reanudar NO se vuelvan a pedir. Es un archivo de KEY='valor' que se puede 'source'.
+CONFIG_FILE="$SCRIPT_DIR/.install-config"
 RESUME=false
 
 paso_hecho()   { [[ -f "$STATE_FILE" ]] && grep -qxF "$1" "$STATE_FILE"; }
 marcar_paso()  { echo "$1" >> "$STATE_FILE"; }
 # Se salta el paso solo si está marcado Y el usuario aceptó reanudar.
 omitir_paso()  { $RESUME && paso_hecho "$1"; }
+
+# Guarda la configuración ingresada con comillas seguras (soporta caracteres especiales en
+# contraseñas). Al reanudar se lee con 'source' para no volver a preguntar.
+guardar_config() {
+  {
+    for var in USER_NAME ANTHROPIC_API_KEY WHATSAPP_PHONE GMAIL_USER \
+               GMAIL_APP_PASSWORD FRONTEND_PORT BACKEND_PORT; do
+      printf '%s=%q\n' "$var" "${!var-}"
+    done
+  } > "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE" 2>/dev/null || true  # contiene la contraseña de Gmail
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Diagnóstico de errores
@@ -127,6 +141,19 @@ diagnosticar_error() {
   elif grep -qiE "cannot connect to the docker daemon|docker daemon is not running|is the docker daemon running" "$logfile"; then
     echo -e "${RED}  CAUSA: el DAEMON de Docker se detuvo durante la instalación.${RESET}"
     echo -e "    Abre Docker Desktop, espera a que quede en verde y reintenta."
+
+  elif grep -qiE "failed to prepare extraction snapshot|parent snapshot .* does not exist|snapshot .* does not exist|failed to prepare .* snapshot|content digest .* not found|no such file or directory.* snapshot" "$logfile"; then
+    echo -e "${RED}  CAUSA: la caché de compilación de Docker (BuildKit) está CORRUPTA.${RESET}"
+    echo -e "    No es un error del proyecto ni de tu código: a Docker se le dañó un"
+    echo -e "    'snapshot' interno (suele pasar si un build previo se cortó a la mitad o"
+    echo -e "    si dos builds corrieron a la vez sobre el mismo Docker)."
+    echo -e "    ${BOLD}Cómo repararlo (de menos a más agresivo):${RESET}"
+    echo -e "      ${CYAN}1.${RESET} Limpiar la caché de compilación:"
+    echo -e "         ${CYAN}docker builder prune -af${RESET}"
+    echo -e "      ${CYAN}2.${RESET} Si sigue: reinicia Docker Desktop (Quit y vuelve a abrir) y reintenta."
+    echo -e "      ${CYAN}3.${RESET} Si aún persiste: limpieza profunda ${YELLOW}(borra imágenes sin usar)${RESET}:"
+    echo -e "         ${CYAN}docker system prune -af${RESET}"
+    echo -e "    ${GREEN}Luego vuelve a ejecutar el instalador: retomará donde quedó.${RESET}"
 
   else
     echo -e "${YELLOW}  CAUSA: no reconocida automáticamente.${RESET}"
@@ -193,7 +220,7 @@ if [[ -f "$STATE_FILE" ]]; then
   read -r -p "  ¿Continuar desde donde quedó? (S/n) > " RESP_RESUME
   RESP_RESUME_L=$(echo "$RESP_RESUME" | tr '[:upper:]' '[:lower:]')
   if [[ "$RESP_RESUME_L" == "n" || "$RESP_RESUME_L" == "no" ]]; then
-    rm -f "$STATE_FILE"
+    rm -f "$STATE_FILE" "$CONFIG_FILE"
     ok "Se reiniciará la instalación desde cero"
   else
     RESUME=true
@@ -368,6 +395,23 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Configuración interactiva
 # ─────────────────────────────────────────────────────────────────────────────
+# Al reanudar, si ya se guardó la configuración de una ejecución anterior, se reutiliza
+# tal cual y se omite todo el cuestionario. (Empezar de cero borra este archivo más
+# arriba, así que este bloque solo aplica cuando el usuario eligió continuar.)
+if $RESUME && [[ -f "$CONFIG_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$CONFIG_FILE"
+  echo ""
+  echo -e "${BOLD}Configuración inicial${RESET}"
+  sep
+  ok "Reutilizando los datos de la instalación anterior (no se vuelven a pedir):"
+  echo -e "    • Nombre:   ${CYAN}${USER_NAME:-(sin definir)}${RESET}"
+  echo -e "    • WhatsApp: ${CYAN}${WHATSAPP_PHONE:-(sin definir)}${RESET}"
+  echo -e "    • Correo:   ${CYAN}${GMAIL_USER:-(sin definir)}${RESET}"
+  echo -e "    • Puertos:  ${CYAN}web ${FRONTEND_PORT:-3000} / API ${BACKEND_PORT:-8000}${RESET}"
+  echo -e "  ${CYAN}Para cambiarlos, reinicia el instalador y elige «empezar de cero».${RESET}"
+  echo ""
+else
 echo ""
 echo -e "${BOLD}Configuración inicial${RESET}"
 sep
@@ -452,6 +496,10 @@ ask "→ Puerto para el API backend:"
 read -r -p "  [8000] > " BACKEND_PORT
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 echo ""
+
+# Persistir lo ingresado para no volver a preguntarlo si hay que reanudar tras un fallo.
+guardar_config
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Generar archivo .env
@@ -809,9 +857,10 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 if [[ "${BACKEND_OK:-false}" == "true" ]]; then
-  # La instalación llegó al final con el backend sano: se descarta el estado para que
-  # la próxima ejecución sea una instalación limpia y no ofrezca "reanudar".
-  rm -f "$STATE_FILE"
+  # La instalación llegó al final con el backend sano: se descarta el estado (incluida la
+  # config con la contraseña de Gmail) para que la próxima ejecución sea limpia y no ofrezca
+  # "reanudar".
+  rm -f "$STATE_FILE" "$CONFIG_FILE"
   rm -rf "$LOG_DIR"
   echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
   echo -e "${GREEN}${BOLD}║         Instalación completada           ║${RESET}"
