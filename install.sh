@@ -24,23 +24,22 @@ BLUSH='\033[38;2;250;216;214m'    # $soft-blush  #fad8d6
 CL_RED='\033[38;2;213;43;30m'
 CL_BLUE='\033[38;2;0;57;166m'
 
-# El robot se dibuja sobre una grilla fija: la cabeza y el cuerpo ocupan las columnas
-# 14-24 (centro en la 19), donde se alinean antena y piernas. Se usan solo caracteres
-# de ancho 1 — se evitan ● ★ ▪ y similares porque son "East Asian Ambiguous" y muchos
-# terminales los pintan a doble ancho, lo que descuadra todo el dibujo.
+# Robot compacto: cabeza, cuerpo y piernas apilados y CONECTADOS (los hombros ┴ nacen
+# bajo los lados de la cabeza; las piernas ┬ bajo el cuerpo; los brazos █ se adosan al
+# cuerpo con ┤├). El pecho lleva la bandera chilena (azul+blanco / rojo). Solo caracteres
+# de ancho 1 — se evitan ● ★ ▪ (East Asian Ambiguous), que muchos terminales pintan a
+# doble ancho y descuadran el dibujo.
 print_header() {
   echo ""
-  echo -e "                   ${PINE}▄${RESET}"
-  echo -e "                   ${PINE}│${RESET}"
-  echo -e "              ${PINE}╭─────────╮${RESET}"
-  echo -e "      ${PINE}╭─╮${RESET}     ${PINE}│${RESET}  ${CELADON}o${RESET}   ${CELADON}o${RESET}  ${PINE}│${RESET}     ${PINE}╭─╮${RESET}"
-  echo -e "      ${PINE}│${RESET} ${PINE}│${RESET}     ${PINE}│${RESET}    ${BLUSH}‿${RESET}    ${PINE}│${RESET}     ${PINE}│${RESET} ${PINE}│${RESET}"
-  echo -e "      ${PINE}╰─╯${RESET}     ${PINE}╰─────────╯${RESET}     ${PINE}╰─╯${RESET}"
-  echo -e "              ${PINE}╭─────────╮${RESET}"
-  echo -e "   ${ORANGE}┌────┐${RESET}     ${PINE}│${RESET}  ${CL_BLUE}██${RESET}${BLUSH}▀▀▀${RESET}  ${PINE}│${RESET}"
-  echo -e "   ${ORANGE}│${RESET} ${ORANGE}══${RESET} ${ORANGE}│${RESET}     ${PINE}│${RESET}  ${CL_RED}▄▄▄▄▄${RESET}  ${PINE}│${RESET}"
-  echo -e "   ${ORANGE}└────┘${RESET}     ${PINE}╰─────────╯${RESET}"
-  echo -e "                ${PINE}▀▀${RESET}   ${PINE}▀▀${RESET}"
+  echo -e "         ${PINE}╻${RESET}"
+  echo -e "      ${PINE}╭──┴──╮${RESET}"
+  echo -e "      ${PINE}│${RESET} ${CELADON}o${RESET} ${CELADON}o${RESET} ${PINE}│${RESET}"
+  echo -e "      ${PINE}│${RESET}  ${BLUSH}‿${RESET}  ${PINE}│${RESET}"
+  echo -e "     ${PINE}╭┴─────┴╮${RESET}"
+  echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_BLUE}██${BLUSH}▀▀▀${RESET} ${PINE}├${ORANGE}█${RESET}"
+  echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_RED}▄▄▄▄▄${RESET} ${PINE}├${ORANGE}█${RESET}"
+  echo -e "     ${PINE}╰─┬───┬─╯${RESET}"
+  echo -e "       ${PINE}╹${RESET}   ${PINE}╹${RESET}"
   echo ""
   echo -e "          ${ORANGE}${BOLD}B U S C A P E G A${RESET}"
   echo -e "   ${CYAN}Automatización de búsqueda de empleo${RESET}"
