@@ -3,7 +3,7 @@
 # wunen-daily.sh — Búsqueda y auto-postulación diaria de ofertas laborales
 #
 # Flujo:
-#   1. Esperar que el backend de Wunen esté listo
+#   1. Esperar que el backend de Buscapega esté listo
 #   2. Disparar pipeline completo FindJobIT (scraping + auto-postulación)
 #   3. Disparar scraping de otros portales (Remotive, RemoteOK, GetOnBrd, etc.)
 #   4. Esperar a que los scrapers terminen
@@ -11,7 +11,7 @@
 #   6. Notificar por Telegram con resumen
 #
 # Crontab sugerido (9:30am, Domingo-Viernes):
-#   30 9 * * 0-5 /home/rodrigo/scripts/cron_wrapper.sh "Wunen Daily" "/home/rodrigo/scripts/wunen-daily.sh"
+#   30 9 * * 0-5 /home/rodrigo/scripts/cron_wrapper.sh "Buscapega Daily" "/home/rodrigo/scripts/wunen-daily.sh"
 # =============================================================================
 
 BACKEND="http://localhost:8020"
@@ -31,14 +31,14 @@ log() {
 }
 
 # ── 1. Esperar backend ────────────────────────────────────────────────────────
-log "=== Wunen Daily Run ==="
+log "=== Buscapega Daily Run ==="
 log "Esperando que el backend esté disponible (max ${MAX_WAIT_SECS}s)..."
 
 waited=0
 until curl -sf "$BACKEND/health" > /dev/null 2>&1; do
     if [ $waited -ge $MAX_WAIT_SECS ]; then
         log "ERROR: Backend no respondió en ${MAX_WAIT_SECS}s. Abortando."
-        $NOTIFY "❌ <b>Wunen Daily — ABORTADO</b>
+        $NOTIFY "❌ <b>Buscapega Daily — ABORTADO</b>
 ⚠️ Backend no disponible después de ${MAX_WAIT_SECS}s
 📅 $(date '+%d/%m/%Y %H:%M')"
         exit 1
@@ -79,7 +79,7 @@ PENDIENTES=$(curl -sf "$BACKEND/api/offers?status=PENDIENTE" 2>/dev/null | \
 # ── 7. Notificación Telegram ──────────────────────────────────────────────────
 log "Auto-postulaciones iniciadas: $STARTED. Pendientes en bandeja: $PENDIENTES"
 
-$NOTIFY "🤖 <b>Wunen — Búsqueda diaria completada</b>
+$NOTIFY "🤖 <b>Buscapega — Búsqueda diaria completada</b>
 
 ✉️ Postulaciones automáticas: <b>${STARTED}</b>
 📋 Ofertas pendientes en bandeja: <b>${PENDIENTES}</b>
@@ -87,4 +87,4 @@ $NOTIFY "🤖 <b>Wunen — Búsqueda diaria completada</b>
 
 Revisa las postulaciones en: http://wunen.presto"
 
-log "=== Wunen Daily Run completado ==="
+log "=== Buscapega Daily Run completado ==="
