@@ -45,6 +45,24 @@ def save_settings(data: dict):
     return {"status": "ok"}
 
 
+@router.get("/email-status")
+async def email_status():
+    """Estado del envío de correos, para avisar en la web si falta configurarlo.
+
+    Las credenciales de Gmail viven en el scraper (el backend no las recibe), así que
+    se consulta allí. Si el scraper no responde no se muestra alarma: se devuelve
+    configurado=True para no mostrar un aviso falso por un servicio caído.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(f"{SCRAPER_URL}/email-status")
+            if r.status_code == 200:
+                return r.json()
+    except Exception:
+        pass
+    return {"configurado": True, "motivo": None, "mensaje": None}
+
+
 @router.post("/test-whatsapp")
 async def test_whatsapp():
     settings = _read()

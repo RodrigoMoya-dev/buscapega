@@ -61,7 +61,146 @@ DOCKER_DIR="$SCRIPT_DIR/docker"
 DOCS_DIR="$SCRIPT_DIR/documentos"
 SETUP_DIR="$SCRIPT_DIR/setup"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Estado de instalación (permite reanudar tras un fallo)
+# ─────────────────────────────────────────────────────────────────────────────
+# Cada paso costoso que termina bien se anota en este archivo. Si el instalador se
+# corta a medias (típicamente durante un build de Docker), la siguiente ejecución
+# ofrece saltarse lo ya hecho en vez de repetir 15 minutos de descargas.
+STATE_FILE="$SCRIPT_DIR/.install-state"
+LOG_DIR="$SCRIPT_DIR/.install-logs"
+RESUME=false
+
+paso_hecho()   { [[ -f "$STATE_FILE" ]] && grep -qxF "$1" "$STATE_FILE"; }
+marcar_paso()  { echo "$1" >> "$STATE_FILE"; }
+# Se salta el paso solo si está marcado Y el usuario aceptó reanudar.
+omitir_paso()  { $RESUME && paso_hecho "$1"; }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Diagnóstico de errores
+# ─────────────────────────────────────────────────────────────────────────────
+# Traduce el log de un build fallido a una causa concreta. Sin esto el usuario solo
+# ve el volcado crudo de apt/npm/pip y no puede distinguir un problema de su equipo
+# (sin disco, sin red) de un error real del proyecto.
+diagnosticar_error() {
+  local logfile="$1"
+  local etiqueta="$2"
+  [[ -f "$logfile" ]] || return 0
+
+  echo ""
+  echo -e "${RED}${BOLD}  ┌─ Diagnóstico ─────────────────────────────────────────┐${RESET}"
+
+  if grep -qiE "unable to connect|could not connect|could not resolve|temporary failure in name resolution|connection timed out|network is unreachable|failed to fetch|TLS handshake timeout|i/o timeout" "$logfile"; then
+    echo -e "${RED}  CAUSA: problema de RED (no es un error del proyecto).${RESET}"
+    echo -e "    El build no pudo descargar paquetes desde internet."
+    echo -e "    ${BOLD}Qué revisar:${RESET}"
+    echo -e "      • Que tengas conexión:  ${CYAN}ping -c2 deb.debian.org${RESET}"
+    echo -e "      • DNS de Docker: reinicia Docker Desktop, o agrega en"
+    echo -e "        Settings → Docker Engine:  ${CYAN}\"dns\": [\"8.8.8.8\", \"1.1.1.1\"]${RESET}"
+    echo -e "      • Si estás tras VPN/proxy corporativo, desactívalo y reintenta."
+    echo -e "      • A veces el espejo de Debian falla un rato: reintenta en unos minutos."
+    echo -e "    ${GREEN}Es seguro reintentar: el instalador retomará donde quedó.${RESET}"
+
+  elif grep -qiE "no space left on device|disk quota exceeded|write error: no space" "$logfile"; then
+    echo -e "${RED}  CAUSA: te quedaste sin ESPACIO EN DISCO.${RESET}"
+    echo -e "    ${BOLD}Cómo liberar espacio de Docker:${RESET}"
+    echo -e "      ${CYAN}docker system df${RESET}         # ver cuánto ocupa Docker"
+    echo -e "      ${CYAN}docker system prune -a${RESET}   # borra imágenes/cachés sin usar"
+    echo -e "    Docker Desktop además tiene un límite propio de disco en"
+    echo -e "    Settings → Resources → Disk image size."
+
+  elif grep -qiE "killed|out of memory|oom|cannot allocate memory|signal: killed|exit code: 137" "$logfile"; then
+    echo -e "${RED}  CAUSA: el build se quedó sin MEMORIA (proceso terminado por el sistema).${RESET}"
+    echo -e "    El build de frontend/WhatsApp es el que más RAM consume."
+    echo -e "    ${BOLD}Qué hacer:${RESET}"
+    echo -e "      • Docker Desktop → Settings → Resources → sube la memoria a 4 GB o más."
+    echo -e "      • Cierra otras aplicaciones pesadas y reintenta."
+
+  elif grep -qiE "permission denied|operation not permitted|eacces" "$logfile"; then
+    echo -e "${RED}  CAUSA: problema de PERMISOS.${RESET}"
+    echo -e "    ${BOLD}Qué revisar:${RESET}"
+    echo -e "      • Que tu usuario pueda usar Docker:  ${CYAN}docker ps${RESET}"
+    echo -e "      • En Linux, que estés en el grupo docker:"
+    echo -e "        ${CYAN}sudo usermod -aG docker \$USER${RESET}  (y vuelve a iniciar sesión)"
+    echo -e "      • Que tengas permiso de escritura en ${CYAN}${SCRIPT_DIR}${RESET}"
+
+  elif grep -qiE "cannot connect to the docker daemon|docker daemon is not running|is the docker daemon running" "$logfile"; then
+    echo -e "${RED}  CAUSA: el DAEMON de Docker se detuvo durante la instalación.${RESET}"
+    echo -e "    Abre Docker Desktop, espera a que quede en verde y reintenta."
+
+  else
+    echo -e "${YELLOW}  CAUSA: no reconocida automáticamente.${RESET}"
+    echo -e "    Probablemente sea un error real del proyecto y no de tu equipo."
+    echo -e "    ${BOLD}Últimas líneas del log:${RESET}"
+    grep -viE '^\s*$' "$logfile" | tail -12 | sed 's/^/      /'
+  fi
+
+  echo -e "${RED}${BOLD}  └───────────────────────────────────────────────────────┘${RESET}"
+  echo ""
+  echo -e "  ${BOLD}Log completo:${RESET} ${CYAN}${logfile}${RESET}"
+  echo -e "  ${BOLD}Paso que falló:${RESET} ${etiqueta}"
+  echo ""
+  echo -e "  ${GREEN}${BOLD}Para reanudar, vuelve a ejecutar:${RESET} ${CYAN}bash install.sh${RESET}"
+  echo -e "  Te ofrecerá continuar desde este punto sin repetir lo ya construido."
+  echo ""
+}
+
+# Ejecuta un build de compose capturando la salida para poder diagnosticarla.
+# Se usa `tee` para que el usuario siga viendo el progreso en vivo.
+ejecutar_build() {
+  local servicio="$1"
+  local etiqueta="$2"
+  local paso="build_${servicio}"
+
+  if omitir_paso "$paso"; then
+    ok "${etiqueta} — ya construido (omitido)"
+    return 0
+  fi
+
+  mkdir -p "$LOG_DIR"
+  local logfile="$LOG_DIR/build_${servicio}.log"
+
+  # PIPESTATUS: con `| tee`, $? sería el estado de tee (siempre 0) y los fallos de
+  # build pasarían desapercibidos.
+  set +e
+  $COMPOSE_CMD build "$servicio" 2>&1 | tee "$logfile"
+  local estado=${PIPESTATUS[0]}
+  set -e
+
+  if [[ $estado -ne 0 ]]; then
+    echo ""
+    echo -e "${RED}✗ Falló la construcción de ${etiqueta}${RESET}"
+    diagnosticar_error "$logfile" "$etiqueta"
+    exit 1
+  fi
+
+  marcar_paso "$paso"
+  return 0
+}
+
 print_header
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 0. ¿Hay una instalación a medio terminar?
+# ─────────────────────────────────────────────────────────────────────────────
+if [[ -f "$STATE_FILE" ]]; then
+  warn "Detecté una instalación anterior que no terminó."
+  echo -e "  Pasos ya completados:"
+  sed 's/^/      ✓ /' "$STATE_FILE"
+  echo ""
+  echo -e "  ${CYAN}a)${RESET} Continuar desde donde quedó (no repite los builds ya hechos)"
+  echo -e "  ${CYAN}b)${RESET} Empezar de cero (reconstruye todo)"
+  read -r -p "  ¿Continuar desde donde quedó? (S/n) > " RESP_RESUME
+  RESP_RESUME_L=$(echo "$RESP_RESUME" | tr '[:upper:]' '[:lower:]')
+  if [[ "$RESP_RESUME_L" == "n" || "$RESP_RESUME_L" == "no" ]]; then
+    rm -f "$STATE_FILE"
+    ok "Se reiniciará la instalación desde cero"
+  else
+    RESUME=true
+    ok "Se reanudará la instalación"
+  fi
+  echo ""
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Validar estructura de carpetas obligatorias
@@ -188,6 +327,44 @@ if ! docker info &> /dev/null 2>&1; then
 fi
 ok "Docker daemon activo"
 
+# ── Recursos del sistema ─────────────────────────────────────────────────────
+# Se comprueban ANTES de empezar: un build que muere a los 10 minutos por falta de
+# disco o RAM es mucho más caro de diagnosticar que un aviso al inicio.
+
+# Espacio libre en disco. Las imágenes completas (Playwright + Chromium + Node)
+# rondan los 6 GB, así que por debajo de 10 GB el riesgo es real.
+# `df -Pk` (bloques de 1K) es POSIX y funciona igual en macOS/BSD y Linux; `df -Pg`
+# solo existe en BSD y en Linux devolvería basura.
+ESPACIO_LIBRE_GB=$(df -Pk "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2 {printf "%d", $4/1024/1024}')
+if [[ -n "${ESPACIO_LIBRE_GB:-}" ]] && [[ "$ESPACIO_LIBRE_GB" =~ ^[0-9]+$ ]]; then
+  if [[ $ESPACIO_LIBRE_GB -lt 5 ]]; then
+    warn "Solo quedan ${ESPACIO_LIBRE_GB} GB libres en disco. Las imágenes ocupan ~6 GB."
+    warn "Libera espacio (${CYAN}docker system prune -a${RESET}) o el build fallará a mitad de camino."
+    read -r -p "  ¿Continuar de todas formas? (s/N) > " SEGUIR_DISCO
+    SEGUIR_DISCO_L=$(echo "$SEGUIR_DISCO" | tr '[:upper:]' '[:lower:]')
+    [[ "$SEGUIR_DISCO_L" != "s" && "$SEGUIR_DISCO_L" != "si" && "$SEGUIR_DISCO_L" != "y" ]] && \
+      error "Instalación cancelada por falta de espacio en disco."
+  elif [[ $ESPACIO_LIBRE_GB -lt 10 ]]; then
+    warn "Quedan ${ESPACIO_LIBRE_GB} GB libres — justo. Las imágenes ocupan ~6 GB."
+  else
+    ok "Espacio en disco disponible: ${ESPACIO_LIBRE_GB} GB"
+  fi
+fi
+
+# Memoria asignada a Docker. Con menos de 2 GB el build de frontend/WhatsApp suele
+# morir por OOM (exit 137), que se ve como un fallo inexplicable.
+DOCKER_MEM_BYTES=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo "")
+if [[ -n "$DOCKER_MEM_BYTES" ]] && [[ "$DOCKER_MEM_BYTES" =~ ^[0-9]+$ ]]; then
+  DOCKER_MEM_GB=$((DOCKER_MEM_BYTES / 1024 / 1024 / 1024))
+  if [[ $DOCKER_MEM_GB -lt 2 ]]; then
+    warn "Docker tiene solo ${DOCKER_MEM_GB} GB de memoria asignada."
+    warn "El build de frontend/WhatsApp puede morir por falta de memoria (exit 137)."
+    warn "Súbela en Docker Desktop → Settings → Resources → Memory (4 GB recomendado)."
+  else
+    ok "Memoria disponible para Docker: ${DOCKER_MEM_GB} GB"
+  fi
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Configuración interactiva
 # ─────────────────────────────────────────────────────────────────────────────
@@ -246,9 +423,24 @@ echo ""
 
 GMAIL_APP_PASSWORD=""
 if [[ -n "$GMAIL_USER" ]]; then
-  ask "→ Contraseña de aplicación Gmail (16 caracteres, sin espacios):"
-  echo -e "  ${CYAN}Cómo obtenerla: https://myaccount.google.com/apppasswords${RESET}"
+  ask "→ Contraseña de aplicación Gmail  [OPCIONAL — Enter para omitir]:"
+  echo -e "  ${CYAN}Son 16 caracteres, sin espacios.${RESET} Se obtiene en:"
+  echo -e "  ${CYAN}https://myaccount.google.com/apppasswords${RESET}"
+  echo -e "  Puedes dejarla vacía ahora y agregarla después con"
+  echo -e "  ${CYAN}./configuraciones/setup-gmail.sh${RESET} o desde la web en Configuración."
   read -r -p "  > " GMAIL_APP_PASSWORD
+  if [[ -z "$GMAIL_APP_PASSWORD" ]]; then
+    warn "Sin contraseña de aplicación — las postulaciones por correo quedarán desactivadas."
+    warn "La web te lo recordará en Configuración hasta que la agregues."
+  else
+    # Google la muestra en bloques de 4 ("abcd efgh ijkl mnop"); al pegarla se copian los
+    # espacios y el login SMTP falla con "Username and Password not accepted".
+    GMAIL_APP_PASSWORD="${GMAIL_APP_PASSWORD// /}"
+    if [[ ${#GMAIL_APP_PASSWORD} -ne 16 ]]; then
+      warn "La contraseña tiene ${#GMAIL_APP_PASSWORD} caracteres y se esperaban 16."
+      warn "Se guardará igual, pero si el envío falla revísala con ./configuraciones/setup-gmail.sh"
+    fi
+  fi
   echo ""
 fi
 
@@ -432,26 +624,37 @@ ok "Imagen de base de datos lista"
 echo ""
 
 log "[2/5] Construyendo backend (Python/FastAPI)..."
-$COMPOSE_CMD build backend
+ejecutar_build backend "backend (Python/FastAPI)"
 echo ""
 
 log "[3/5] Construyendo scraper (Playwright)..."
-$COMPOSE_CMD build scraper
+ejecutar_build scraper "scraper (Playwright)"
 echo ""
 
 log "[4/5] Construyendo frontend (Next.js)..."
-$COMPOSE_CMD build frontend
+ejecutar_build frontend "frontend (Next.js)"
 echo ""
 
 log "[5/5] Construyendo servicio WhatsApp (Node.js + Chromium)..."
 echo -e "${YELLOW}  Este paso instala Chromium y puede demorar más.${RESET}"
-$COMPOSE_CMD build whatsapp
+ejecutar_build whatsapp "servicio WhatsApp (Node.js + Chromium)"
 echo ""
 
 log "Iniciando todos los servicios..."
-$COMPOSE_CMD up -d
+mkdir -p "$LOG_DIR"
+set +e
+$COMPOSE_CMD up -d 2>&1 | tee "$LOG_DIR/up.log"
+UP_ESTADO=${PIPESTATUS[0]}
+set -e
+if [[ $UP_ESTADO -ne 0 ]]; then
+  echo ""
+  echo -e "${RED}✗ Los servicios no pudieron iniciarse${RESET}"
+  diagnosticar_error "$LOG_DIR/up.log" "arranque de los servicios (compose up)"
+  exit 1
+fi
 echo ""
 ok "Servicios Docker iniciados"
+marcar_paso "servicios_iniciados"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 7. Esperar a que el backend esté listo
@@ -606,6 +809,10 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 if [[ "${BACKEND_OK:-false}" == "true" ]]; then
+  # La instalación llegó al final con el backend sano: se descarta el estado para que
+  # la próxima ejecución sea una instalación limpia y no ofrezca "reanudar".
+  rm -f "$STATE_FILE"
+  rm -rf "$LOG_DIR"
   echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
   echo -e "${GREEN}${BOLD}║         Instalación completada           ║${RESET}"
   echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${RESET}"
