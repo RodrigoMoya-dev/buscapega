@@ -5,7 +5,7 @@ from typing import List, Dict
 
 SEARCH_TAGS = {"php", "laravel", "wordpress", "backend", "python", "vue", "vuejs", "javascript", "woocommerce"}
 
-_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; Wunen/1.0; personal-job-search)"}
+_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; Buscapega/1.0; personal-job-search)"}
 
 
 def _clean_html(text: str) -> str:

@@ -1,4 +1,6 @@
-
+> [!warning] Paleta obsoleta (20/07/2026)
+> Esta paleta azul quedó **reemplazada** por la identidad oficial de Buscapega.
+> Ver [[identidad-grafica]]. Se conserva solo como referencia histórica.
 
 :root {
     --knowledge-dark:  #0F172A;

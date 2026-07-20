@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Paleta oficial de Buscapega — espejo de grafica/palette.scss.
+   Se exponen como variables CSS para poder usarlas fuera de Tailwind (SVG inline,
+   estilos calculados) y se mapean a utilidades en tailwind.config.ts. */
+:root {
+  --bp-celadon: #bcd8c1;
+  --bp-pine-blue: #297373;
+  --bp-spicy-orange: #c84c09;
+  --bp-night-bordeaux: #420217;
+  --bp-soft-blush: #fad8d6;
+}

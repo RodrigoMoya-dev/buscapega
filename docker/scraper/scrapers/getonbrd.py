@@ -7,7 +7,7 @@ CATEGORIES = ["programming", "devops-sysadmin", "data-science"]
 BASE_URL = "https://www.getonbrd.com/api/v0"
 
 _HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; Wunen/1.0; personal-job-search)",
+    "User-Agent": "Mozilla/5.0 (compatible; Buscapega/1.0; personal-job-search)",
     "Accept": "application/json",
 }
 

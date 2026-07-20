@@ -11,7 +11,7 @@ from scrapers.findjobit import fetch_offers as fetch_findjobit
 from applicator.registry import get_applicator
 from applicator import findjobit as findjobit_applicator
 
-app = FastAPI(title="Wunen Scraper", version="0.2.0")
+app = FastAPI(title="Buscapega Scraper", version="0.2.0")
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 WHATSAPP_URL = os.getenv("WHATSAPP_URL", "http://whatsapp:3001")
@@ -270,16 +270,16 @@ def test_email(req: TestEmailRequest):
         return {
             "status": "error",
             "message": "No hay método de envío configurado. Define GMAIL_USER y "
-                       "GMAIL_APP_PASSWORD en docker/.env (o ejecuta ./setup-gmail.sh).",
+                       "GMAIL_APP_PASSWORD en docker/.env (o ejecuta ./configuraciones/setup-gmail.sh).",
         }
 
     try:
         ok = findjobit_applicator._send_email(
             to_email=to,
-            subject="Wunen — correo de prueba ✓",
-            body_text="Este es un correo de prueba de Wunen. Si lo recibiste, el correo "
+            subject="Buscapega — correo de prueba ✓",
+            body_text="Este es un correo de prueba de Buscapega. Si lo recibiste, el correo "
                       "de postulaciones está funcionando correctamente.",
-            body_html="<p>Este es un <strong>correo de prueba</strong> de Wunen. Si lo "
+            body_html="<p>Este es un <strong>correo de prueba</strong> de Buscapega. Si lo "
                       "recibiste, el correo de postulaciones está funcionando correctamente. ✓</p>",
             cv_url=None,
         )

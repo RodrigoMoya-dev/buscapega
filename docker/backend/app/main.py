@@ -7,7 +7,7 @@ from app.routers import offers, companies, scraper, answers, stats, portals, cv,
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Wunen API", version="0.1.0", docs_url="/docs")
+app = FastAPI(title="Buscapega API", version="0.1.0", docs_url="/docs")
 
 app.add_middleware(
     CORSMiddleware,

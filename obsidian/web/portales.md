@@ -41,12 +41,12 @@ Al compactar, cada acordeón muestra la **cantidad de portales** junto al títul
   > portal). Ahora incluye el slug: `claude /autentica <slug>`, y el skill `/autentica` acepta ese
   > argumento para autenticar solo ese portal. (Rama `feature_setup_vistas_26062026`.)
 
-  > **Fix venv 26/06/2026:** `./setup-sessions.sh` fallaba con `ModuleNotFoundError: No module
+  > **Fix venv 26/06/2026:** `./configuraciones/setup-sessions.sh` fallaba con `ModuleNotFoundError: No module
   > named 'playwright'` porque el wrapper de la raíz invocaba `python3` del sistema (sin venv).
   > Ahora `setup-sessions.sh` valida que Python 3 exista, usa/crea `setup/.venv` e instala
   > playwright + Chromium automáticamente si faltan, y ejecuta `setup_session.py` con el Python del
   > venv. (Rama `fix_setup_sessions_venv_26062026`.) El instalador de dependencias se movió a la
-  > raíz como `./instalar_dependencias_python.sh` (antes `setup/run_setup.sh`).
+  > raíz como `./configuraciones/instalar_dependencias_python.sh` (antes `setup/run_setup.sh`).
 
 ## Estado de sesión (`session_active`) vs. `active`
 - `session_active`: hay cookies capturadas (`cookies/{session_key}_session.json`).

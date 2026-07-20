@@ -39,7 +39,7 @@ Verifica el estado de la conexión.
 
 ### `GET /qr`
 Devuelve una página HTML con el **código QR** actual (autorefresca). Se usa desde
-`./vincular-whatsapp.sh`. Si ya está conectado, muestra un aviso en vez del QR.
+`./configuraciones/vincular-whatsapp.sh`. Si ya está conectado, muestra un aviso en vez del QR.
 
 ### `POST /pair`
 Alternativa al QR: genera un **código de vinculación** de 8 caracteres (`requestPairingCode`).
@@ -68,8 +68,8 @@ Envía múltiples mensajes (pausa entre cada uno). Body: arreglo de `{ message, 
 
 ```bash
 # Desde la raíz del proyecto (curl al servicio)
-./vincular-whatsapp.sh [host] [port]              # QR
-./vincular-whatsapp.sh [host] [port] <telefono>   # código de vinculación (sin QR)
+./configuraciones/vincular-whatsapp.sh [host] [port]              # QR
+./configuraciones/vincular-whatsapp.sh [host] [port] <telefono>   # código de vinculación (sin QR)
 ```
 
 O manualmente:

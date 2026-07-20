@@ -29,10 +29,10 @@ sirviendo un build viejo.
 ## WhatsApp (whatsapp-web.js) y Gmail
 
 - **WhatsApp:** no se configura en el instalador (requiere escanear un QR). Usar
-  `./vincular-whatsapp.sh` (o `./vincular-whatsapp.sh <host> <port> <telefono>` para vincular por
+  `./configuraciones/vincular-whatsapp.sh` (o `./configuraciones/vincular-whatsapp.sh <host> <port> <telefono>` para vincular por
   código sin QR).
 - **Gmail:** el correo y la contraseña de aplicación se piden en el instalador y se guardan en
-  `docker/.env`. Para cambiarlos luego: `./setup-gmail.sh`.
+  `docker/.env`. Para cambiarlos luego: `./configuraciones/setup-gmail.sh`.
 - La API key de Anthropic **es opcional**: la web no la pide. La evaluación funciona con scoring
   por keywords o con Claude Code.
 
@@ -72,5 +72,5 @@ correo funcione. Flujo:
 ## Cambios sesión 17/06/2026
 
 - Documentado que teléfono/correo provienen del instalador (settings.json) y editables aquí.
-- Scripts de configuración en la raíz: `vincular-whatsapp.sh` (WhatsApp, antes `whatsapp-qr.sh`) y
-  `setup-gmail.sh` (Gmail).
+- Scripts de configuración en `configuraciones/`: `vincular-whatsapp.sh` (WhatsApp, antes
+  `whatsapp-qr.sh`) y `setup-gmail.sh` (Gmail). Hasta el 20/07/2026 estaban en la raíz.

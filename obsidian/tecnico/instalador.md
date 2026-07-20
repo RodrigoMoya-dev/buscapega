@@ -31,7 +31,7 @@ La captura de sesiones (Playwright) **siempre** instala dependencias dentro de u
 `setup/.venv`. Esto evita el error PEP 668 *externally-managed-environment* que rompía
 `pip install` y derivaba en `ModuleNotFoundError: No module named 'playwright'` en macOS/Homebrew
 y Linux moderno. Todas las llamadas usan `setup/.venv/bin/python` (mismo enfoque que
-`./instalar_dependencias_python.sh`, el instalador de dependencias de la raíz —antes
+`./configuraciones/instalar_dependencias_python.sh`, el instalador de dependencias de la raíz —antes
 `setup/run_setup.sh`).
 
 ### Detección de Docker y de instalaciones previas
@@ -60,21 +60,31 @@ instalador no toca Presto.
 
 ### Vinculación de WhatsApp se hace después por QR
 En el prompt del teléfono se aclara que ahí **solo se guarda el número**; la vinculación
-real se hace al terminar la instalación ejecutando `./vincular-whatsapp.sh` y escaneando el QR
-(o vinculando por código: `./vincular-whatsapp.sh <host> <port> <telefono>`).
+real se hace al terminar la instalación ejecutando `./configuraciones/vincular-whatsapp.sh` y escaneando el QR
+(o vinculando por código: `./configuraciones/vincular-whatsapp.sh <host> <port> <telefono>`).
 
 ### Comandos de Claude Code siempre visibles
 El resumen muestra siempre `claude /valida <url>` y `claude /autentica`, por si el usuario tiene
 Claude Code instalado.
 
-## Scripts auxiliares en la raíz
+## Scripts auxiliares en `configuraciones/`
+
+Desde el 20/07/2026 todos los scripts que **no** son de instalación inicial viven en
+`configuraciones/`. En la raíz queda únicamente `install.sh`.
 
 | Script | Propósito |
 |---|---|
-| `vincular-whatsapp.sh` | Vincular WhatsApp (whatsapp-web.js) por QR o por código. No se hace en el instalador. |
-| `setup-gmail.sh` | Configurar/cambiar el correo Gmail de postulaciones (actualiza `docker/.env` y reinicia el scraper). |
-| `instalar_dependencias_python.sh` | Instalar dependencias de Python (venv + Playwright + Chromium) para la captura de sesiones. |
-| `setup-sessions.sh` | Estado y captura de sesiones de portales (usa `setup/.venv`). |
+| `configuraciones/vincular-whatsapp.sh` | Vincular WhatsApp (whatsapp-web.js) por QR o por código. No se hace en el instalador. |
+| `configuraciones/setup-gmail.sh` | Configurar/cambiar el correo Gmail de postulaciones (actualiza `docker/.env` y reinicia el scraper). |
+| `configuraciones/instalar_dependencias_python.sh` | Instalar dependencias de Python (venv + Playwright + Chromium) para la captura de sesiones. |
+| `configuraciones/setup-sessions.sh` | Estado y captura de sesiones de portales (usa `setup/.venv`). |
+| `configuraciones/smoke-test.sh` | Validación post-cambios (ver [[validacion]]). |
+
+> **Detalle de implementación:** estos scripts resolvían sus rutas con
+> `SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"` asumiendo estar en la raíz. Al moverlos se
+> agregó `PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"` y todas las rutas derivadas
+> (`setup/`, `docker/`, `documentos/`) cuelgan ahora de `PROJECT_ROOT`. Sin ese ajuste
+> buscarían `configuraciones/setup/`, `configuraciones/docker/`, etc.
 
 ## Cambios sesión 17/06/2026
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Wunen — Smoke test / validación post-cambios
+# Buscapega — Smoke test / validación post-cambios
 #
 # Verifica que NO se haya roto nada después de un cambio. Dos fases:
 #   1) Estáticas (no requieren servicios levantados):
@@ -15,10 +15,10 @@
 #        · backend  /api/settings  (devuelve user_name)
 #
 # Uso:
-#   ./smoke-test.sh                 # local (puertos por defecto)
-#   ./smoke-test.sh --presto        # presto (frontend 3020, backend 8020, scraper 8021)
-#   ./smoke-test.sh --static        # solo fase estática (sin servicios)
-#   HOST=192.168.100.6 ./smoke-test.sh   # host remoto con puertos por defecto
+#   ./configuraciones/smoke-test.sh                 # local (puertos por defecto)
+#   ./configuraciones/smoke-test.sh --presto        # presto (frontend 3020, backend 8020, scraper 8021)
+#   ./configuraciones/smoke-test.sh --static        # solo fase estática (sin servicios)
+#   HOST=192.168.100.6 ./configuraciones/smoke-test.sh   # host remoto con puertos por defecto
 #
 # Variables de entorno (sobre-escriben los defaults):
 #   HOST, BACKEND_PORT, SCRAPER_PORT, FRONTEND_PORT
@@ -37,6 +37,7 @@ bad()  { echo -e "${RED}✗${RESET} $1"; }
 sep()  { echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ── Configuración de host/puertos ────────────────────────────────────────────
 HOST="${HOST:-localhost}"
@@ -61,7 +62,7 @@ check_pass() { ok "$1"; PASS=$((PASS+1)); }
 check_fail() { bad "$1"; FAIL=$((FAIL+1)); }
 
 echo ""
-echo -e "${BOLD}Wunen — Smoke test${RESET}"
+echo -e "${BOLD}Buscapega — Smoke test${RESET}"
 sep
 
 # ── FASE 1: verificaciones estáticas ─────────────────────────────────────────
@@ -70,7 +71,7 @@ log "Fase 1 · Verificaciones estáticas (sin servicios)"
 echo ""
 
 # 1a. Sintaxis bash de todos los scripts del proyecto (excluye venv/node_modules)
-SH_FILES=$(find "$SCRIPT_DIR" \
+SH_FILES=$(find "$PROJECT_ROOT" \
   -path "*/.venv/*" -prune -o \
   -path "*/node_modules/*" -prune -o \
   -path "*/test/*" -prune -o \
@@ -80,7 +81,7 @@ SYNTAX_OK=1
 while IFS= read -r f; do
   [[ -z "$f" ]] && continue
   if ! bash -n "$f" 2>/dev/null; then
-    check_fail "Error de sintaxis bash en: ${f#"$SCRIPT_DIR"/}"
+    check_fail "Error de sintaxis bash en: ${f#"$PROJECT_ROOT"/}"
     SYNTAX_OK=0
   fi
 done <<< "$SH_FILES"
@@ -101,7 +102,7 @@ fi
 
 # 1c. docker-compose.yml válido
 if command -v docker >/dev/null 2>&1; then
-  if docker compose -f "$SCRIPT_DIR/docker/docker-compose.yml" config -q 2>/dev/null; then
+  if docker compose -f "$PROJECT_ROOT/docker/docker-compose.yml" config -q 2>/dev/null; then
     check_pass "docker-compose.yml válido"
   else
     check_fail "docker-compose.yml inválido — corre: docker compose -f docker/docker-compose.yml config"
@@ -111,7 +112,7 @@ else
 fi
 
 # 1d. settings.json válido (si existe)
-SETTINGS="$SCRIPT_DIR/documentos/settings.json"
+SETTINGS="$PROJECT_ROOT/documentos/settings.json"
 if [[ -f "$SETTINGS" ]]; then
   if command -v python3 >/dev/null 2>&1 && python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$SETTINGS" 2>/dev/null; then
     check_pass "documentos/settings.json es JSON válido"

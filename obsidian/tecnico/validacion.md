@@ -23,10 +23,10 @@ Imprime un resumen `N OK · M fallidas` y devuelve código de salida `0`/`1`.
 ## Uso
 
 ```bash
-./smoke-test.sh            # local (frontend 3000, backend 8000, scraper 8001)
-./smoke-test.sh --presto   # presto (frontend 3020, backend 8020, scraper 8021)
-./smoke-test.sh --static   # solo fase estática (sin Docker corriendo)
-HOST=192.168.100.6 ./smoke-test.sh   # host arbitrario con puertos por defecto
+./configuraciones/smoke-test.sh            # local (frontend 3000, backend 8000, scraper 8001)
+./configuraciones/smoke-test.sh --presto   # presto (frontend 3020, backend 8020, scraper 8021)
+./configuraciones/smoke-test.sh --static   # solo fase estática (sin Docker corriendo)
+HOST=192.168.100.6 ./configuraciones/smoke-test.sh   # host arbitrario con puertos por defecto
 ```
 
 Variables de entorno: `HOST`, `BACKEND_PORT`, `SCRAPER_PORT`, `FRONTEND_PORT`.

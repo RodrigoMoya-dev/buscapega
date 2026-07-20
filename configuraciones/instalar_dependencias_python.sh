@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Wunen — Instalador de dependencias de Python para la captura de sesiones.
+# Buscapega — Instalador de dependencias de Python para la captura de sesiones.
 #
 # Valida que Python 3 esté instalado, crea el entorno virtual en setup/.venv e
 # instala las dependencias (Playwright) junto con el navegador Chromium.
 #
-# Uso: ./instalar_dependencias_python.sh
+# Uso: ./configuraciones/instalar_dependencias_python.sh
 #
 # Después de instalar, captura sesiones con:
-#   ./setup-sessions.sh <portal>     (ej: ./setup-sessions.sh getonbrd)
-#   ./setup-sessions.sh --lista      (ver portales y estado de sesión)
+#   ./configuraciones/setup-sessions.sh <portal>     (ej: ./configuraciones/setup-sessions.sh getonbrd)
+#   ./configuraciones/setup-sessions.sh --lista      (ver portales y estado de sesión)
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 CYAN='\033[0;36m'; GREEN='\033[0;32m'; RED='\033[0;31m'; BOLD='\033[1m'; RESET='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SETUP_DIR="$SCRIPT_DIR/setup"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SETUP_DIR="$PROJECT_ROOT/setup"
 VENV_DIR="$SETUP_DIR/.venv"
 
 echo ""
-echo -e "${BOLD}Wunen — Instalar dependencias de Python${RESET}"
+echo -e "${BOLD}Buscapega — Instalar dependencias de Python${RESET}"
 echo ""
 
 # 1) Validar que Python 3 esté instalado en el sistema.
@@ -52,6 +53,6 @@ playwright install chromium
 
 echo ""
 echo -e "${GREEN}✓ Dependencias instaladas correctamente.${RESET}"
-echo -e "  Captura una sesión con: ${CYAN}./setup-sessions.sh <portal>${RESET}"
-echo -e "  Lista los portales con: ${CYAN}./setup-sessions.sh --lista${RESET}"
+echo -e "  Captura una sesión con: ${CYAN}./configuraciones/setup-sessions.sh <portal>${RESET}"
+echo -e "  Lista los portales con: ${CYAN}./configuraciones/setup-sessions.sh --lista${RESET}"
 echo ""

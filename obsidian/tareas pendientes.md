@@ -1,130 +1,157 @@
+## Checklist de la sesión (20/07/2026)
 
-# Plan de trabajo — sesión 26-06-2026
+> Decisiones tomadas al inicio:
+> - **Rebranding cosmético**: se cambia el nombre visible, textos, logo y docs. NO se tocan
+>   `container_name`, el volumen `wunen_db_data` ni el usuario/DB de Postgres, porque
+>   renombrarlos dejaría huérfano el volumen de Presto (contraseña irrecuperable).
+> - **Repos aún NO renombrados** (verificado con `git ls-remote`): Gitea y GitHub siguen
+>   como `wunen`. El rename lo hace Rodrigo; después se actualizan los remotos locales.
 
-Rama fix (`fix_setup_sessions_venv_26062026`):
-- [x] F1. `setup-sessions.sh` usa el venv (corrige `ModuleNotFoundError: playwright`) — el wrapper llamaba a `python3` del sistema en vez del venv.
-- [x] F2. Validar que Python 3 esté instalado en los scripts; si falta, mensaje claro de instalación.
-- [x] F3. Si faltan librerías Python, avisar al usuario e instalarlas automáticamente vía el instalador.
+### Rama `feature_rebranding_buscapega_20072026`
+- [x] Renombrar referencias visibles Wunen → Buscapega (install.sh, README, frontend, backend, scrapers)
+- [x] Logo ASCII del robot en el header de install.sh
+- [x] Texto destacado "Hecho desde Chile: Si es chileno, es bueno" en el instalador
+- [x] Integrar paleta de colores (grafica/palette.scss) al frontend
+- [x] Integrar logo (grafica/logobuscapega.jpg) al frontend y favicon
+- [x] Crear carpeta `configuraciones/` y mover los .sh no-iniciales
+- [x] Documento "Manual de creación" para GitHub Pages
+- [x] Actualizar documentación en obsidian/
 
-Rama feature (`feature_setup_vistas_26062026`):
-- [x] T1. Mover `setup/run_setup.sh` a la raíz como `instalar_dependencias_python.sh` (instalador de dependencias con validación de Python).
-- [x] T2. Renombrar `whatsapp-qr.sh` → `vincular-whatsapp.sh` (y referencias).
-- [x] T3. WhatsApp: alternativa de conexión por código de vinculación (pairing code) ante "No se pueden vincular dispositivos nuevos"; validación desde el portal documentada (botón "Enviar mensaje de prueba").
-- [x] T4. Web/Portales: texto "Sesión activa / no iniciada" → "Incluido / No incluido en búsquedas".
-- [x] T5. Web/Portales: el comando copiado para Claude Code incluye el portal (`claude /autentica <portal>`).
-- [x] T6. Web/Configuración: botón "Enviar correo de prueba" para validar el "Correo de postulaciones".
+### Rama `fix_install_errores_reanudable_20072026`
+- [ ] Contraseña de aplicación Gmail opcional (Enter para continuar)
+- [ ] Aviso en la web cuando falta la contraseña Gmail
+- [ ] Manejo de errores del instalador (red, disco, memoria, versiones de Python)
+- [ ] Reanudar la instalación desde donde falló
 
-Cierre:
-- [x] Actualizar documentación en `obsidian/` (web + técnico).
-- [x] Push a gitea (`origin`) y github; merge de ambas ramas a `main` (sin `obsidian/`). main en `a401eed`.
-- [x] Ejecutar `/prueba`. ✅ Clon limpio de `main`, `install.sh` EXIT 0, banner "Instalación completada", backend `/health` OK, 5 contenedores arriba. Endpoints nuevos verificados: `test-email` (backend/scraper) y `/pair` (WhatsApp, devolvió código). `./setup-sessions.sh --lista` en clon limpio creó el venv, instaló Playwright + Chromium y listó portales sin `ModuleNotFoundError`. Sin problemas detectados.
-- [ ] (Pendiente, requiere confirmación) Deploy a Presto (`~/docker/wunen/`, puertos propios; ver [[project-presto-deploy]]).
+### Cierre
+- [ ] Push de ambas ramas a gitea (`origin`) y github (`github`)
+- [ ] Merge a `main` sin incluir `obsidian/`
+- [ ] Ejecutar `/prueba`
 
 ---
 
-# Comandos 
+* Finalmente se optará por el nombre "Buscapega" para el nombre publico del proyecto.  
+* Entonces, lo primero que necesito es que revises la carpeta local para poder cambiar las referencias: El nombre antiguo (wunen) fue cambiado, así que todo ahora debiera apuntar a buscapega. Esto también debiera incluir las referencias a los nombres (Por ejemplo en el instalador menciona a "Wunen"). 
+* Después de eso revisa que en el gitea de presto todo funcione bien también. Es necesario cambiar el nombre : Yo cambiaré el nombre y luego tu haz las modificaciones. 
+* Finalmente, realiza la misma revisión en github. 
+* Respecto a la página web, la página de github pages y toda la información gráfica, armó un logo y una paleta de colores: Ambos se enceuntran en /Users/rodrigo/Proyectos/Moya.dev/Proyectos internos/buscapega/grafica, para que los integres al proyecto y a las secciones indicadas. 
+	* Si pudieras agregar el logo a la setup del proyecto (Con. caracteres, así como ocurre con el bot de claude), mucho mejor. En la setup, coloca también con un texto resaltado "Hecho desde Chile: Si es chileno, es bueno". 
 
-* Al ejecutar este comando me apareció este mensaje : ./setup-sessions.sh
+* Pregunta ¿MEdiante github pages se puede hacer una pagina tipo buscapega.github.io? Si la respuesta es positiva, crea en esta carpeta un documento llamado "Manual de creación" para poder crearla en github. 
 
-Traceback (most recent call last):
-
-  File "/Users/rodrigo/Proyectos/Moya.dev/Proyectos internos/wunen/demo/setup/setup_session.py", line 32, in <module>
-
-    from playwright.sync_api import sync_playwright
-
-**ModuleNotFoundError**: No module named 'playwright'
-* Sería bueno que en general, si no están las librerías de Python necesarias, indique al usuario que debe cargarlas. 
-* Respecto a lo anterior ¿Los scripts detectan si está Python en el sistema? Si no está ¿Puedes agregar una validación? 
-* En la carpeta /setup ¿Podrías trasladar el comando run_setup.sh a la raíz del proyecto, y cambiarle el nombre a installar_dependencias_python.sh ? 
-* Ejecuté el comando setup_session.py desde la terminal, luego de instalar los requeriminetos, pero sigue apareciendo el mensaje. Te adjunto la data completa. 
-
- `` python 
-
-./run_setup.sh
-
-🔧 Creando entorno virtual...
-
-📦 Instalando dependencias...
-
-WARNING: Cache entry deserialization failed, entry ignored
-
-WARNING: Cache entry deserialization failed, entry ignored
-
-WARNING: Cache entry deserialization failed, entry ignored
-
-WARNING: Cache entry deserialization failed, entry ignored
-
-  
-
-**[**notice**]** A new release of pip is available: 26.1 -> 26.1.2
-
-**[**notice**]** To update, run: pip install --upgrade pip
-
-🌐 Instalando Chromium para Playwright...
-
-  
-
-Portales disponibles:
-
-  
-
-  findjobit       FindJobIT            ❌ Sin sesión
-
-  getonbrd        GetOnBrd             ❌ Sin sesión
-
-  tecnoempleo     Tecnoempleo          ❌ Sin sesión
-
-  remotelatinos   RemoteLatinos        ❌ Sin sesión
-
-  chiletrabajos   ChileTrabajos        ❌ Sin sesión
-
-  chumiit         Chumi-IT             ❌ Sin sesión
-
-  
-
-❯ ./setup-sessions.sh
-
-Traceback (most recent call last):
-
-  File "/Users/rodrigo/Proyectos/Moya.dev/Proyectos internos/wunen/demo/setup/setup_session.py", line 32, in <module>
-
-    from playwright.sync_api import sync_playwright
-
-ModuleNotFoundError: No module named 'playwright'
-
-zsh: parse error near `\n'
-
-❯ python3 setup/setup_session.py tecnoempleo
-
-/usr/local/Cellar/python@3.14/3.14.4_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python: can't open file '/Users/rodrigo/Proyectos/Moya.dev/Proyectos internos/wunen/demo/setup/setup/setup_session.py': [Errno 2] No such file or directory
-
-❯ cd ..
-
-❯ python3 setup/setup_session.py tecnoempleo
-
-Traceback (most recent call last):
-
-  File "/Users/rodrigo/Proyectos/Moya.dev/Proyectos internos/wunen/demo/setup/setup_session.py", line 32, in <module>
-
-    from playwright.sync_api import sync_playwright
-
-**ModuleNotFoundError**: No module named 'playwright'
-
- ``
-* El comando /whatsapp-qr.sh ¿Puedes cambiarle el nombre a vincular-whatsapp.sh? ¿Esta sincronización, se puede validar desde el portal? 
-* Quize probar el escaneo de whatsapp, y en teléfono me aparece el mensaje "No se pueden vincular dispositivos nuevos en este momento". Desde el bash ¿Se puede hacer algo para buscar una segunda alternativa de conexión? 
-* 
+* Para darle un orden, crea en la raíz del proyecto una carpeta llamada configuraciones y ahi guarda todos los archivos .sh que no tengan que ver con la configuración inicial del proyecto (Ej: setup-gmail.sh, setup-sessions.sh, vincular-whatsapp.sh, etc). 
 
 
-# Web 
 
-## Portales de empleo 
+### Install.sh
 
-* Cambia el texto "Sesion activa / no iniciada" por "Incluir portal en búsquedas / no incluir en búsquedas". 
-* Al momento de copiar la instrucción, en el caso de usar claude code, falta colocar la ruta del sitio web en el registro. 
+* La Contraseña de aplicación Gmail debiera ser opcional ingresarla. Da la opción de presionar enter para continuar. Si falta la contraseña, esto debiera avisarlo luego en la web. 
+* Al ejecutar el instalador inicial, se cae sin dar mayores explicaciones. Entonces esto me genera dos consultas. 
+	* ¿Es posible manejar los errores? Es decir, poder determinar donde está el problema, o si el problema fue a nivel de código o de usuario? Por ejemplo, el equipo del usuario se quedó sin memoria o sin espacio en disco, o hay problemas con las versiones de Python, etc. 
+	* ¿Es posible, también, que el usuario retome donde quedó la instalación, en caso de que falle? 
+	* Esta es la traza del error que aparece. 
 
+ => ERROR [3/7] RUN apt-get update && apt-get install -y --no-install-recommends     curl     && rm -rf /var/lib/apt/lists/*  76.6s
+------                                                                                                                              
+ > [3/7] RUN apt-get update && apt-get install -y --no-install-recommends     curl     && rm -rf /var/lib/apt/lists/*:              
+0.341 Hit:1 http://deb.debian.org/debian trixie InRelease                                                                           
+0.341 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]                                                         
+0.353 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]                                               
+0.386 Get:4 http://deb.debian.org/debian trixie/main amd64 Packages [9673 kB]                                                       
+3.099 Get:5 http://deb.debian.org/debian trixie-updates/main amd64 Packages [4412 B]
+3.099 Get:6 http://deb.debian.org/debian-security trixie-security/main amd64 Packages [226 kB]
+4.166 Fetched 9993 kB in 4s (2545 kB/s)
+4.166 Reading package lists...
+5.068 Reading package lists...
+5.841 Building dependency tree...
+6.005 Reading state information...
+6.275 The following additional packages will be installed:
+6.275   libbrotli1 libcom-err2 libcurl4t64 libgnutls30t64 libgssapi-krb5-2 libidn2-0
+6.275   libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap2 libnghttp2-14
+6.276   libnghttp3-9 libp11-kit0 libpsl5t64 librtmp1 libsasl2-2 libsasl2-modules-db
+6.277   libssh2-1t64 libtasn1-6 libunistring5
+6.281 Suggested packages:
+6.281   gnutls-bin krb5-doc krb5-user
+6.281 Recommended packages:
+6.281   bash-completion krb5-locales libldap-common publicsuffix libsasl2-modules
+6.486 The following NEW packages will be installed:
+6.486   curl libbrotli1 libcom-err2 libcurl4t64 libgnutls30t64 libgssapi-krb5-2
+6.487   libidn2-0 libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap2
+6.487   libnghttp2-14 libnghttp3-9 libp11-kit0 libpsl5t64 librtmp1 libsasl2-2
+6.488   libsasl2-modules-db libssh2-1t64 libtasn1-6 libunistring5
+6.556 0 upgraded, 22 newly installed, 0 to remove and 0 not upgraded.
+6.556 Need to get 4887 kB of archives.
+6.556 After this operation, 14.7 MB of additional disk space will be used.
+6.556 Get:1 http://deb.debian.org/debian trixie/main amd64 libbrotli1 amd64 1.1.0-2+b7 [307 kB]
+6.667 Get:2 http://deb.debian.org/debian trixie/main amd64 libkrb5support0 amd64 1.21.3-5+deb13u1 [33.1 kB]
+6.671 Get:3 http://deb.debian.org/debian trixie/main amd64 libcom-err2 amd64 1.47.2-3+b11 [25.0 kB]
+6.675 Get:4 http://deb.debian.org/debian trixie/main amd64 libk5crypto3 amd64 1.21.3-5+deb13u1 [81.2 kB]
+6.689 Get:5 http://deb.debian.org/debian trixie/main amd64 libkeyutils1 amd64 1.6.3-6 [9456 B]
+6.702 Get:6 http://deb.debian.org/debian trixie/main amd64 libkrb5-3 amd64 1.21.3-5+deb13u1 [326 kB]
+6.757 Get:7 http://deb.debian.org/debian trixie/main amd64 libgssapi-krb5-2 amd64 1.21.3-5+deb13u1 [138 kB]
+7.052 Get:8 http://deb.debian.org/debian trixie/main amd64 libunistring5 amd64 1.3-2 [477 kB]
+7.409 Get:9 http://deb.debian.org/debian trixie/main amd64 libidn2-0 amd64 2.3.8-2 [109 kB]
+7.459 Get:10 http://deb.debian.org/debian trixie/main amd64 libsasl2-modules-db amd64 2.1.28+dfsg1-9 [19.8 kB]
+7.469 Get:11 http://deb.debian.org/debian trixie/main amd64 libsasl2-2 amd64 2.1.28+dfsg1-9 [57.5 kB]
+7.749 Get:12 http://deb.debian.org/debian trixie/main amd64 libldap2 amd64 2.6.10+dfsg-1 [194 kB]
+7.908 Get:13 http://deb.debian.org/debian trixie/main amd64 libnghttp2-14 amd64 1.64.0-1.1+deb13u1 [76.2 kB]
+8.008 Get:14 http://deb.debian.org/debian trixie/main amd64 libnghttp3-9 amd64 1.8.0-1 [67.7 kB]
+8.066 Get:15 http://deb.debian.org/debian trixie/main amd64 libpsl5t64 amd64 0.21.2-1.1+b1 [57.2 kB]
+8.140 Get:16 http://deb.debian.org/debian trixie/main amd64 libp11-kit0 amd64 0.25.5-3 [425 kB]
+8.396 Get:17 http://deb.debian.org/debian trixie/main amd64 libtasn1-6 amd64 4.20.0-2+deb13u1 [50.1 kB]
+69.47 Ign:18 http://deb.debian.org/debian trixie/main amd64 libgnutls30t64 amd64 3.8.9-3+deb13u4
+69.47 Ign:19 http://deb.debian.org/debian trixie/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b5
+69.47 Ign:20 http://deb.debian.org/debian trixie/main amd64 libssh2-1t64 amd64 1.11.1-1+deb13u1
+69.47 Ign:21 http://deb.debian.org/debian trixie/main amd64 libcurl4t64 amd64 8.14.1-2+deb13u4
+69.47 Ign:22 http://deb.debian.org/debian trixie/main amd64 curl amd64 8.14.1-2+deb13u4
+70.47 Ign:22 http://deb.debian.org/debian trixie/main amd64 curl amd64 8.14.1-2+deb13u4
+70.47 Ign:21 http://deb.debian.org/debian trixie/main amd64 libcurl4t64 amd64 8.14.1-2+deb13u4
+70.47 Ign:20 http://deb.debian.org/debian trixie/main amd64 libssh2-1t64 amd64 1.11.1-1+deb13u1
+70.47 Ign:19 http://deb.debian.org/debian trixie/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b5
+70.47 Ign:18 http://deb.debian.org/debian trixie/main amd64 libgnutls30t64 amd64 3.8.9-3+deb13u4
+72.47 Ign:18 http://deb.debian.org/debian trixie/main amd64 libgnutls30t64 amd64 3.8.9-3+deb13u4
+72.47 Ign:19 http://deb.debian.org/debian trixie/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b5
+72.47 Ign:20 http://deb.debian.org/debian trixie/main amd64 libssh2-1t64 amd64 1.11.1-1+deb13u1
+72.47 Ign:21 http://deb.debian.org/debian trixie/main amd64 libcurl4t64 amd64 8.14.1-2+deb13u4
+72.47 Ign:22 http://deb.debian.org/debian trixie/main amd64 curl amd64 8.14.1-2+deb13u4
+76.49 Err:22 http://deb.debian.org/debian trixie/main amd64 curl amd64 8.14.1-2+deb13u4
+76.49   Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.49 Err:21 http://deb.debian.org/debian trixie/main amd64 libcurl4t64 amd64 8.14.1-2+deb13u4
+76.49   Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.49 Ign:20 http://deb.debian.org/debian trixie/main amd64 libssh2-1t64 amd64 1.11.1-1+deb13u1
+76.49 Err:19 http://deb.debian.org/debian trixie/main amd64 librtmp1 amd64 2.4+20151223.gitfa8646d.1-2+b5
+76.49   Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.49 Ign:18 http://deb.debian.org/debian trixie/main amd64 libgnutls30t64 amd64 3.8.9-3+deb13u4
+76.49 Err:20 http://deb.debian.org/debian trixie/main amd64 libssh2-1t64 amd64 1.11.1-1+deb13u1
+76.49   Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.49 Err:18 http://deb.debian.org/debian trixie/main amd64 libgnutls30t64 amd64 3.8.9-3+deb13u4
+76.49   Could not connect to debian.map.fastlydns.net:80 (151.101.130.132), connection timed out Could not connect to debian.map.fastlydns.net:80 (151.101.66.132), connection timed out Could not connect to debian.map.fastlydns.net:80 (151.101.194.132), connection timed out Could not connect to debian.map.fastlydns.net:80 (151.101.2.132), connection timed out Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.49   Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.50 E: Failed to fetch http://deb.debian.org/debian-security/pool/updates/main/g/gnutls28/libgnutls30t64_3.8.9-3%2bdeb13u4_amd64.deb  Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.50 E: Failed to fetch http://deb.debian.org/debian/pool/main/r/rtmpdump/librtmp1_2.4%2b20151223.gitfa8646d.1-2%2bb5_amd64.deb  Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.50 E: Failed to fetch http://deb.debian.org/debian-security/pool/updates/main/libs/libssh2/libssh2-1t64_1.11.1-1%2bdeb13u1_amd64.deb  Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.50 E: Failed to fetch http://deb.debian.org/debian/pool/main/c/curl/libcurl4t64_8.14.1-2%2bdeb13u4_amd64.deb  Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.50 E: Failed to fetch http://deb.debian.org/debian/pool/main/c/curl/curl_8.14.1-2%2bdeb13u4_amd64.deb  Unable to connect to deb.debian.org:http: [IP: 151.101.2.132 80]
+76.50 E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+76.50 Fetched 2453 kB in 1min 10s (35.0 kB/s)
+------
+[+] build 0/2
+ ⠙ Image wunen-backend Building                                                                                                78.3s
+ ⠙ Image wunen-scraper Building                                                                                                78.3s
+Dockerfile:5
 
-## Configuración 
+--------------------
 
-* Agrega una opción en "Correo de postulaciones" para poder validar que esté funcionando. 
+   4 |     
 
+   5 | >>> RUN apt-get update && apt-get install -y --no-install-recommends \
+
+   6 | >>>     curl \
+
+   7 | >>>     && rm -rf /var/lib/apt/lists/*
+
+   8 |     
+
+--------------------
+
+failed to solve: process "/bin/sh -c apt-get update && apt-get install -y --no-install-recommends     curl     && rm -rf /var/lib/apt/lists/*" did not complete successfully: exit code: 100
