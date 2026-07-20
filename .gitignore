@@ -66,4 +66,5 @@ obsidian/.obsidian/
 
 # Estado y logs del instalador (permiten reanudar una instalación fallida)
 .install-state
+.install-config
 .install-logs/
