@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSettings, saveSettings, testWhatsapp, testEmail } from "@/lib/api";
+import { getSettings, saveSettings, testWhatsapp, testEmail, getEmailStatus, type EmailStatus } from "@/lib/api";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
@@ -19,6 +19,9 @@ export default function SettingsPage() {
   const [emailTestResult, setEmailTestResult] = useState<{ status: string; message: string } | null>(null);
   // T11: cuando está activo, el reply-to replica el correo de envío.
   const [sameReply, setSameReply] = useState(false);
+  // La contraseña de aplicación de Gmail es opcional en el instalador, así que se puede
+  // terminar la instalación sin ella. Este aviso evita que el correo falle en silencio.
+  const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null);
 
   useEffect(() => {
     getSettings().then((data) => {
@@ -29,6 +32,7 @@ export default function SettingsPage() {
       }
       setLoading(false);
     });
+    getEmailStatus().then(setEmailStatus);
   }, []);
 
   async function handleSave() {
@@ -77,6 +81,38 @@ export default function SettingsPage() {
       <p className="text-gray-400 text-sm mb-8">
         Ajustes generales del sistema de postulación.
       </p>
+
+      {emailStatus && !emailStatus.configurado && (
+        <div className="mb-8 flex gap-3 rounded-xl border border-marca-naranja/50 bg-marca-naranja/10 p-4">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mt-0.5 h-5 w-5 shrink-0 text-marca-naranja"
+            aria-hidden="true"
+          >
+            <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          </svg>
+          <div className="text-sm">
+            <p className="font-semibold text-marca-naranja">
+              {emailStatus.motivo === "falta_password"
+                ? "Falta la contraseña de aplicación de Gmail"
+                : "Envío de correo sin configurar"}
+            </p>
+            <p className="mt-1 text-gray-300">{emailStatus.mensaje}</p>
+            <p className="mt-2 text-xs text-gray-400">
+              Ejecuta{" "}
+              <code className="rounded bg-gray-800 px-1.5 py-0.5 text-marca-celadon">
+                ./configuraciones/setup-gmail.sh
+              </code>{" "}
+              y reinicia el scraper para aplicarlo.
+            </p>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-gray-500 text-center py-10">Cargando...</div>

@@ -63,3 +63,7 @@ obsidian/.obsidian/
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Estado y logs del instalador (permiten reanudar una instalación fallida)
+.install-state
+.install-logs/
