@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What is Wunen
+## What is Buscapega
 
-Wunen is a personal job-search automation system. It scrapes job offers from multiple portals, evaluates each one against a candidate profile using Claude AI, presents them in a review UI, and can auto-apply to supported portals via Playwright browser automation.
+Buscapega is a personal job-search automation system. It scrapes job offers from multiple portals, evaluates each one against a candidate profile using Claude AI, presents them in a review UI, and can auto-apply to supported portals via Playwright browser automation.
 
 ## Commands
 
@@ -36,12 +36,12 @@ cd setup
 pip3 install -r requirements.txt
 playwright install chromium
 
-./setup-sessions.sh --lista          # list portals and session status (root wrapper, cds into setup/)
-./setup-sessions.sh getonbrd         # capture session for a portal
+./configuraciones/setup-sessions.sh --lista          # list portals and session status (root wrapper, cds into setup/)
+./configuraciones/setup-sessions.sh getonbrd         # capture session for a portal
 ```
 After capturing, the script auto-rsync's cookies to `rodrigo@presto:~/docker/wunen/cookies/`.
 
-**WhatsApp QR linking**: `./vincular-whatsapp.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
+**WhatsApp QR linking**: `./configuraciones/vincular-whatsapp.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
 
 **API docs** (when backend is running): http://localhost:8000/docs  
 **Frontend**: http://localhost:3000

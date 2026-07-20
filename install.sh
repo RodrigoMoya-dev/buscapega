@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# Wunen — Instalador
+# Buscapega — Instalador
 # Sistema personal de automatización de búsqueda de empleo
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -12,13 +12,40 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 RESET='\033[0m'
 BOLD='\033[1m'
+DIM='\033[2m'
 
+# Paleta Buscapega (grafica/palette.scss) en truecolor. Los terminales que no soportan
+# 24-bit ignoran la secuencia y caen al color por defecto, así que es seguro usarlas.
+PINE='\033[38;2;41;115;115m'      # $pine-blue   #297373
+ORANGE='\033[38;2;200;76;9m'      # $spicy-orange #c84c09
+CELADON='\033[38;2;188;216;193m'  # $celadon     #bcd8c1
+BLUSH='\033[38;2;250;216;214m'    # $soft-blush  #fad8d6
+# Rojo y azul de la bandera chilena, para la insignia del robot
+CL_RED='\033[38;2;213;43;30m'
+CL_BLUE='\033[38;2;0;57;166m'
+
+# El robot se dibuja sobre una grilla fija: la cabeza y el cuerpo ocupan las columnas
+# 14-24 (centro en la 19), donde se alinean antena y piernas. Se usan solo caracteres
+# de ancho 1 — se evitan ● ★ ▪ y similares porque son "East Asian Ambiguous" y muchos
+# terminales los pintan a doble ancho, lo que descuadra todo el dibujo.
 print_header() {
   echo ""
-  echo -e "${BLUE}${BOLD}╔══════════════════════════════════════════╗${RESET}"
-  echo -e "${BLUE}${BOLD}║           Wunen — Instalador             ║${RESET}"
-  echo -e "${BLUE}${BOLD}║  Automatización de búsqueda de empleo    ║${RESET}"
-  echo -e "${BLUE}${BOLD}╚══════════════════════════════════════════╝${RESET}"
+  echo -e "                   ${PINE}▄${RESET}"
+  echo -e "                   ${PINE}│${RESET}"
+  echo -e "              ${PINE}╭─────────╮${RESET}"
+  echo -e "      ${PINE}╭─╮${RESET}     ${PINE}│${RESET}  ${CELADON}o${RESET}   ${CELADON}o${RESET}  ${PINE}│${RESET}     ${PINE}╭─╮${RESET}"
+  echo -e "      ${PINE}│${RESET} ${PINE}│${RESET}     ${PINE}│${RESET}    ${BLUSH}‿${RESET}    ${PINE}│${RESET}     ${PINE}│${RESET} ${PINE}│${RESET}"
+  echo -e "      ${PINE}╰─╯${RESET}     ${PINE}╰─────────╯${RESET}     ${PINE}╰─╯${RESET}"
+  echo -e "              ${PINE}╭─────────╮${RESET}"
+  echo -e "   ${ORANGE}┌────┐${RESET}     ${PINE}│${RESET}  ${CL_BLUE}██${RESET}${BLUSH}▀▀▀${RESET}  ${PINE}│${RESET}"
+  echo -e "   ${ORANGE}│${RESET} ${ORANGE}══${RESET} ${ORANGE}│${RESET}     ${PINE}│${RESET}  ${CL_RED}▄▄▄▄▄${RESET}  ${PINE}│${RESET}"
+  echo -e "   ${ORANGE}└────┘${RESET}     ${PINE}╰─────────╯${RESET}"
+  echo -e "                ${PINE}▀▀${RESET}   ${PINE}▀▀${RESET}"
+  echo ""
+  echo -e "          ${ORANGE}${BOLD}B U S C A P E G A${RESET}"
+  echo -e "   ${CYAN}Automatización de búsqueda de empleo${RESET}"
+  echo ""
+  echo -e "   ${CL_BLUE}${BOLD}▌${RESET}${BOLD} Hecho desde Chile: ${CL_RED}Si es chileno, es bueno ${CL_BLUE}▐${RESET}"
   echo ""
 }
 
@@ -60,7 +87,7 @@ if [[ ${#MISSING_DIRS[@]} -gt 0 ]]; then
   error "Faltan carpetas obligatorias del proyecto:
 $(for d in "${MISSING_DIRS[@]}"; do echo "  ✗ $d"; done)
 
-  Asegúrate de estar ejecutando install.sh desde la raíz del proyecto Wunen."
+  Asegúrate de estar ejecutando install.sh desde la raíz del proyecto Buscapega."
 fi
 
 ok "Estructura de carpetas del proyecto correcta"
@@ -188,7 +215,7 @@ echo ""
 while true; do
   ask "→ Número de teléfono para notificaciones WhatsApp (sin el +, ej: 56912345678):"
   echo -e "  ${CYAN}Aquí solo se guarda el número. La vinculación se hace DESPUÉS escaneando${RESET}"
-  echo -e "  ${CYAN}un QR: al terminar la instalación ejecuta ./vincular-whatsapp.sh y escanéalo.${RESET}"
+  echo -e "  ${CYAN}un QR: al terminar la instalación ejecuta ./configuraciones/vincular-whatsapp.sh y escanéalo.${RESET}"
   read -r -p "  [56912345678] > " WHATSAPP_PHONE
   WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
   WHATSAPP_PHONE_CLEAN=$(echo "$WHATSAPP_PHONE" | tr -dc '0-9')
@@ -282,7 +309,7 @@ WHATSAPP_PAIRING_PHONE=${WHATSAPP_PHONE}
 
 GMAIL_USER=${GMAIL_USER:-}
 GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD:-}
-GMAIL_FROM_NAME=Wunen
+GMAIL_FROM_NAME=Buscapega
 
 FINDJOBIT_MIN_SCORE=50
 EOF
@@ -311,12 +338,12 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 log "Verificando disponibilidad de puertos..."
 
-# Detectar una instalación previa de Wunen (contenedores ya creados o corriendo).
+# Detectar una instalación previa de Buscapega (contenedores ya creados o corriendo).
 # Sirve para no asustar con falsos "puerto en uso" cuando el puerto lo ocupa el
-# propio Wunen: en ese caso es una reinstalación y 'compose up -d' lo recrea.
+# propio Buscapega: en ese caso es una reinstalación y 'compose up -d' lo recrea.
 WUNEN_EXISTING=$(docker ps -a --filter "name=wunen_" --format "{{.Names}}" 2>/dev/null || true)
 if [[ -n "$WUNEN_EXISTING" ]]; then
-  warn "Detecté una instalación previa de Wunen (contenedores existentes):"
+  warn "Detecté una instalación previa de Buscapega (contenedores existentes):"
   echo "$WUNEN_EXISTING" | sed 's/^/      • /'
   echo -e "  ${CYAN}Se recrearán con la nueva configuración al iniciar los servicios.${RESET}"
   echo -e "  ${CYAN}Tus datos (base de datos, cookies) se conservan en los volúmenes.${RESET}"
@@ -346,7 +373,7 @@ if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
       ok "Volumen eliminado — la base de datos se creará limpia con la nueva contraseña"
     else
       warn "No se pudo eliminar el volumen (¿lo usa un contenedor en marcha?)."
-      warn "Detén Wunen y reintenta: cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v"
+      warn "Detén Buscapega y reintenta: cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v"
     fi
   else
     warn "Conservando el volumen. Si el backend falla con 'password authentication failed',"
@@ -359,10 +386,10 @@ check_port() {
   local port=$1
   local name=$2
   if lsof -iTCP:"$port" -sTCP:LISTEN -n -P &>/dev/null 2>&1; then
-    # ¿El puerto lo ocupa un contenedor de Wunen ya corriendo? Entonces es una
+    # ¿El puerto lo ocupa un contenedor de Buscapega ya corriendo? Entonces es una
     # reinstalación, no un conflicto real: 'compose up -d' recreará el contenedor.
     if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^wunen_.*:${port}->"; then
-      ok "Puerto ${port} (${name}) lo usa tu Wunen actual — se recreará al reiniciar"
+      ok "Puerto ${port} (${name}) lo usa tu Buscapega actual — se recreará al reiniciar"
       return
     fi
     warn "Puerto ${port} (${name}) ya está en uso:"
@@ -473,12 +500,12 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
 
   if [[ ! -d "$SETUP_DIR" ]]; then
     warn "No se encontró la carpeta setup/. Omitiendo configuración de sesiones."
-    warn "Puedes hacerlo manualmente más tarde: ./setup-sessions.sh --lista"
+    warn "Puedes hacerlo manualmente más tarde: ./configuraciones/setup-sessions.sh --lista"
   else
     # Verificar Python
     if ! command -v python3 &> /dev/null; then
       warn "Python 3 no está instalado. No se pueden configurar sesiones ahora."
-      warn "Instala Python 3 y luego ejecuta: ./setup-sessions.sh --lista"
+      warn "Instala Python 3 y luego ejecuta: ./configuraciones/setup-sessions.sh --lista"
     else
       cd "$SETUP_DIR"
       SETUP_DEPS_OK=true
@@ -489,8 +516,8 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
       # que rompe pip en macOS/Homebrew y Linux moderno.
       log "Preparando entorno virtual de Python (setup/.venv)..."
       if [[ ! -d "$VENV_DIR" ]]; then
-        if ! python3 -m venv "$VENV_DIR" 2>/tmp/wunen_venv_err.log; then
-          warn "No se pudo crear el venv. Detalle: $(tail -n 1 /tmp/wunen_venv_err.log)"
+        if ! python3 -m venv "$VENV_DIR" 2>/tmp/buscapega_venv_err.log; then
+          warn "No se pudo crear el venv. Detalle: $(tail -n 1 /tmp/buscapega_venv_err.log)"
           warn "En Debian/Ubuntu instala: sudo apt install python3-venv"
           SETUP_DEPS_OK=false
         fi
@@ -501,9 +528,9 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
       if $SETUP_DEPS_OK; then
         log "Instalando dependencias de setup en el venv..."
         if ! "$VENV_PY" -m pip install -q --upgrade pip 2>/dev/null; then :; fi
-        if ! "$VENV_PY" -m pip install -q -r requirements.txt 2>/tmp/wunen_pip_err.log; then
-          warn "Falló pip install. Detalle: $(tail -n 1 /tmp/wunen_pip_err.log)"
-          warn "Intenta manualmente: ./instalar_dependencias_python.sh"
+        if ! "$VENV_PY" -m pip install -q -r requirements.txt 2>/tmp/buscapega_pip_err.log; then
+          warn "Falló pip install. Detalle: $(tail -n 1 /tmp/buscapega_pip_err.log)"
+          warn "Intenta manualmente: ./configuraciones/instalar_dependencias_python.sh"
           SETUP_DEPS_OK=false
         fi
       fi
@@ -513,15 +540,15 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
         SETUP_DEPS_OK=false
       fi
 
-      if $SETUP_DEPS_OK && ! "$VENV_PY" -m playwright install chromium 2>/tmp/wunen_pw_err.log; then
-        warn "Falló playwright install. Detalle: $(tail -n 1 /tmp/wunen_pw_err.log)"
-        warn "Intenta manualmente: ./instalar_dependencias_python.sh"
+      if $SETUP_DEPS_OK && ! "$VENV_PY" -m playwright install chromium 2>/tmp/buscapega_pw_err.log; then
+        warn "Falló playwright install. Detalle: $(tail -n 1 /tmp/buscapega_pw_err.log)"
+        warn "Intenta manualmente: ./configuraciones/instalar_dependencias_python.sh"
         SETUP_DEPS_OK=false
       fi
 
       if ! $SETUP_DEPS_OK; then
         warn "Omitiendo configuración de sesiones por dependencias faltantes."
-        warn "Una vez resuelto, ejecuta: ./setup-sessions.sh --lista"
+        warn "Una vez resuelto, ejecuta: ./configuraciones/setup-sessions.sh --lista"
       else
 
       echo ""
@@ -571,7 +598,7 @@ PYEOF
   fi
 else
   echo -e "  Puedes configurar sesiones más tarde:"
-  echo -e "  ${CYAN}./setup-sessions.sh --lista${RESET}"
+  echo -e "  ${CYAN}./configuraciones/setup-sessions.sh --lista${RESET}"
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -617,18 +644,18 @@ echo ""
 echo -e "  ${BOLD}Vincular WhatsApp (Baileys — notificaciones):${RESET}"
 echo -e "    WhatsApp NO se configura en el instalador: requiere escanear un QR."
 echo -e "    Ejecuta este script y escanea el QR con tu teléfono:"
-echo -e "    ${CYAN}./vincular-whatsapp.sh${RESET}              (local)"
-echo -e "    ${CYAN}./vincular-whatsapp.sh presto 3001${RESET}  (servidor remoto Presto)"
+echo -e "    ${CYAN}./configuraciones/vincular-whatsapp.sh${RESET}              (local)"
+echo -e "    ${CYAN}./configuraciones/vincular-whatsapp.sh presto 3001${RESET}  (servidor remoto Presto)"
 echo ""
 echo -e "  ${BOLD}Correo Gmail de postulaciones:${RESET}"
 echo -e "    Se pidió en este instalador. Para cambiarlo más tarde:"
-echo -e "    ${CYAN}./setup-gmail.sh${RESET}"
+echo -e "    ${CYAN}./configuraciones/setup-gmail.sh${RESET}"
 echo ""
 echo -e "  ${BOLD}Comandos útiles:${RESET}"
 echo -e "    cd docker && docker compose logs -f"
 echo -e "    cd docker && docker compose down"
-echo -e "    ./setup-sessions.sh --lista          # estado de sesiones de portales"
-echo -e "    ./vincular-whatsapp.sh                     # vincular WhatsApp"
+echo -e "    ./configuraciones/setup-sessions.sh --lista          # estado de sesiones de portales"
+echo -e "    ./configuraciones/vincular-whatsapp.sh                     # vincular WhatsApp"
 echo ""
 
 # La API key de Anthropic es OPCIONAL — recordatorio amable, no una advertencia de error

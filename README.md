@@ -1,6 +1,6 @@
-# Wunen — Automatización de Búsqueda de Empleo
+# Buscapega — Automatización de Búsqueda de Empleo
 
-Wunen es un sistema self-hosted de automatización para búsqueda y postulaciones de empleos. Es capaz de extraer ofertas de múltiples portales, valida tus capacidades, y ejecuta la postulacion de forma automática y luego te informa a tu whatsapp. Además, te permite revisarlas en una interfaz web y puede postularse automáticamente a los portales compatibles mediante automatización de navegador con Playwright, si el portal lo permite.
+Buscapega es un sistema self-hosted de automatización para búsqueda y postulaciones de empleos. Es capaz de extraer ofertas de múltiples portales, valida tus capacidades, y ejecuta la postulacion de forma automática y luego te informa a tu whatsapp. Además, te permite revisarlas en una interfaz web y puede postularse automáticamente a los portales compatibles mediante automatización de navegador con Playwright, si el portal lo permite.
 
 ## Características
 
@@ -19,8 +19,8 @@ Wunen es un sistema self-hosted de automatización para búsqueda y postulacione
 ## Instalación rápida
 
 ```bash
-git clone https://github.com/RodrigoMoya-dev/wunen.git
-cd wunen
+git clone https://github.com/RodrigoMoya-dev/buscapega.git
+cd buscapega
 ./install.sh
 ```
 
@@ -40,8 +40,8 @@ Si prefieres configurar el proyecto paso a paso:
 **1. Clonar el repositorio**
 
 ```bash
-git clone https://github.com/RodrigoMoya-dev/wunen.git
-cd wunen
+git clone https://github.com/RodrigoMoya-dev/buscapega.git
+cd buscapega
 ```
 
 **2. Configurar las variables de entorno**
@@ -163,18 +163,19 @@ Los portales sin auto-postulación pueden marcarse como postulados manualmente d
 ## Estructura del proyecto
 
 ```
-wunen/
+buscapega/
 ├── docker/
 │   ├── backend/      # FastAPI — API, evaluador, modelos de BD
 │   ├── scraper/      # FastAPI — scrapers + aplicadores Playwright
 │   ├── frontend/     # Interfaz web Next.js 14
 │   ├── whatsapp/     # Servicio de notificaciones WhatsApp (Baileys)
 │   └── docker-compose.yml
+├── configuraciones/  # Scripts auxiliares (sesiones, Gmail, WhatsApp, smoke test)
+├── grafica/          # Logo y paleta de colores oficiales
 ├── setup/            # Scripts de captura de sesiones (ejecutar en local)
 ├── documentos/       # Datos en tiempo de ejecución: portales.json, CV, configuración
 ├── perfil.md         # Tu perfil de candidato — lo lee el evaluador de IA
-├── install.sh        # Instalador interactivo
-└── sync-github.sh    # Sincronización con GitHub (uso del mantenedor)
+└── install.sh        # Instalador interactivo
 ```
 
 ## Solución de problemas

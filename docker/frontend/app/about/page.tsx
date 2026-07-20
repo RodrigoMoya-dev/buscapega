@@ -77,7 +77,7 @@ export default function AboutPage() {
       <div className="bg-blue-950 border border-blue-800 rounded-xl p-4 mb-6">
         <p className="text-blue-300 text-sm font-medium mb-1">¿Por qué es importante completar estos datos?</p>
         <p className="text-blue-400 text-xs leading-relaxed">
-          Wunen usa tu CV y perfil para que el evaluador de IA seleccione las mejores ofertas para ti,
+          Buscapega usa tu CV y perfil para que el evaluador de IA seleccione las mejores ofertas para ti,
           y para generar cartas de presentación personalizadas al postular automáticamente.
           Entre más completo esté tu perfil, mejores serán los resultados.
         </p>

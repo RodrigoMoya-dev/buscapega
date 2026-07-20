@@ -42,7 +42,7 @@ export default function SettingsPage() {
     setSaving(false);
     setSaved(true);
     // T9: refrescar el saludo del menú sin recargar la página.
-    window.dispatchEvent(new CustomEvent("wunen:settings-updated", { detail: { user_name: payload.user_name } }));
+    window.dispatchEvent(new CustomEvent("buscapega:settings-updated", { detail: { user_name: payload.user_name } }));
     setTimeout(() => setSaved(false), 2000);
   }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Vincula el número de WhatsApp: muestra el QR o genera un código de vinculación.
-# Uso: ./vincular-whatsapp.sh [host] [puerto] [telefono]
-#   host      IP o hostname del servidor donde corre Wunen (default: localhost)
+# Uso: ./configuraciones/vincular-whatsapp.sh [host] [puerto] [telefono]
+#   host      IP o hostname del servidor donde corre Buscapega (default: localhost)
 #   puerto    Puerto del servicio WhatsApp (default: 3001)
 #   telefono  (opcional) Número con código de país (solo dígitos, ej: 56962075019).
 #             Si se indica, genera un CÓDIGO de vinculación en vez del QR —
@@ -26,7 +26,7 @@ RESET='\033[0m'
 
 echo ""
 echo -e "${BLUE}${BOLD}╔══════════════════════════════════════════╗${RESET}"
-echo -e "${BLUE}${BOLD}║     Wunen — Vincular WhatsApp            ║${RESET}"
+echo -e "${BLUE}${BOLD}║     Buscapega — Vincular WhatsApp            ║${RESET}"
 echo -e "${BLUE}${BOLD}╚══════════════════════════════════════════╝${RESET}"
 echo ""
 
@@ -110,8 +110,8 @@ else
 fi
 echo ""
 echo -e "  ${BOLD}3. ¿El QR falla? Vincula con un código (sin QR):${RESET}"
-echo -e "     ${CYAN}./vincular-whatsapp.sh ${HOST} ${PORT} <tu_numero>${RESET}"
-echo -e "     (ej: ./vincular-whatsapp.sh ${HOST} ${PORT} 56962075019)"
+echo -e "     ${CYAN}./configuraciones/vincular-whatsapp.sh ${HOST} ${PORT} <tu_numero>${RESET}"
+echo -e "     (ej: ./configuraciones/vincular-whatsapp.sh ${HOST} ${PORT} 56962075019)"
 echo -e "     Útil si aparece \"No se pueden vincular dispositivos nuevos en este momento\"."
 echo ""
 echo -e "${BOLD}Pasos en el teléfono:${RESET}"

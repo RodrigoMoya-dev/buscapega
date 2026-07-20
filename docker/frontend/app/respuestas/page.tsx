@@ -83,7 +83,7 @@ export default function RespuestasPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Respuestas automáticas</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Respuestas que tú defines para que Wunen complete los formularios de postulación
+            Respuestas que tú defines para que Buscapega complete los formularios de postulación
           </p>
         </div>
         <button
@@ -98,8 +98,8 @@ export default function RespuestasPage() {
       <div className="mb-6 p-4 bg-blue-950 border border-blue-800 rounded-xl text-sm">
         <p className="font-medium text-blue-300 mb-1">¿Cómo funcionan?</p>
         <p className="text-blue-400 text-xs leading-relaxed">
-          Estas respuestas <span className="font-semibold">las defines tú</span> aquí — Wunen no las
-          obtiene de ningún sitio web. Cuando Wunen postula automáticamente y un formulario tiene
+          Estas respuestas <span className="font-semibold">las defines tú</span> aquí — Buscapega no las
+          obtiene de ningún sitio web. Cuando Buscapega postula automáticamente y un formulario tiene
           preguntas (ej: "¿Cuál es tu pretensión de renta?"), busca la respuesta cuyas{" "}
           <span className="font-semibold">keywords</span> coincidan con el texto del campo y la
           escribe por ti. Si ninguna coincide, ese campo se deja vacío o la postulación queda
@@ -207,7 +207,7 @@ export default function RespuestasPage() {
         <div className="text-center py-20">
           <p className="text-gray-500">Aún no hay respuestas configuradas.</p>
           <p className="text-gray-600 text-sm mt-2">
-            Agrega respuestas para que Wunen complete los formularios automáticamente.
+            Agrega respuestas para que Buscapega complete los formularios automáticamente.
           </p>
         </div>
       ) : (
