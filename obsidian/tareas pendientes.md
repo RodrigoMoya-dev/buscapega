@@ -1,3 +1,58 @@
+* Volvió a fallar. Ahora bien, cuando le puse ./install.sh para continuar, me volvió a pedir los datos. Esos datos ya debieran estar registrados en el sistema para que no los vuelva a pedir. Aunque puede dar la opción de continuar de cero. 
+  
+  
+  ^ El error que apareció es éste :  > exporting to image:
+------
+failed to solve: failed to prepare extraction snapshot "extract-970252435-hqvG sha256:929ff0fe8b1ef800a6791691bcbd082c2d220d7c806eebaee4d530f58fbbd363": parent snapshot sha256:842a3c13ff19ddbf773308da8ee5bffea454a4c619fc7629dca2431b1ab67bca does not exist: not found
+
+
+✗ Falló la construcción de backend (Python/FastAPI)
+
+  ┌─ Diagnóstico ─────────────────────────────────────────┐
+  CAUSA: no reconocida automáticamente.
+    Probablemente sea un error real del proyecto y no de tu equipo.
+    Últimas líneas del log:
+      #13 exporting manifest sha256:684aa3d4a50d8e2dc359e6e5e5779acfee47c1a379458bdaebbf8db8d1aae9ff 0.0s done
+      #13 exporting config sha256:bb05a8e823b4c8279c957f7294a9c86847cfac42f3ad9ca3f9bb3b5b92ccd6e5
+      #13 exporting config sha256:bb05a8e823b4c8279c957f7294a9c86847cfac42f3ad9ca3f9bb3b5b92ccd6e5 0.0s done
+      #13 exporting attestation manifest sha256:690819b18d6422b079a79cd2f2d77e6a95847304d8499d64787b6a1935d3da4d 0.0s done
+      #13 exporting manifest list sha256:8fa35da2bb977777c66f68335896aa3cd4caad4041899dc4c8ac23f407d8f7d1 0.0s done
+      #13 naming to docker.io/library/wunen-backend:latest done
+      #13 unpacking to docker.io/library/wunen-backend:latest 0.0s done
+      #13 ERROR: failed to prepare extraction snapshot "extract-970252435-hqvG sha256:929ff0fe8b1ef800a6791691bcbd082c2d220d7c806eebaee4d530f58fbbd363": parent snapshot sha256:842a3c13ff19ddbf773308da8ee5bffea454a4c619fc7629dca2431b1ab67bca does not exist: not found
+      ------
+       > exporting to image:
+      ------
+      failed to solve: failed to prepare extraction snapshot "extract-970252435-hqvG sha256:929ff0fe8b1ef800a6791691bcbd082c2d220d7c806eebaee4d530f58fbbd363": parent snapshot sha256:842a3c13ff19ddbf773308da8ee5bffea454a4c619fc7629dca2431b1ab67bca does not exist: not found
+  └───────────────────────────────────────────────────────┘
+
+  Log completo: /Users/rodrigo/Desktop/buscapega-main/.install-logs/build_backend.log
+  Paso que falló: backend (Python/FastAPI)
+
+* Respecto al dibujo del "Robot" que aparece arriba ¿Es posible juntar mas sus piezas? Parece un dibujo algo infantil. Te adjunto una vaptura de pantalla. 
+![[Pasted image 20260720183929.png]]
+
+* Una vez revisados los dos temas indicados arriba, sigue con los temas que están abajo y no están listos. 
+
+## Checklist ronda 2 (20/07/2026 — feedback tras /prueba)
+
+### Rama `fix_install_snapshot_persistir_datos_20072026`
+- [ ] Diagnosticar el error de snapshot corrupto de BuildKit
+      (`failed to prepare extraction snapshot ... parent snapshot ... does not exist`)
+      con causa y solución (`docker builder prune`, reiniciar Docker).
+- [ ] Al reanudar, NO volver a pedir los datos ya ingresados: persistir la config
+      (nombre, teléfono, correo, puertos, API key) y reutilizarla. Mantener la opción
+      de empezar de cero.
+
+### Rama `feature_logo_ascii_compacto_20072026`
+- [ ] Rediseñar el robot ASCII del instalador: piezas juntas/conectadas
+      (cabeza pegada al cuerpo, brazos adosados, piernas debajo), menos "infantil".
+
+### Cierre ronda 2
+- [ ] Push de ambas ramas a `origin` (gitea) y `github`
+- [ ] Merge a `main` sin `obsidian/`
+- [ ] Re-ejecutar `/prueba`
+
 ## Checklist de la sesión (20/07/2026)
 
 > Decisiones tomadas al inicio:

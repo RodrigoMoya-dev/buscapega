@@ -35,11 +35,18 @@ deb.debian.org`), no un error de código.
 | **Memoria** | `killed`, `out of memory`, `exit code: 137` |
 | **Permisos** | `permission denied`, `eacces` |
 | **Daemon caído** | `cannot connect to the docker daemon` |
+| **Caché BuildKit corrupta** | `failed to prepare extraction snapshot`, `parent snapshot ... does not exist` |
 | **No reconocida** | *(fallback)* muestra las últimas 12 líneas del log |
 
 Cada caso imprime pasos concretos de solución. La causa "no reconocida" avisa
 explícitamente que probablemente sea un error real del proyecto y no del equipo del
 usuario — esa distinción era justamente lo que faltaba.
+
+> **Caché BuildKit corrupta (agregado ronda 2, 20/07/2026):** apareció en una prueba real
+> con `failed to prepare extraction snapshot ... parent snapshot ... does not exist`. Antes
+> caía en "no reconocida". Es un daño interno de la caché de Docker (build previo cortado a
+> la mitad, o **dos builds concurrentes sobre el mismo daemon**). La solución escalonada que
+> imprime: `docker builder prune -af` → reiniciar Docker Desktop → `docker system prune -af`.
 
 ### Reanudación
 
@@ -47,8 +54,22 @@ usuario — esa distinción era justamente lo que faltaba.
 - Al arrancar, si el archivo existe, se ofrece **continuar** o **empezar de cero**.
 - `omitir_paso()` solo salta un paso si está marcado **y** el usuario aceptó reanudar.
 - Los logs de cada build quedan en `.install-logs/` (gitignored).
-- Al terminar con el backend sano se borran ambos, para que la próxima ejecución sea
+- Al terminar con el backend sano se borran todos, para que la próxima ejecución sea
   limpia y no ofrezca reanudar una instalación que sí terminó.
+
+### Persistencia de la configuración al reanudar (ronda 2, 20/07/2026)
+
+**Problema reportado:** al reanudar tras un fallo, el instalador **volvía a pedir todos los
+datos** (nombre, teléfono, correo, puertos). Molesto e innecesario.
+
+- Tras el cuestionario, `guardar_config()` escribe `.install-config` (gitignored, `chmod
+  600` porque incluye la contraseña de Gmail) con `printf '%s=%q\n'`.
+- El `%q` cita de forma segura: espacios, `$`, comillas, etc. sobreviven el round-trip
+  `source` sin romperse (verificado con `ab cd ef$g`).
+- Todo el bloque interactivo va dentro de un `if $RESUME && [[ -f "$CONFIG_FILE" ]]`: al
+  reanudar se hace `source` del archivo, se muestra un resumen de lo reutilizado y **se
+  omiten las preguntas**. «Empezar de cero» borra `.install-config` y vuelve a preguntar.
+- Se borra al completar con éxito (junto a `.install-state` y `.install-logs`).
 
 > **Detalle:** los builds se ejecutan con `| tee` para mostrar progreso en vivo y a la vez
 > guardar el log. Se lee `${PIPESTATUS[0]}` y no `$?`, porque con una tubería `$?` sería el
