@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPortals, Portal, validatePortal, togglePortal, addPortal } from "@/lib/api";
 
-const GITHUB_REPO = "https://github.com/RodrigoMoya-dev/wunen";
+const GITHUB_REPO = "https://github.com/RodrigoMoya-dev/buscapega";
 
 // ── Banderas por mercado ──────────────────────────────────────────────────────
 const MARKET_FLAG: Record<string, { flag: string; country: string }> = {
@@ -164,7 +164,7 @@ function ValidateSection({ onAdded }: { onAdded: () => void }) {
       setResult({
         url: normalized, allows_scraping: false, has_google_auth: false,
         automatable: false, notes: [],
-        error: "URL inválida — debe tener una estructura tipo 'sitio.com' (ej: wunen.app).",
+        error: "URL inválida — debe tener una estructura tipo 'sitio.com' (ej: buscapega.app).",
       });
       return;
     }
@@ -209,7 +209,7 @@ function ValidateSection({ onAdded }: { onAdded: () => void }) {
 
   // Enlace a GitHub con un issue prellenado para compartir el portal con la comunidad.
   function shareUrl(): string {
-    const body = `## Portal de empleo propuesto\n\n- **URL:** ${result?.url}\n- **Permite scraping:** ${result?.allows_scraping ? "Sí" : "No"}\n- **Login con Google:** ${result?.has_google_auth ? "Sí" : "No detectado"}\n\n_Compartido desde la vista Validar sitio de Wunen._`;
+    const body = `## Portal de empleo propuesto\n\n- **URL:** ${result?.url}\n- **Permite scraping:** ${result?.allows_scraping ? "Sí" : "No"}\n- **Login con Google:** ${result?.has_google_auth ? "Sí" : "No detectado"}\n\n_Compartido desde la vista Validar sitio de Buscapega._`;
     return `${GITHUB_REPO}/issues/new?title=${encodeURIComponent("[Portal] " + (added?.name || result?.url || ""))}&body=${encodeURIComponent(body)}`;
   }
 
@@ -230,7 +230,7 @@ function ValidateSection({ onAdded }: { onAdded: () => void }) {
       <p className="text-indigo-200/80 text-sm mb-3">
         Comprueba si un portal de empleo puede automatizarse: verifica que el sitio
         <strong> permita scraping</strong> (no lo bloquee en su <code>robots.txt</code>) y que ofrezca
-        <strong> inicio de sesión con Google</strong>. Con ambos, Wunen puede capturar la sesión y
+        <strong> inicio de sesión con Google</strong>. Con ambos, Buscapega puede capturar la sesión y
         auto-postular.
       </p>
 
@@ -240,7 +240,7 @@ function ValidateSection({ onAdded }: { onAdded: () => void }) {
           <ul className="list-disc list-inside space-y-1">
             <li>Lee el <code>robots.txt</code> del dominio para ver si permite scraping.</li>
             <li>Inspecciona la página en busca de autenticación con Google.</li>
-            <li>Si el portal ya está registrado en Wunen, lo indica.</li>
+            <li>Si el portal ya está registrado en Buscapega, lo indica.</li>
           </ul>
           <p className="mt-2">No guarda nada: es solo un diagnóstico de factibilidad.</p>
         </div>
@@ -284,7 +284,7 @@ function ValidateSection({ onAdded }: { onAdded: () => void }) {
         <div className="mt-4 bg-gray-900 border border-gray-800 rounded-xl p-5">
           {result.already_configured && (
             <div className="mb-4 px-4 py-3 bg-yellow-950 border border-yellow-800 rounded-lg">
-              <p className="text-yellow-300 text-sm">Este portal ya está registrado en Wunen.</p>
+              <p className="text-yellow-300 text-sm">Este portal ya está registrado en Buscapega.</p>
             </div>
           )}
           <div className="flex items-center gap-3 mb-4">
@@ -503,7 +503,7 @@ function SessionDialog({ portal, onClose }: { portal: Portal; onClose: () => voi
   const slug = portalSlug(portal.name);
   // Wrapper que crea el venv e instala playwright automáticamente la primera vez
   // (evita el ModuleNotFoundError de ejecutar python3 setup/setup_session.py directo).
-  const cmdPython = `./setup-sessions.sh ${slug}`;
+  const cmdPython = `./configuraciones/setup-sessions.sh ${slug}`;
   const cmdClaude = `claude /autentica ${slug}`;
 
   async function copy(text: string, id: string) {
