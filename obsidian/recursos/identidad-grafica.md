@@ -63,10 +63,28 @@ Fuente: `grafica/palette.scss`. Replicada en:
 
 > **Hecho desde Chile: Si es chileno, es bueno**
 
-> **Detalle técnico:** el dibujo usa una grilla fija (cabeza y cuerpo en las columnas
-> 14–24, centro en la 19) y **solo caracteres de ancho 1**. Se evitan `●`, `★`, `▪` y
-> similares porque son *East Asian Ambiguous* y muchos terminales los pintan a doble ancho,
-> lo que descuadra el dibujo completo. Los colores usan ANSI truecolor (`38;2;R;G;B`); los
-> terminales sin soporte 24-bit los ignoran sin romper el diseño.
+> **Detalle técnico:** el dibujo usa **solo caracteres de ancho 1**. Se evitan `●`, `★`,
+> `▪` y similares porque son *East Asian Ambiguous* y muchos terminales los pintan a doble
+> ancho, lo que descuadra el dibujo completo. Los colores usan ANSI truecolor
+> (`38;2;R;G;B`); los terminales sin soporte 24-bit los ignoran sin romper el diseño.
+
+> **Rediseño compacto (ronda 2, 20/07/2026):** la primera versión tenía las piezas muy
+> separadas (cabeza, brazos, piernas y un maletín flotando) y se veía desarmada/infantil.
+> Se rehízo apilado y **conectado**: los hombros `┴` nacen bajo los lados de la cabeza, las
+> piernas `┬` cuelgan del cuerpo y los brazos `█` se adosan al cuerpo con `┤`/`├`. Se
+> eliminó el maletín. La bandera chilena queda en el pecho (azul `██` + blanco `▀▀▀` /
+> rojo `▄▄▄▄▄`).
+>
+> ```
+>          ╻
+>       ╭──┴──╮
+>       │ o o │
+>       │  ‿  │
+>      ╭┴─────┴╮
+>     █┤ ██▀▀▀ ├█
+>     █┤ ▄▄▄▄▄ ├█
+>      ╰─┬───┬─╯
+>        ╹   ╹
+> ```
 
 Ver también: [[Manual de creación]] para la publicación del sitio en GitHub Pages.

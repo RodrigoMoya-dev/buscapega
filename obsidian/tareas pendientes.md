@@ -45,7 +45,7 @@ failed to solve: failed to prepare extraction snapshot "extract-970252435-hqvG s
       de empezar de cero.
 
 ### Rama `feature_logo_ascii_compacto_20072026`
-- [ ] Rediseñar el robot ASCII del instalador: piezas juntas/conectadas
+- [x] Rediseñar el robot ASCII del instalador: piezas juntas/conectadas
       (cabeza pegada al cuerpo, brazos adosados, piernas debajo), menos "infantil".
 
 ### Cierre ronda 2
