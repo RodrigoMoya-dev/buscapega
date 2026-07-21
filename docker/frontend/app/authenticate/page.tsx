@@ -119,6 +119,16 @@ export default function PortalesPage() {
           <div className="flex flex-col gap-3">
             {/* key con `query` para que los acordeones se reabran al buscar y muestren resultados */}
             <Accordion key={`auto-${query}`} title="Portales con auto-postulación" count={autoApply.length} defaultOpen>
+              {/* Por qué hace falta registrar la sesión: sin esto el botón "Registrar sesión
+                  con Google" parece un trámite opcional y la gente lo salta. */}
+              <div className="mb-3 px-3 py-2.5 bg-slate-800/60 border border-slate-600 rounded text-gray-300 text-xs leading-relaxed">
+                <strong className="text-white">¿Por qué registrar tu sesión con Google?</strong>{" "}
+                Estos portales solo muestran sus ofertas y aceptan postulaciones si estás
+                identificado. Al registrar la sesión, Buscapega puede{" "}
+                <strong className="text-white">buscar ofertas y postular automáticamente</strong>{" "}
+                por ti según tus criterios. La sesión queda guardada{" "}
+                <strong className="text-white">solo en tu equipo</strong>.
+              </div>
               {autoApply.map((p) => (
                 <PortalRow key={p.name} portal={p} onToggle={load} />
               ))}
@@ -466,6 +476,22 @@ function PortalRow({ portal, onToggle }: { portal: Portal; onToggle: () => void 
           <Switch on={active} onChange={handleSwitch} />
         </div>
       </div>
+
+      {/* Aviso destacado: el portal necesita sesión y todavía no está registrada. Es la
+          causa más común de "activé el portal y no llega nada", así que va en rojo y por
+          delante del resto de avisos. */}
+      {portal.requires_auth && !portal.session_active && (
+        <div className="mt-2 px-3 py-2.5 bg-red-950/70 border border-red-700 rounded text-red-200 text-xs flex items-start gap-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true">
+            <path d="M12 9v4M12 17h.01" />
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          </svg>
+          <span>
+            <strong className="text-white">Sesión con Google no iniciada.</strong> Este portal
+            no buscará ofertas ni podrá postular hasta que la registres con el botón de abajo.
+          </span>
+        </div>
+      )}
 
       {/* Aviso para portales activos sin auto-postulación (revisión manual) */}
       {active && !portal.auto_apply && (

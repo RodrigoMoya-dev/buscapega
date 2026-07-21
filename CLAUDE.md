@@ -39,7 +39,7 @@ playwright install chromium
 ./configuraciones/setup-sessions.sh --lista          # list portals and session status (root wrapper, cds into setup/)
 ./configuraciones/setup-sessions.sh getonbrd         # capture session for a portal
 ```
-After capturing, the script auto-rsync's cookies to `rodrigo@presto:~/docker/wunen/cookies/`.
+After capturing, the script auto-rsync's cookies to `rodrigo@presto:~/docker/buscapega/cookies/`.
 
 **WhatsApp QR linking**: `./configuraciones/vincular-whatsapp.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
 
@@ -100,10 +100,10 @@ PENDIENTE → GUARDADA | DESCARTADA | POSTULANDO → POSTULADA | PARCIAL | FALLI
 ### Important Details
 
 - `technologies` on `Offer` is stored as a JSON string (not JSONB): always `JSON.parse()` / `json.dumps()` when reading or writing
-- The evaluator reads the candidate profile from `/wunen/perfil.md` inside the container. The `docker/docker-compose.yml` mounts the project root at `/wunen:ro`, so `perfil.md` must exist at the project root (not inside `obsidian/`). Edit `obsidian/persona/perfil.md` and copy/symlink to root to update the evaluator's profile
+- The evaluator reads the candidate profile from `/buscapega/perfil.md` inside the container. The `docker/docker-compose.yml` mounts the project root at `/buscapega:ro`, so `perfil.md` must exist at the project root (not inside `obsidian/`). Edit `obsidian/persona/perfil.md` and copy/symlink to root to update the evaluator's profile
 - Auto-apply portals (supported): Tecnoempleo, Chumi-IT, ChileTrabajos, RemoteLatinos, GetOnBrd, Torre.ai, InfoJobs
 - Portals without auto-apply: LaraJobs, FlexJobs, Remotive, RemoteOK — use "Marcar como postulado" manually
-- n8n webhook URL is set via `N8N_WEBHOOK_URL` env var (default: `http://localhost:5678/webhook/wunen-apply-result`)
+- n8n webhook URL is set via `N8N_WEBHOOK_URL` env var (default: `http://localhost:5678/webhook/buscapega-apply-result`)
 
 ### Environment Variables
 

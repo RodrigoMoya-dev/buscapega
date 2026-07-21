@@ -37,7 +37,7 @@ Cuando se invoque este comando:
    ```
    Esto abrirá un navegador visible donde el usuario deberá completar el login con Google.
 
-5. Tras capturar cada sesión, el script rsync automáticamente las cookies a `rodrigo@presto:~/docker/wunen/cookies/`.
+5. Tras capturar cada sesión, el script rsync automáticamente las cookies a `rodrigo@presto:~/docker/buscapega/cookies/`.
 
 6. Al finalizar, muestra un resumen del estado de todos los portales.
 
