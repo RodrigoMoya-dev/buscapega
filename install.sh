@@ -55,6 +55,28 @@ error() { echo -e "${RED}✗ ERROR:${RESET} $1"; exit 1; }
 ask()   { echo -e "${BOLD}$1${RESET}"; }
 sep()   { echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"; }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Red de seguridad: mensaje claro si el instalador termina antes de completarse
+# ─────────────────────────────────────────────────────────────────────────────
+# Antes, si algo cortaba el script (p. ej. `set -e` por una función que retornaba != 0),
+# se salía a la terminal SIN avisar y el usuario no sabía si la instalación fue exitosa.
+# Este trap se dispara en CUALQUIER salida: si no se llegó al final (REACHED_END=false),
+# imprime un aviso inequívoco. Así siempre queda claro el resultado.
+REACHED_END=false
+on_exit() {
+  local code=$?
+  $REACHED_END && return 0
+  echo ""
+  echo -e "${RED}${BOLD}╔══════════════════════════════════════════╗${RESET}"
+  echo -e "${RED}${BOLD}║      Instalación NO completada           ║${RESET}"
+  echo -e "${RED}${BOLD}╚══════════════════════════════════════════╝${RESET}"
+  echo -e "  El instalador se detuvo antes de terminar (código de salida: ${code})."
+  echo -e "  Revisa el último mensaje o diagnóstico de más arriba."
+  echo -e "  Vuelve a ejecutar ${CYAN}bash install.sh${RESET} — retomará donde quedó."
+  echo ""
+}
+trap on_exit EXIT
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKER_DIR="$SCRIPT_DIR/docker"
 DOCS_DIR="$SCRIPT_DIR/documentos"
@@ -641,11 +663,18 @@ check_port() {
     echo -e "  ${CYAN}c)${RESET} Continuar igual (puede fallar el servicio ${name})"
     read -r -p "  ¿Continuar de todas formas? (s/N) > " FORCE_PORT
     FORCE_PORT_L=$(echo "$FORCE_PORT" | tr '[:upper:]' '[:lower:]')
-    [[ "$FORCE_PORT_L" != "s" && "$FORCE_PORT_L" != "si" && "$FORCE_PORT_L" != "y" ]] && \
+    # OJO: NO usar `[[ cond ]] && error` como última línea de la función. Cuando el usuario
+    # SÍ continúa, el `[[ ]]` es falso → la función retornaría 1 y, con `set -e`, el llamador
+    # `check_port ...` mataría el script EN SILENCIO (antes de `compose up` y del resumen).
+    # Por eso va un if explícito y un `return 0` al final que garantiza éxito al continuar.
+    if [[ "$FORCE_PORT_L" != "s" && "$FORCE_PORT_L" != "si" && "$FORCE_PORT_L" != "y" ]]; then
       error "Instalación cancelada. Libera el puerto ${port} y vuelve a ejecutar install.sh"
+    fi
+    warn "Continuando con el puerto ${port} en uso — el servicio ${name} podría no levantar."
   else
     ok "Puerto ${port} (${name}) disponible"
   fi
+  return 0
 }
 
 check_port "$FRONTEND_PORT" "frontend"
@@ -929,3 +958,7 @@ echo -e "  ${BOLD}Si tienes Claude Code instalado, puedes usar estos comandos de
 echo -e "    ${CYAN}claude /valida <url>${RESET}   — verifica si un portal es automatizable"
 echo -e "    ${CYAN}claude /autentica${RESET}      — configura sesiones de todos los portales"
 echo ""
+
+# El script llegó al final de forma normal: el trap on_exit NO debe mostrar el aviso de
+# "instalación no completada". (El resumen de arriba ya indicó si el backend quedó sano.)
+REACHED_END=true
