@@ -89,6 +89,10 @@ def list_portals(db: Session = Depends(get_db)):
             # 'allows_scraping' = el portal permite scraping. Por defecto True (los portales
             # históricos no lo declaran). Los validados/agregados sí lo guardan.
             "allows_scraping": bool(p.get("allows_scraping", True)),
+            # 'requires_auth' = el portal necesita una sesión capturada para poder operar.
+            # Se deriva de session_key, que NO se expone al frontend. Sin este dato la vista
+            # de Ofertas no puede distinguir "sin sesión" de "no necesita sesión".
+            "requires_auth": bool(p.get("session_key")),
             "session_active": cookie_active,
             "applications_count": counts_map.get(key, 0),
         })

@@ -46,9 +46,14 @@ export default function Home() {
     setLoading(false);
   }, [tab]);
 
-  // Portales activos para los checkboxes de filtro (se cargan una vez).
+  // Portales para los checkboxes de filtro (se cargan una vez).
+  // Solo se listan los que realmente pueden traer ofertas: activos y, si el portal exige
+  // sesión, únicamente cuando ya está capturada. Filtrar por un portal sin sesión no
+  // devolvía nada y hacía parecer que la búsqueda estaba rota.
   useEffect(() => {
-    getPortals().then((ps) => setPortals(ps.filter((p) => p.active)));
+    getPortals().then((ps) =>
+      setPortals(ps.filter((p) => p.active && (!p.requires_auth || p.session_active)))
+    );
   }, []);
 
   useEffect(() => {

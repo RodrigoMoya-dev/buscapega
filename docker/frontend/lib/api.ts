@@ -133,6 +133,8 @@ export interface Portal {
   market: string;
   active: boolean;
   allows_scraping: boolean;
+  /** El portal necesita una sesión capturada para operar (deriva de session_key en el backend). */
+  requires_auth: boolean;
   session_active: boolean;
   applications_count: number;
 }
