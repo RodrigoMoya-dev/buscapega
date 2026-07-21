@@ -69,3 +69,7 @@ obsidian/
 .install-state
 .install-config
 .install-logs/
+
+# Icono de carpeta de macOS (se cuela al asignar un icono en Finder)
+Icon\r
+Icon?
