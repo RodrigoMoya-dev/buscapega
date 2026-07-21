@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# wunen-daily.sh — Búsqueda y auto-postulación diaria de ofertas laborales
+# buscapega-daily.sh — Búsqueda y auto-postulación diaria de ofertas laborales
 #
 # Flujo:
 #   1. Esperar que el backend de Buscapega esté listo
@@ -11,13 +11,13 @@
 #   6. Notificar por Telegram con resumen
 #
 # Crontab sugerido (9:30am, Domingo-Viernes):
-#   30 9 * * 0-5 /home/rodrigo/scripts/cron_wrapper.sh "Buscapega Daily" "/home/rodrigo/scripts/wunen-daily.sh"
+#   30 9 * * 0-5 /home/rodrigo/scripts/cron_wrapper.sh "Buscapega Daily" "/home/rodrigo/scripts/buscapega-daily.sh"
 # =============================================================================
 
 BACKEND="http://localhost:8020"
 SCRAPER="http://localhost:8021"
 NOTIFY="/home/rodrigo/scripts/notify_telegram.sh"
-LOG_DIR="/var/log/wunen"
+LOG_DIR="/var/log/buscapega"
 LOG_FILE="$LOG_DIR/daily-$(date '+%Y%m%d_%H%M%S').log"
 MIN_SCORE=40          # score mínimo para auto-postular (0-100)
 MAX_WAIT_SECS=300     # esperar hasta 5 min a que el backend inicie
@@ -85,6 +85,6 @@ $NOTIFY "🤖 <b>Buscapega — Búsqueda diaria completada</b>
 📋 Ofertas pendientes en bandeja: <b>${PENDIENTES}</b>
 📅 $(date '+%d/%m/%Y %H:%M')
 
-Revisa las postulaciones en: http://wunen.presto"
+Revisa las postulaciones en: http://buscapega.presto"
 
 log "=== Buscapega Daily Run completado ==="

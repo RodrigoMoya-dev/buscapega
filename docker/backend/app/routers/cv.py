@@ -6,14 +6,14 @@ from typing import Any
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
-WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
-DATA_DIR = os.path.join(WUNEN_DIR, "documentos")
+BUSCAPEGA_DIR = os.getenv("BUSCAPEGA_DIR", "/buscapega")
+DATA_DIR = os.path.join(BUSCAPEGA_DIR, "documentos")
 
 CV_ES_PATH = os.path.join(DATA_DIR, "cv_data.json")
 CV_EN_PATH = os.path.join(DATA_DIR, "cv_data_en.json")
 PROFILE_PATH = os.path.join(DATA_DIR, "perfil_data.json")
 PERFIL_MD_PATH = os.path.join(DATA_DIR, "perfil.md")
-PERFIL_ROOT_PATH = os.path.join(WUNEN_DIR, "perfil.md")  # lo lee el evaluador
+PERFIL_ROOT_PATH = os.path.join(BUSCAPEGA_DIR, "perfil.md")  # lo lee el evaluador
 
 CV_ES_PDF_PATH = os.path.join(DATA_DIR, "cv_es.pdf")
 CV_EN_PDF_PATH = os.path.join(DATA_DIR, "cv_en.pdf")

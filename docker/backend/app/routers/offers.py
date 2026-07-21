@@ -13,7 +13,7 @@ from app.schemas import OfferIngest, OfferResponse
 from app.evaluator import evaluate_offer
 
 SCRAPER_URL = os.getenv("SCRAPER_URL", "http://scraper:8001")
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/wunen-apply-result")
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/buscapega-apply-result")
 
 AUTO_APPLY_PORTALS = [
     "FindJobIT", "findjobit",

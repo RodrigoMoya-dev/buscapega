@@ -39,7 +39,7 @@ if [[ "$STATUS" == "unreachable" ]]; then
   echo -e "${RED}✗${RESET} No se puede conectar al servicio WhatsApp en ${HOST}:${PORT}"
   echo ""
   echo -e "  Asegúrate de que el contenedor esté corriendo:"
-  echo -e "  ${CYAN}cd ~/docker/wunen && docker compose up -d whatsapp${RESET}"
+  echo -e "  ${CYAN}cd ~/docker/buscapega && docker compose up -d whatsapp${RESET}"
   echo -e "  ${CYAN}docker compose logs -f whatsapp${RESET}"
   exit 1
 fi
@@ -104,9 +104,9 @@ echo -e "     (La página se actualiza automáticamente cada 20 segundos)"
 echo ""
 echo -e "  ${BOLD}2. Desde los logs del contenedor:${RESET}"
 if [[ "$HOST" == "localhost" || "$HOST" == "127.0.0.1" ]]; then
-  echo -e "     ${CYAN}docker compose -f ~/docker/wunen/docker-compose.yml logs -f whatsapp${RESET}"
+  echo -e "     ${CYAN}docker compose -f ~/docker/buscapega/docker-compose.yml logs -f whatsapp${RESET}"
 else
-  echo -e "     ${CYAN}ssh ${HOST} 'cd ~/docker/wunen && docker compose logs -f whatsapp'${RESET}"
+  echo -e "     ${CYAN}ssh ${HOST} 'cd ~/docker/buscapega && docker compose logs -f whatsapp'${RESET}"
 fi
 echo ""
 echo -e "  ${BOLD}3. ¿El QR falla? Vincula con un código (sin QR):${RESET}"
