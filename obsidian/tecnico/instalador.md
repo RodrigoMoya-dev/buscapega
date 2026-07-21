@@ -83,6 +83,29 @@ Antes de empezar (un build que muere a los 10 minutos es mucho más caro de diag
   Se usa `df -Pk` (POSIX) y no `df -Pg`, que solo existe en BSD/macOS.
 - **Memoria de Docker:** < 2 GB advierte sobre posibles OOM (exit 137) en frontend/WhatsApp.
 
+## Salida silenciosa al continuar por conflicto de puerto (ronda 3, 20/07/2026)
+
+**Síntoma reportado:** tras un conflicto de puerto, el instalador ofrecía continuar; el
+usuario escribía "S" y el script **salía a la terminal sin decir nada**. No quedaban
+contenedores ni web en `localhost:3000`, y no había forma de saber si fue exitoso.
+
+**Causa raíz (un solo bug explica los tres síntomas):** `check_port` terminaba con el
+idiom `[[ cond ]] && error`. Al **continuar**, el `[[ ]]` es falso → la función retorna 1
+→ bajo `set -e`, el llamador `check_port ...` (una simple orden) **mata el script en
+silencio**, antes de `docker compose up -d` y del resumen. El idiom `[[ ]] && cmd` es
+seguro a nivel de script (la parte izquierda del `&&` está exenta de `set -e`), pero
+**NO como última línea de una función**, porque ahí define el valor de retorno.
+
+**Correcciones:**
+- `check_port`: el `[[ ]] && error` final se convirtió en `if/then` explícito y se agregó
+  `return 0` al cierre de la función, garantizando éxito al continuar.
+- **Red de seguridad con `trap on_exit EXIT`**: una bandera `REACHED_END` se pone en
+  `true` solo al final del script. Si el instalador termina antes (por `set -e`,
+  `error()`, Ctrl-C, etc.), el trap imprime un recuadro **"Instalación NO completada"**
+  con el código de salida. Así nunca más se sale en silencio y siempre queda claro el
+  resultado. En una salida normal (incluido el caso "backend caído"), `REACHED_END=true`
+  y el trap queda callado.
+
 ## Decisiones importantes
 
 ### Contraseña de aplicación de Gmail es OPCIONAL (20/07/2026)
