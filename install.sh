@@ -23,6 +23,11 @@ BLUSH='\033[38;2;250;216;214m'    # $soft-blush  #fad8d6
 # Rojo y azul de la bandera chilena, para la insignia del robot
 CL_RED='\033[38;2;213;43;30m'
 CL_BLUE='\033[38;2;0;57;166m'
+# El cantón azul lleva la estrella. Se pinta como FONDO azul + glifo blanco encima, en vez
+# de un carácter azul: así la estrella queda recortada dentro del cuadro y no abre un hueco
+# negro en el pecho del robot.
+CL_BLUE_BG='\033[48;2;0;57;166m'
+STAR_WHITE='\033[38;2;255;255;255m'
 
 # Robot compacto: cabeza, cuerpo y piernas apilados y CONECTADOS (los hombros ┴ nacen
 # bajo los lados de la cabeza; las piernas ┬ bajo el cuerpo; los brazos █ se adosan al
@@ -36,7 +41,7 @@ print_header() {
   echo -e "      ${PINE}│${RESET} ${CELADON}o${RESET} ${CELADON}o${RESET} ${PINE}│${RESET}"
   echo -e "      ${PINE}│${RESET}  ${BLUSH}‿${RESET}  ${PINE}│${RESET}"
   echo -e "     ${PINE}╭┴─────┴╮${RESET}"
-  echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_BLUE}██${BLUSH}▀▀▀${RESET} ${PINE}├${ORANGE}█${RESET}"
+  echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_BLUE_BG}${STAR_WHITE}${BOLD}✦${RESET}${CL_BLUE_BG} ${RESET}${BLUSH}▀▀▀${RESET} ${PINE}├${ORANGE}█${RESET}"
   echo -e "    ${ORANGE}█${PINE}┤${RESET} ${CL_RED}▄▄▄▄▄${RESET} ${PINE}├${ORANGE}█${RESET}"
   echo -e "     ${PINE}╰─┬───┬─╯${RESET}"
   echo -e "       ${PINE}╹${RESET}   ${PINE}╹${RESET}"
