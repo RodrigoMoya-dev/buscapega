@@ -5,8 +5,8 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
-SETTINGS_PATH = os.path.join(WUNEN_DIR, "documentos", "settings.json")
+BUSCAPEGA_DIR = os.getenv("BUSCAPEGA_DIR", "/buscapega")
+SETTINGS_PATH = os.path.join(BUSCAPEGA_DIR, "documentos", "settings.json")
 WHATSAPP_URL = os.getenv("WHATSAPP_URL", "http://whatsapp:3001")
 SCRAPER_URL = os.getenv("SCRAPER_URL", "http://scraper:8001")
 
@@ -79,7 +79,7 @@ async def test_whatsapp():
                 return {
                     "status": "error",
                     "message": "El servicio de WhatsApp no responde. Verifica que el contenedor "
-                               "wunen_whatsapp esté corriendo (docker compose up -d whatsapp).",
+                               "buscapega_whatsapp esté corriendo (docker compose up -d whatsapp).",
                 }
             if hdata.get("status") != "ok":
                 conexion = hdata.get("connection", "desconocido")

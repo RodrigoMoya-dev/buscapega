@@ -1,21 +1,21 @@
-name: wunen
+name: buscapega
 
 services:
 
   db:
     image: postgres:16-alpine
-    container_name: wunen_db
+    container_name: buscapega_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-wunen}
-      POSTGRES_USER: ${POSTGRES_USER:-wunen}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wunen_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-buscapega}
+      POSTGRES_USER: ${POSTGRES_USER:-buscapega}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-buscapega_secret}
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wunen}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-buscapega}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,19 +24,19 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: wunen_backend
+    container_name: buscapega_backend
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-wunen}:${POSTGRES_PASSWORD:-wunen_secret}@db:5432/${POSTGRES_DB:-wunen}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-buscapega}:${POSTGRES_PASSWORD:-buscapega_secret}@db:5432/${POSTGRES_DB:-buscapega}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SCRAPER_URL: http://scraper:8001
       ENVIRONMENT: ${ENVIRONMENT:-development}
     volumes:
       - ./backend:/app
-      - ..:/wunen
+      - ..:/buscapega
       - playwright_cookies:/app/cookies:ro
     ports:
       - "8000:8000"
@@ -46,7 +46,7 @@ services:
     build:
       context: ./scraper
       dockerfile: Dockerfile
-    container_name: wunen_scraper
+    container_name: buscapega_scraper
     restart: unless-stopped
     depends_on:
       - backend
@@ -69,7 +69,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: wunen_frontend
+    container_name: buscapega_frontend
     restart: unless-stopped
     depends_on:
       - backend
@@ -91,7 +91,7 @@ services:
     build:
       context: ./whatsapp
       dockerfile: Dockerfile
-    container_name: wunen_whatsapp
+    container_name: buscapega_whatsapp
     restart: unless-stopped
     environment:
       PORT: 3001

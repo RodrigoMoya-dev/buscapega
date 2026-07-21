@@ -12,8 +12,8 @@ from app.models import Offer
 router = APIRouter(prefix="/api/portals", tags=["portals"])
 
 COOKIES_DIR = os.getenv("COOKIES_DIR", "/app/cookies")
-WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
-PORTALES_PATH = os.path.join(WUNEN_DIR, "documentos", "portales.json")
+BUSCAPEGA_DIR = os.getenv("BUSCAPEGA_DIR", "/buscapega")
+PORTALES_PATH = os.path.join(BUSCAPEGA_DIR, "documentos", "portales.json")
 
 DEFAULT_PORTAL_LIST = [
     {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit", "demo_active": True},
@@ -89,6 +89,10 @@ def list_portals(db: Session = Depends(get_db)):
             # 'allows_scraping' = el portal permite scraping. Por defecto True (los portales
             # históricos no lo declaran). Los validados/agregados sí lo guardan.
             "allows_scraping": bool(p.get("allows_scraping", True)),
+            # 'requires_auth' = el portal necesita una sesión capturada para poder operar.
+            # Se deriva de session_key, que NO se expone al frontend. Sin este dato la vista
+            # de Ofertas no puede distinguir "sin sesión" de "no necesita sesión".
+            "requires_auth": bool(p.get("session_key")),
             "session_active": cookie_active,
             "applications_count": counts_map.get(key, 0),
         })

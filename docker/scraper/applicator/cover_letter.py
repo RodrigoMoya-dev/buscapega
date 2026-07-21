@@ -6,7 +6,7 @@ import anthropic
 _client: Optional[anthropic.Anthropic] = None
 
 _PROFILE_PATHS = [
-    Path("/wunen/perfil.md"),
+    Path("/buscapega/perfil.md"),
     Path("/app/perfil.md"),
 ]
 

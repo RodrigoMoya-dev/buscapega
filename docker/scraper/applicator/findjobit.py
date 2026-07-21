@@ -36,7 +36,7 @@ BASE_URL = "https://www.findjobit.com"
 SESSION_FILE = Path("/app/cookies/findjobit_session.json")
 
 # Ruta al CV — montada en el contenedor desde el proyecto (usado para formularios con upload)
-CV_DIR = Path("/wunen")
+CV_DIR = Path("/buscapega")
 CV_ES = CV_DIR / "cv_es.pdf"
 CV_EN = CV_DIR / "cv_en.pdf"
 CV_FALLBACK = CV_DIR / "cv.pdf"
