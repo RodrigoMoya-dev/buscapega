@@ -91,11 +91,20 @@ confirmar con Rodrigo cómo proceder (migrar / empezar limpio / mantener nombres
       muchos terminales lo pintan a doble ancho; `✦` (U+2726) es **N**, ancho 1 seguro.
       Verificada la alineación: las dos filas del pecho miden 15 columnas igual que antes.
 
-### `fix_rebranding_wunen_buscapega_21072026` (corrección)
-- [ ] `wunen` → `buscapega` en los 22 archivos (contenedores, red, mount, rutas)
-- [ ] Quitar **todas** las referencias a Presto en la web (texto de "Configurar WhatsApp
-      (Baileys)" y donde aparezcan) — el proyecto corre local
-- [ ] Migración de volúmenes según lo que se decida arriba
+### `fix_rebranding_wunen_buscapega_21072026` (corrección) — ✅ COMPLETADA
+- [x] `wunen` → `buscapega`: 93 ocurrencias en 22 archivos + los 36 docs de obsidian.
+      Incluye `name:` del proyecto compose, los 5 `container_name`, el mount
+      `..:/buscapega`, `/buscapega/perfil.md`, `POSTGRES_DB/USER` y el renombre de
+      `setup/wunen-daily.sh` → `setup/buscapega-daily.sh`
+- [x] **Empezar limpio** (decisión de Rodrigo): el instalador detecta los restos
+      `wunen_*` (contenedores y volúmenes), explica qué se pierde y ofrece eliminarlos
+- [x] Referencias a Presto eliminadas del producto: instrucciones de WhatsApp en
+      Configuración (ahora `./configuraciones/vincular-whatsapp.sh`), el QR de
+      `server.js` (`presto.local:3002` → `localhost:${PORT}`, host **y** puerto estaban
+      mal) y la opción `vincular-whatsapp.sh presto 3001` de `install.sh`.
+      Se conservan las de uso interno del desarrollador (`--presto` de `setup_session.py`
+      y `smoke-test.sh --presto`), que no ve quien instala — **confirmar con Rodrigo**
+- [x] Validado: `compose config -q`, `py_compile`, `node --check`, `bash -n` de todos los shells
 
 ### `feature_web_portales_21072026` (mejora)
 - [ ] Ofertas: mostrar solo portales autenticados o que no requieran autenticación

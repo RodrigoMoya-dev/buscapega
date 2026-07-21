@@ -172,11 +172,9 @@ export default function SettingsPage() {
             <div className="mt-6 border-t border-gray-800 pt-5">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Configurar WhatsApp (Baileys)</p>
               <ol className="space-y-2 text-xs text-gray-500">
-                <li><span className="text-gray-400 font-medium">1.</span> Accede al servidor: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">ssh rodrigo@presto</code></li>
-                <li><span className="text-gray-400 font-medium">2.</span> Entra al contenedor WhatsApp: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">docker exec -it wunen_whatsapp sh</code></li>
-                <li><span className="text-gray-400 font-medium">3.</span> Ejecuta el script de vinculación: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">node link.js</code></li>
-                <li><span className="text-gray-400 font-medium">4.</span> Escanea el código QR con tu WhatsApp (Ajustes → Dispositivos vinculados)</li>
-                <li><span className="text-gray-400 font-medium">5.</span> Usa el botón "Enviar mensaje de prueba" para verificar</li>
+                <li><span className="text-gray-400 font-medium">1.</span> En una terminal, desde la carpeta del proyecto, ejecuta: <code className="text-cyan-400 bg-gray-800 px-1.5 py-0.5 rounded">./configuraciones/vincular-whatsapp.sh</code></li>
+                <li><span className="text-gray-400 font-medium">2.</span> Escanea el código QR que aparece con tu WhatsApp (Ajustes → Dispositivos vinculados → Vincular dispositivo)</li>
+                <li><span className="text-gray-400 font-medium">3.</span> Usa el botón "Enviar mensaje de prueba" para verificar</li>
               </ol>
             </div>
           </section>
