@@ -25,8 +25,10 @@
       exitoso?".
 
 ### Rama `feature_install_url_admin_20072026`
-- [ ] Mostrar de forma destacada al final la URL del administrador
-      (`http://localhost:<puerto>`) para entrar a la web.
+- [x] Mostrar de forma destacada al final la URL del administrador
+      (`http://localhost:<puerto>`) para entrar a la web. Recuadro "👉 Abre el
+      administrador en…" tras "Instalación completada", y también en el caso
+      "backend caído" (URL cuando responda).
 
 ### Cierre ronda 3
 - [ ] Push de ambas ramas a `origin` (gitea) y `github`

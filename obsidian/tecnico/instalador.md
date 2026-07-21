@@ -106,6 +106,14 @@ seguro a nivel de script (la parte izquierda del `&&` está exenta de `set -e`),
   resultado. En una salida normal (incluido el caso "backend caído"), `REACHED_END=true`
   y el trap queda callado.
 
+## URL del administrador destacada (ronda 3, 20/07/2026)
+
+A pedido del usuario, al terminar la instalación se muestra bien visible un recuadro
+**"👉 Abre el administrador en tu navegador: http://localhost:<puerto>"** justo después de
+"Instalación completada". En el caso "backend caído" también se indica la URL (para cuando
+el backend responda). Antes la URL estaba solo en la lista de datos del resumen y, además,
+con el bug de salida silenciosa el resumen a veces ni se alcanzaba a ver.
+
 ## Decisiones importantes
 
 ### Contraseña de aplicación de Gmail es OPCIONAL (20/07/2026)

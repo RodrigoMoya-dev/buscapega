@@ -894,6 +894,10 @@ if [[ "${BACKEND_OK:-false}" == "true" ]]; then
   echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${RESET}"
   echo -e "${GREEN}${BOLD}║         Instalación completada           ║${RESET}"
   echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${RESET}"
+  echo ""
+  # URL del administrador, bien destacada: es lo primero que el usuario necesita saber.
+  echo -e "  ${GREEN}${BOLD}👉  Abre el administrador en tu navegador:${RESET}"
+  echo -e "      ${CYAN}${BOLD}http://localhost:${FRONTEND_PORT}${RESET}"
 else
   echo -e "${YELLOW}${BOLD}╔══════════════════════════════════════════╗${RESET}"
   echo -e "${YELLOW}${BOLD}║   Instalación incompleta — backend caído ║${RESET}"
@@ -901,9 +905,12 @@ else
   echo ""
   echo -e "  ${YELLOW}Los servicios se levantaron, pero el backend (${BACKEND_PORT}) no responde /health.${RESET}"
   echo -e "  ${YELLOW}Revisa el aviso de más arriba antes de usar la interfaz web.${RESET}"
+  echo ""
+  echo -e "  Cuando el backend responda, el administrador estará en:"
+  echo -e "      ${CYAN}${BOLD}http://localhost:${FRONTEND_PORT}${RESET}"
 fi
 echo ""
-echo -e "  ${BOLD}Interfaz web:${RESET}  http://localhost:${FRONTEND_PORT}"
+echo -e "  ${BOLD}Interfaz web (administrador):${RESET}  http://localhost:${FRONTEND_PORT}"
 echo -e "  ${BOLD}API / Backend:${RESET} http://localhost:${BACKEND_PORT}"
 echo -e "  ${BOLD}API Docs:${RESET}      http://localhost:${BACKEND_PORT}/docs"
 echo ""
