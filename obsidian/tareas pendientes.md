@@ -127,9 +127,14 @@ confirmar con Rodrigo cómo proceder (migrar / empezar limpio / mantener nombres
       bloque, dentro del flex quedaban apretados contra el botón
 - [x] Validado con `tsc --noEmit` (exit 0)
 
-### `feature_manual_github_pages_21072026` (mejora)
-- [ ] `Creación de página github.md` — manual para publicar `buscapega` en GitHub Pages
-      (incluye la diferencia entre `usuario.github.io` y `usuario.github.io/buscapega`)
+### `feature_manual_github_pages_21072026` (mejora) — ✅ COMPLETADA
+- [x] `obsidian/Creación de página github.md`. Responde la duda del nombre con datos
+      verificados vía API el 21/07/2026: el subdominio lo determina el nombre de la
+      **cuenta**, no el del repo. El usuario/org `buscapega` está **libre**, así que
+      `buscapega.github.io` es posible pero exige crear una organización aparte;
+      `rodrigomoya-dev.github.io/buscapega` no requiere nada nuevo (recomendada).
+      Incluye ambos caminos paso a paso, `.nojekyll`, dominio propio con las IPs de
+      Pages, tabla de problemas frecuentes y el recordatorio de `git push github main`
 
 ## Cierre de sesión
 - [ ] Push de cada rama a `github` **y** a `origin` (gitea)
