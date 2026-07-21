@@ -754,8 +754,19 @@ check_port() {
       # falsa y, si alguna vez queda como última línea de la función, `set -e` mataría el
       # instalador en silencio (es el bug que se corrigió en la ronda 3).
       if [[ -n "$cont" ]]; then
+        # OJO: aquí NO se sugiere `kill $ppid`. Cuando el puerto lo publica Docker, ese PID
+        # es el proxy de Docker Desktop (com.docker.backend), COMPARTIDO por todos los
+        # contenedores: matarlo tumbaría Docker entero, no solo este servicio. Lo correcto
+        # es detener el contenedor concreto.
         echo -e "    Contenedor Docker: ${BOLD}${cont}${RESET}"
-        echo -e "    Para liberarlo:  ${CYAN}kill ${ppid}${RESET}   o   ${CYAN}docker stop ${cont}${RESET}"
+        echo -e "    Para liberarlo:  ${CYAN}docker stop ${cont}${RESET}"
+      # `com.dock*` y no `com.docker*`: lsof trunca la columna COMMAND a 9 caracteres, así
+      # que "com.docker.backend" llega como "com.docke" y el patrón más largo nunca casaría.
+      elif [[ "$pcmd" == com.dock* || "$pcmd" == docker* || "$pcmd" == Docker* ]]; then
+        # Lo publica Docker pero no se pudo resolver qué contenedor (p. ej. lo expone un
+        # compose ajeno). Tampoco aquí sirve matar el PID.
+        echo -e "    Lo publica Docker, pero no pude identificar el contenedor."
+        echo -e "    Búscalo con:     ${CYAN}docker ps --filter publish=${port}${RESET}"
       else
         echo -e "    Para liberarlo:  ${CYAN}kill ${ppid}${RESET}"
       fi
