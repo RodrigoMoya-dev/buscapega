@@ -99,9 +99,11 @@ async function startClient() {
     connectionStatus = "waiting_qr";
     reconnectAttempts = 0;  // reset: el QR es señal de vida del browser
     lastQrData = qr;
+    // El host/puerto salen de la propia config: antes estaba escrito a mano
+    // "presto.local:3002" y no coincidia ni con el servidor ni con el puerto real.
     console.log("\n╔══════════════════════════════════════════════════════╗");
     console.log("║         ESCANEA EL QR CON WHATSAPP                  ║");
-    console.log(`║  Abre http://presto.local:3002/qr en el navegador   ║`);
+    console.log(`║  Abre http://localhost:${PORT}/qr en el navegador`);
     console.log("║  WhatsApp → ⋮ → Dispositivos vinculados → Vincular  ║");
     console.log("╚══════════════════════════════════════════════════════╝\n");
     qrcode.generate(qr, { small: true });

@@ -6,7 +6,7 @@ import anthropic
 
 def _load_profile() -> str:
     try:
-        with open("/wunen/perfil.md", "r", encoding="utf-8") as f:
+        with open("/buscapega/perfil.md", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return "Candidato con 15+ años en PHP, WordPress, Laravel, VueJS, Docker. Salario mínimo: USD 9/h."

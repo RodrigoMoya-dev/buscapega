@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Wunen — Setup de sesión por portal
+Buscapega — Setup de sesión por portal
 
 Uso:
     python3 setup_session.py <portal>
@@ -12,14 +12,14 @@ Portales disponibles: findjobit, getonbrd, tecnoempleo, remotelatinos, chiletrab
 
 El script abre el navegador elegido con un perfil persistente real, navegas al
 portal, haces login con Google, y las cookies quedan guardadas localmente y
-disponibles para el contenedor local de Wunen automáticamente.
+disponibles para el contenedor local de Buscapega automáticamente.
 
 --real-chrome: usa el perfil real de Chrome del sistema (~/.../Chrome/Default).
   Requiere cerrar Chrome antes de ejecutar. Útil cuando el portal usa Google OAuth
   y en el perfil vacío de Playwright Google no completa el login.
 
 --presto: (uso interno del desarrollador) además sincroniza las cookies al
-  servidor Presto vía rsync. NO usar en instalaciones locales: Wunen funciona
+  servidor Presto vía rsync. NO usar en instalaciones locales: Buscapega funciona
   100% local en el equipo de quien lo instala.
 """
 
@@ -39,12 +39,12 @@ TIMEOUT_LOGIN = 5 * 60 * 1000  # 5 minutos para completar el login
 
 # Contenedor local del scraper (definido en docker/docker-compose.yml). Su
 # volumen playwright_cookies está montado en /app/cookies con permiso de escritura.
-SCRAPER_CONTAINER = "wunen_scraper"
+SCRAPER_CONTAINER = "buscapega_scraper"
 SCRAPER_COOKIES_DIR = "/app/cookies"
 
 # Sincronización opcional al servidor Presto (uso interno del desarrollador).
-# NO se usa en instalaciones locales: Wunen funciona 100% local.
-PRESTO_COOKIES_PATH = "rodrigo@presto:~/docker/wunen/cookies/"
+# NO se usa en instalaciones locales: Buscapega funciona 100% local.
+PRESTO_COOKIES_PATH = "rodrigo@presto:~/docker/buscapega/cookies/"
 
 BROWSERS = {
     "chrome": {"channel": "chrome", "exe": None},
@@ -77,21 +77,21 @@ def listar_portales():
 def sincronizar_local(portal: str):
     """Copia la sesión al volumen del contenedor scraper local.
 
-    Wunen funciona 100% en el equipo de quien lo instala: las cookies deben
+    Buscapega funciona 100% en el equipo de quien lo instala: las cookies deben
     quedar en el volumen `playwright_cookies` que lee el scraper, no en ningún
     servidor remoto. Si el contenedor no está corriendo, deja la sesión guardada
     localmente e indica el comando manual para copiarla cuando levante.
     """
     session_file = COOKIES_DIR / f"{portal}_session.json"
-    print("\n📦 Cargando la sesión en el contenedor local de Wunen...")
+    print("\n📦 Cargando la sesión en el contenedor local de Buscapega...")
     result = subprocess.run(
         ["docker", "cp", str(session_file), f"{SCRAPER_CONTAINER}:{SCRAPER_COOKIES_DIR}/"],
         capture_output=True, text=True
     )
     if result.returncode == 0:
-        print("✅ Sesión disponible para Wunen. Ya puede postular automáticamente con ella.")
+        print("✅ Sesión disponible para Buscapega. Ya puede postular automáticamente con ella.")
     else:
-        print("ℹ️  No se pudo copiar al contenedor (¿está Wunen corriendo?).")
+        print("ℹ️  No se pudo copiar al contenedor (¿está Buscapega corriendo?).")
         print(f"   La sesión quedó guardada en: {session_file}")
         print("   Cuando los servicios estén arriba, cópiala con:")
         print(f"   docker cp {session_file} {SCRAPER_CONTAINER}:{SCRAPER_COOKIES_DIR}/")
@@ -132,7 +132,7 @@ def _finalizar_guardado(session_file: Path, portal: str, config: dict):
 ║  ✅ Setup completado para {config['nombre']:<26}║
 ╚══════════════════════════════════════════════════════╝
 
-La sesión quedó guardada localmente. Wunen puede ahora
+La sesión quedó guardada localmente. Buscapega puede ahora
 postular automáticamente en {config['nombre']}.
 
 Recuerda renovar la sesión si ves errores de login
@@ -178,7 +178,7 @@ def setup_portal(portal: str, browser_name: str = "chrome", use_real_chrome: boo
 
     print(f"""
 ╔══════════════════════════════════════════════════════╗
-║  Wunen — Setup sesión: {config['nombre']:<30}║
+║  Buscapega — Setup sesión: {config['nombre']:<30}║
 ╚══════════════════════════════════════════════════════╝
 
 Navegador: {browser_name}  (Vivaldi no es compatible con Playwright)

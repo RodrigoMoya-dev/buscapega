@@ -577,7 +577,7 @@ ENV_PREEXISTING=false
 # Reutilizar la contraseña de Postgres si ya existe un .env. El volumen de la base de
 # datos se inicializa con la contraseña de la PRIMERA instalación y NO cambia aunque el
 # .env se regenere; generar una nueva rompería la autenticación del backend contra ese
-# volumen ("password authentication failed for user wunen").
+# volumen ("password authentication failed for user buscapega").
 POSTGRES_PASSWORD=""
 if [[ -f "$ENV_FILE" ]]; then
   POSTGRES_PASSWORD=$(grep -E '^POSTGRES_PASSWORD=' "$ENV_FILE" | head -1 | cut -d= -f2-)
@@ -587,9 +587,9 @@ if [[ -n "$POSTGRES_PASSWORD" ]]; then
 else
   # `head -c 24` cierra el pipe y `tr` recibe SIGPIPE (exit 141). El `|| true` evita que
   # `set -o pipefail` aborte el script y, sobre todo, que el fallback se concatene al
-  # valor aleatorio (antes salía "<aleatorio>wunen_<timestamp>" en un mismo string).
+  # valor aleatorio (antes salía "<aleatorio>buscapega_<timestamp>" en un mismo string).
   POSTGRES_PASSWORD="$(LC_ALL=C tr -dc 'A-Za-z0-9_' < /dev/urandom 2>/dev/null | head -c 24 || true)"
-  [[ -z "$POSTGRES_PASSWORD" ]] && POSTGRES_PASSWORD="wunen_$(date +%s)"
+  [[ -z "$POSTGRES_PASSWORD" ]] && POSTGRES_PASSWORD="buscapega_$(date +%s)"
 fi
 
 [[ -f "$ENV_FILE" ]] && cp "$ENV_FILE" "$ENV_FILE.bak" && warn "Backup del .env anterior guardado como .env.bak"
@@ -598,8 +598,8 @@ log "Generando archivo de configuración..."
 cat > "$ENV_FILE" << EOF
 # Generado por install.sh — $(date)
 
-POSTGRES_DB=wunen
-POSTGRES_USER=wunen
+POSTGRES_DB=buscapega
+POSTGRES_USER=buscapega
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
@@ -641,13 +641,57 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 log "Verificando disponibilidad de puertos..."
 
+# ── Restos de la versión anterior, cuando el proyecto se llamaba "wunen" ──────
+# El proyecto de compose pasó de `wunen` a `buscapega`. Ese nombre prefija contenedores
+# y volúmenes, así que los `wunen_*` de una instalación anterior NO se reutilizan ni se
+# borran solos: quedan ocupando puertos y espacio, y confunden en `docker ps`. Se ofrece
+# limpiarlos. Los volúmenes viejos contienen la base de datos, las cookies de sesión y la
+# vinculación de WhatsApp anteriores; con el cambio de nombre ya no se leen, y se parte
+# limpio (decisión tomada al planificar el rebranding).
+LEGADO_CONT=$(docker ps -a --filter "name=wunen_" --format "{{.Names}}" 2>/dev/null || true)
+LEGADO_VOL=$(docker volume ls --format '{{.Name}}' 2>/dev/null | grep -E '^wunen_' || true)
+if [[ -n "$LEGADO_CONT" || -n "$LEGADO_VOL" ]]; then
+  warn "Encontré restos de la versión anterior del proyecto (se llamaba «wunen»):"
+  # `|| true`: sin él, un `[[ ]] && …` falso devuelve 1 y bajo `set -e` puede cortar el
+  # instalador (el bug de la ronda 3). Aquí solo listamos, nunca debe abortar.
+  [[ -n "$LEGADO_CONT" ]] && echo "$LEGADO_CONT" | sed 's/^/      • contenedor  /' || true
+  [[ -n "$LEGADO_VOL" ]]  && echo "$LEGADO_VOL"  | sed 's/^/      • volumen     /' || true
+  echo ""
+  echo -e "  Ahora los contenedores se llaman ${CYAN}buscapega_*${RESET}, así que estos ya no se usan."
+  nota "Los volúmenes «wunen» guardan la base de datos, las sesiones de los portales y"
+  nota "la vinculación de WhatsApp ANTERIORES. Al borrarlos habrá que volver a capturar"
+  nota "las sesiones y a escanear el QR de WhatsApp."
+  echo ""
+  read -r -p "  ¿Eliminar los restos de «wunen»? (s/N) > " LIMPIAR_LEGADO
+  LIMPIAR_LEGADO_L=$(echo "$LIMPIAR_LEGADO" | tr '[:upper:]' '[:lower:]')
+  if [[ "$LIMPIAR_LEGADO_L" == "s" || "$LIMPIAR_LEGADO_L" == "si" || "$LIMPIAR_LEGADO_L" == "y" ]]; then
+    if [[ -n "$LEGADO_CONT" ]]; then
+      echo "$LEGADO_CONT" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      ok "Contenedores «wunen» eliminados"
+    fi
+    if [[ -n "$LEGADO_VOL" ]]; then
+      # Si algún volumen sigue en uso, docker se niega: se informa en vez de fallar.
+      if echo "$LEGADO_VOL" | xargs -r docker volume rm >/dev/null 2>&1; then
+        ok "Volúmenes «wunen» eliminados"
+      else
+        fail "Algún volumen «wunen» no se pudo eliminar (¿lo usa un contenedor en marcha?)."
+        warn "Puedes borrarlos luego con: docker volume rm \$(docker volume ls -q -f name=wunen_)"
+      fi
+    fi
+  else
+    warn "Se conservan. Ocuparán espacio y sus puertos pueden chocar con los nuevos."
+    warn "Para borrarlos después: docker rm -f \$(docker ps -aq -f name=wunen_)"
+  fi
+  echo ""
+fi
+
 # Detectar una instalación previa de Buscapega (contenedores ya creados o corriendo).
 # Sirve para no asustar con falsos "puerto en uso" cuando el puerto lo ocupa el
 # propio Buscapega: en ese caso es una reinstalación y 'compose up -d' lo recrea.
-WUNEN_EXISTING=$(docker ps -a --filter "name=wunen_" --format "{{.Names}}" 2>/dev/null || true)
-if [[ -n "$WUNEN_EXISTING" ]]; then
+BUSCAPEGA_EXISTING=$(docker ps -a --filter "name=buscapega_" --format "{{.Names}}" 2>/dev/null || true)
+if [[ -n "$BUSCAPEGA_EXISTING" ]]; then
   warn "Detecté una instalación previa de Buscapega (contenedores existentes):"
-  echo "$WUNEN_EXISTING" | sed 's/^/      • /'
+  echo "$BUSCAPEGA_EXISTING" | sed 's/^/      • /'
   echo -e "  ${CYAN}Se recrearán con la nueva configuración al iniciar los servicios.${RESET}"
   echo -e "  ${CYAN}Tus datos (base de datos, cookies) se conservan en los volúmenes.${RESET}"
   echo ""
@@ -660,9 +704,9 @@ fi
 # failed". Sin el .env original esa contraseña es irrecuperable: hay que resetear el
 # volumen o restaurar el .env. (Si el .env preexistía, su contraseña se reutiliza arriba y
 # no hay conflicto, así que no preguntamos.)
-DB_VOLUME_HUERFANO=$(docker volume ls --format '{{.Name}}' 2>/dev/null | grep -Fx "wunen_db_data" || true)
+DB_VOLUME_HUERFANO=$(docker volume ls --format '{{.Name}}' 2>/dev/null | grep -Fx "buscapega_db_data" || true)
 if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
-  warn "Detecté un volumen de base de datos de una instalación anterior (wunen_db_data)"
+  warn "Detecté un volumen de base de datos de una instalación anterior (buscapega_db_data)"
   echo -e "  pero no hay un ${CYAN}docker/.env${RESET} que conserve su contraseña. La contraseña nueva"
   echo -e "  generada NO coincidirá con la del volumen y el backend no podrá autenticar."
   echo ""
@@ -671,8 +715,8 @@ if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
   read -r -p "  ¿Resetear la base de datos para una instalación limpia? (s/N) > " RESET_DB
   RESET_DB_L=$(echo "$RESET_DB" | tr '[:upper:]' '[:lower:]')
   if [[ "$RESET_DB_L" == "s" || "$RESET_DB_L" == "si" || "$RESET_DB_L" == "y" ]]; then
-    log "Eliminando volumen wunen_db_data..."
-    if docker volume rm wunen_db_data >/dev/null 2>&1; then
+    log "Eliminando volumen buscapega_db_data..."
+    if docker volume rm buscapega_db_data >/dev/null 2>&1; then
       ok "Volumen eliminado — la base de datos se creará limpia con la nueva contraseña"
     else
       fail "No se pudo eliminar el volumen (¿lo usa un contenedor en marcha?)."
@@ -691,7 +735,7 @@ check_port() {
   if lsof -iTCP:"$port" -sTCP:LISTEN -n -P &>/dev/null 2>&1; then
     # ¿El puerto lo ocupa un contenedor de Buscapega ya corriendo? Entonces es una
     # reinstalación, no un conflicto real: 'compose up -d' recreará el contenedor.
-    if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^wunen_.*:${port}->"; then
+    if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^buscapega_.*:${port}->"; then
       ok "Puerto ${port} (${name}) lo usa tu Buscapega actual — se recreará al reiniciar"
       return
     fi
@@ -815,7 +859,7 @@ if curl -sf "http://localhost:${BACKEND_PORT}/health" > /dev/null 2>&1; then
 elif $COMPOSE_CMD logs backend 2>/dev/null | grep -q "password authentication failed"; then
   # Volumen de DB de una instalación previa con OTRA contraseña: el backend no puede conectar.
   warn "El backend NO está disponible: la contraseña de Postgres no coincide con el volumen."
-  warn "Existe un volumen de una instalación anterior (wunen_db_data) con otra contraseña."
+  warn "Existe un volumen de una instalación anterior (buscapega_db_data) con otra contraseña."
   echo -e "  ${BOLD}Para resetear la base de datos${RESET} (se borran ofertas/datos previos) ejecuta:"
   echo -e "    ${CYAN}cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v && $COMPOSE_CMD up -d${RESET}"
 else
@@ -996,8 +1040,7 @@ echo ""
 echo -e "  ${BOLD}Vincular WhatsApp (Baileys — notificaciones):${RESET}"
 echo -e "    WhatsApp NO se configura en el instalador: requiere escanear un QR."
 echo -e "    Ejecuta este script y escanea el QR con tu teléfono:"
-echo -e "    ${CYAN}./configuraciones/vincular-whatsapp.sh${RESET}              (local)"
-echo -e "    ${CYAN}./configuraciones/vincular-whatsapp.sh presto 3001${RESET}  (servidor remoto Presto)"
+echo -e "    ${CYAN}./configuraciones/vincular-whatsapp.sh${RESET}"
 echo ""
 echo -e "  ${BOLD}Correo Gmail de postulaciones:${RESET}"
 echo -e "    Se pidió en este instalador. Para cambiarlo más tarde:"

@@ -1,5 +1,5 @@
 {
-  "name": "wunen-whatsapp",
+  "name": "buscapega-whatsapp",
   "version": "2.0.0",
   "description": "Servicio WhatsApp para Buscapega usando whatsapp-web.js",
   "type": "commonjs",

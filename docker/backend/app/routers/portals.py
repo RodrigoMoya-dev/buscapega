@@ -12,8 +12,8 @@ from app.models import Offer
 router = APIRouter(prefix="/api/portals", tags=["portals"])
 
 COOKIES_DIR = os.getenv("COOKIES_DIR", "/app/cookies")
-WUNEN_DIR = os.getenv("WUNEN_DIR", "/wunen")
-PORTALES_PATH = os.path.join(WUNEN_DIR, "documentos", "portales.json")
+BUSCAPEGA_DIR = os.getenv("BUSCAPEGA_DIR", "/buscapega")
+PORTALES_PATH = os.path.join(BUSCAPEGA_DIR, "documentos", "portales.json")
 
 DEFAULT_PORTAL_LIST = [
     {"name": "FindJobIT",     "url": "https://findjobit.com",         "auto_apply": True,  "market": "Internacional", "session_key": "findjobit", "demo_active": True},
