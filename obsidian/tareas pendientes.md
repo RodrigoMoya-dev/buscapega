@@ -40,3 +40,42 @@
       pesado del scraper para no repetir el incidente de memoria. El build completo ya
       quedó validado en la ronda 2 (Dockerfiles sin cambios).
 
+---
+
+# Seguridad — credenciales expuestas (21/07/2026)
+
+Detectado al validar la sincronía local ↔ GitHub.
+
+**Hallazgos confirmados:**
+
+1. El repo `RodrigoMoya-dev/buscapega` es **público** (`private: false`, 0 forks).
+2. La contraseña de Gitea `Temporal2026!` está en el **historial público**: commit
+   `772dd5a`, archivo `obsidian/tareas pendientes.md:34`, ancestro de `github/main`.
+   Hoy `main` excluye `obsidian/`, pero el commit histórico sigue siendo accesible.
+   Mitigante: `gitea.presto` es un host de red local, no alcanzable desde internet.
+3. El **token de GitHub** `ghp_…` (scope `repo`, control total) estaba en texto plano
+   en la URL del remoto en `.git/config`. **No** está en el historial ni en archivos
+   versionados — solo en config local, que no se sube.
+4. Las URLs de los 3 remotos (`github`, `origin`, `gitea_old`) llevaban credenciales
+   incrustadas, visibles en cada `git remote -v`, en logs y en capturas de pantalla.
+
+## Rama `fix_credenciales_expuestas_21072026`
+- [x] Guardar credenciales en el keychain de macOS (`credential.helper=osxkeychain`)
+- [x] Limpiar las credenciales de las URLs de los 3 remotos
+- [x] Verificar que `fetch`/`push` siguen funcionando sin credenciales en la URL —
+      `git fetch --dry-run` OK contra `github` y `origin` sin pedir contraseña
+- [x] Configurar upstream en las 6 ramas que no lo tenían (antes coincidían por SHA
+      pero `git status` no avisaba de desincronización)
+- [x] Documentar el hallazgo y la política en `obsidian/tecnico/credenciales-git.md`
+
+## Acciones que solo puede hacer Rodrigo (no automatizables)
+- [ ] **Rotar el token de GitHub** en https://github.com/settings/tokens (quedó visible
+      en salidas de terminal; se considera quemado)
+- [ ] **Rotar la contraseña de Gitea** del usuario `claude` (está en el historial público)
+
+## Purga del historial — pendiente de decisión
+- [ ] Reescribir `main` con `git-filter-repo` y force-push a ambos remotos.
+      **Salvedad:** GitHub conserva los commits huérfanos accesibles por SHA directo
+      hasta hacer garbage collection; para borrado real hay que abrir ticket a GitHub
+      Support. Riesgo bajo de romper terceros (0 forks).
+
