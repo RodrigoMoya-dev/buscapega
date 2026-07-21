@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSettings, saveSettings, testWhatsapp, testEmail, getEmailStatus, type EmailStatus } from "@/lib/api";
+import Aviso from "@/components/Aviso";
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
@@ -47,7 +48,6 @@ export default function SettingsPage() {
     setSaved(true);
     // T9: refrescar el saludo del menú sin recargar la página.
     window.dispatchEvent(new CustomEvent("buscapega:settings-updated", { detail: { user_name: payload.user_name } }));
-    setTimeout(() => setSaved(false), 2000);
   }
 
   async function handleTestWhatsapp() {
@@ -56,7 +56,6 @@ export default function SettingsPage() {
     const result = await testWhatsapp();
     setWaTestResult(result ?? { status: "error", message: "Sin respuesta del servidor" });
     setTestingWa(false);
-    setTimeout(() => setWaTestResult(null), 5000);
   }
 
   async function handleTestEmail() {
@@ -68,7 +67,6 @@ export default function SettingsPage() {
     const result = await testEmail();
     setEmailTestResult(result ?? { status: "error", message: "Sin respuesta del servidor" });
     setTestingEmail(false);
-    setTimeout(() => setEmailTestResult(null), 6000);
   }
 
   function set(field: string, val: string) {
@@ -161,12 +159,16 @@ export default function SettingsPage() {
               >
                 {testingWa ? "Enviando..." : "Enviar mensaje de prueba"}
               </button>
-              {waTestResult && (
-                <span className={`text-sm ${waTestResult.status === "ok" ? "text-green-400" : "text-red-400"}`}>
-                  {waTestResult.message}
-                </span>
-              )}
             </div>
+            {waTestResult && (
+              <div className="mt-3">
+                <Aviso
+                  tipo={waTestResult.status === "ok" ? "ok" : "error"}
+                  mensaje={waTestResult.message}
+                  onClose={() => setWaTestResult(null)}
+                />
+              </div>
+            )}
 
             {/* Setup WhatsApp */}
             <div className="mt-6 border-t border-gray-800 pt-5">
@@ -231,12 +233,16 @@ export default function SettingsPage() {
               >
                 {testingEmail ? "Enviando..." : "Enviar correo de prueba"}
               </button>
-              {emailTestResult && (
-                <span className={`text-sm ${emailTestResult.status === "ok" ? "text-green-400" : "text-red-400"}`}>
-                  {emailTestResult.message}
-                </span>
-              )}
             </div>
+            {emailTestResult && (
+              <div className="mt-3">
+                <Aviso
+                  tipo={emailTestResult.status === "ok" ? "ok" : "error"}
+                  mensaje={emailTestResult.message}
+                  onClose={() => setEmailTestResult(null)}
+                />
+              </div>
+            )}
             <p className="text-gray-600 text-xs mt-1.5">
               Envía un correo de prueba al “Correo de envío” para validar que funciona.
             </p>
@@ -261,8 +267,12 @@ export default function SettingsPage() {
             >
               {saving ? "Guardando..." : "Guardar configuración"}
             </button>
-            {saved && <span className="text-green-400 text-sm">✓ Guardado</span>}
           </div>
+          {saved && (
+            <div className="mt-3">
+              <Aviso tipo="ok" mensaje="✓ Configuración guardada." onClose={() => setSaved(false)} />
+            </div>
+          )}
         </div>
       )}
     </div>
