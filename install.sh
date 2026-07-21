@@ -513,17 +513,23 @@ done
 echo ""
 
 while true; do
-  ask "→ Correo Gmail para postulaciones automáticas (para portales que usan email):"
+  # El correo SIEMPRE fue opcional, pero antes omitirlo era casi imposible: dejarlo vacío
+  # abría una segunda pregunta "¿Continuar sin correo? (s/N)" cuya única salida era
+  # escribir "s". Por la doble negación ("continuar SIN correo"), quien quería saltárselo
+  # respondía Enter o "n" — que lo devolvía a pedir el correo — y quedaba en bucle.
+  # Ahora se omite con Enter, igual que la API key y la contraseña de Gmail.
+  ask "→ Correo Gmail para postulaciones automáticas  [OPCIONAL — Enter para omitir]:"
+  echo -e "  ${CYAN}Lo usan los portales que postulan por correo.${RESET} Sin él, esos portales"
+  echo -e "  ${CYAN}quedan desactivados; el resto funciona igual.${RESET}"
   read -r -p "  correo@gmail.com > " GMAIL_USER
   if [[ -z "$GMAIL_USER" ]]; then
-    warn "Sin correo — las postulaciones por email no funcionarán. ¿Continuar sin correo? (s/N)"
-    read -r -p "  > " SKIP_EMAIL
-    SKIP_EMAIL_L=$(echo "$SKIP_EMAIL" | tr '[:upper:]' '[:lower:]')
-    [[ "$SKIP_EMAIL_L" == "s" || "$SKIP_EMAIL_L" == "si" || "$SKIP_EMAIL_L" == "y" ]] && break
+    warn "Sin correo — las postulaciones por email quedarán desactivadas."
+    warn "Puedes agregarlo luego en la web (Configuración) o con ./configuraciones/setup-gmail.sh"
+    break
   elif [[ "$GMAIL_USER" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
     break
   else
-    fail "Correo inválido. Usa el formato correo@dominio.com"
+    fail "Correo inválido. Usa el formato correo@dominio.com — o pulsa Enter para omitirlo."
   fi
 done
 echo ""
