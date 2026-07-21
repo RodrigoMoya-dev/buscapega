@@ -96,7 +96,7 @@ ejecutar desde la raíz del proyecto:
 # 1. Comprobar que Presto responde (si no, despertarlo)
 nc -z -w3 192.168.100.6 80 || /Users/rodrigo/Proyectos/Moya.dev/sh/wake_presto.sh
 
-# 2. Subir las 11 ramas de la sesión del 21/07/2026 + main
+# 2. Subir las 12 ramas de la sesión del 21/07/2026 + main
 for b in \
   fix_credenciales_expuestas_21072026 \
   fix_instalador_ux_21072026 \
