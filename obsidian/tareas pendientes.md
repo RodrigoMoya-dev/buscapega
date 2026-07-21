@@ -150,8 +150,19 @@ herramientas internas que existen y funcionan — borrarlas dejaría la doc inco
 **Confirmar con Rodrigo si también deben irse.**
 
 ## Cierre de sesión
-- [ ] Push de cada rama a `github` **y** a `origin` (gitea)
-- [ ] Merge a `main` sin `obsidian/`
+- [x] Push de las **7 ramas** a `github` — verificado por SHA, no solo por el exit del push
+- [ ] Push a `origin` (gitea) — **BLOQUEADO**: Presto no responde. WOL enviado 2 veces
+      (magic packet OK) y sondeado el ping sin respuesta. Reintentar todo con:
+      `for b in fix_instalador_ux_21072026 feature_instalador_robot_estrella_21072026 \
+       fix_rebranding_wunen_buscapega_21072026 feature_web_portales_21072026 \
+       feature_web_avisos_fijos_21072026 feature_manual_github_pages_21072026 \
+       fix_daily_referencia_presto_21072026 main fix_credenciales_expuestas_21072026; do \
+       git push origin $b; done`
+- [x] Merge a `main` sin `obsidian/` → `14bd9bf`, verificado: **0 archivos de obsidian**
+      en el árbol de `main` y `.gitignore` público restaurado
+- [x] `main` subido a github y verificado por SHA
+- [x] Validaciones sobre `main`: `bash -n`, `compose config -q`, `node --check`,
+      `tsc --noEmit` (exit 0) y `smoke-test --static` (2 OK · 0 fallidas)
 - [ ] Ejecutar `/prueba`
 
 ---
