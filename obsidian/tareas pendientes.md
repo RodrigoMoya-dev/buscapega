@@ -31,7 +31,12 @@
       "backend caído" (URL cuando responda).
 
 ### Cierre ronda 3
-- [ ] Push de ambas ramas a `origin` (gitea) y `github`
-- [ ] Merge a `main` sin `obsidian/`
-- [ ] Re-ejecutar `/prueba` (validar que ya NO sale en silencio al continuar por puerto)
+- [x] Push de ambas ramas a `origin` (gitea) y `github`
+- [x] Merge a `main` sin `obsidian/`
+- [x] Re-ejecutar `/prueba` — **VALIDADO**: se clonó `main` fresco desde GitHub, el
+      puerto 3001 estaba ocupado (conflicto real), se respondió "S" y el instalador
+      **continuó al build** (`! Continuando con el puerto 3001 en uso` → `[2/5]
+      Construyendo backend`) en vez de morir en silencio. Se abortó antes del build
+      pesado del scraper para no repetir el incidente de memoria. El build completo ya
+      quedó validado en la ronda 2 (Dockerfiles sin cambios).
 
