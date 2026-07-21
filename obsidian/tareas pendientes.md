@@ -118,8 +118,14 @@ confirmar con Rodrigo cómo proceder (migrar / empezar limpio / mantener nombres
       registrar la sesión y que queda solo en el equipo del usuario
 - [x] Validado con `tsc --noEmit` (exit 0, sin errores) y `py_compile`
 
-### `feature_web_avisos_fijos_21072026` (mejora)
-- [ ] Los avisos (ej. el de mensaje de prueba de WhatsApp) quedan fijos y con botón de cierre
+### `feature_web_avisos_fijos_21072026` (mejora) — ✅ COMPLETADA
+- [x] Componente `components/Aviso.tsx` reutilizable (tipos ok/error/info, `role="status"`,
+      botón de cierre con `aria-label`)
+- [x] Eliminados los 3 `setTimeout` de Configuración: prueba de WhatsApp (5 s), prueba de
+      correo (6 s) y "Guardado" (2 s). Ahora quedan fijos hasta cerrarlos a mano
+- [x] Los avisos salieron del contenedor flex del botón: al pasar de texto en línea a
+      bloque, dentro del flex quedaban apretados contra el botón
+- [x] Validado con `tsc --noEmit` (exit 0)
 
 ### `feature_manual_github_pages_21072026` (mejora)
 - [ ] `Creación de página github.md` — manual para publicar `buscapega` en GitHub Pages

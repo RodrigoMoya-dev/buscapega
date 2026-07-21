@@ -74,3 +74,27 @@ correo funcione. Flujo:
 - Documentado que teléfono/correo provienen del instalador (settings.json) y editables aquí.
 - Scripts de configuración en `configuraciones/`: `vincular-whatsapp.sh` (WhatsApp, antes
   `whatsapp-qr.sh`) y `setup-gmail.sh` (Gmail). Hasta el 20/07/2026 estaban en la raíz.
+
+## Cambios 21/07/2026 — avisos fijos con botón de cierre
+
+Los tres mensajes de resultado de la vista se borraban solos con un `setTimeout`:
+
+| Aviso | Antes | Ahora |
+|---|---|---|
+| Prueba de WhatsApp | desaparecía a los 5 s | fijo, con botón × |
+| Prueba de correo | desaparecía a los 6 s | fijo, con botón × |
+| "Guardado" | desaparecía a los 2 s | fijo, con botón × |
+
+Si el usuario estaba mirando otra parte de la pantalla, el resultado se perdía sin forma
+de recuperarlo — justo en los mensajes que más importan, que son los de error de una
+prueba de envío.
+
+### Componente `components/Aviso.tsx`
+Reutilizable, con tres tipos (`ok` / `error` / `info`) y `onClose`. Lleva `role="status"`
+para que los lectores de pantalla anuncien el resultado, y el botón de cierre tiene
+`aria-label`.
+
+Los avisos se movieron **fuera** del contenedor flex del botón: como ahora son bloques y
+no texto en línea, dentro del flex quedaban apretados contra el botón.
+
+Ver [[header]].
