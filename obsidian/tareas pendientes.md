@@ -83,8 +83,13 @@ confirmar con Rodrigo cómo proceder (migrar / empezar limpio / mantener nombres
 - [x] `nota()` con barra naranja de la marca para la información del paso siguiente
       (el azul inicial se probó y quedaba invisible sobre fondo negro)
 
-### `feature_instalador_robot_estrella_21072026` (mejora)
-- [ ] Estrella blanca sobre el azul del robot (efecto bandera chilena)
+### `feature_instalador_robot_estrella_21072026` (mejora) — ✅ COMPLETADA
+- [x] Estrella blanca (`✦`) sobre el cantón azul del pecho del robot.
+      Se pinta como **fondo** azul + glifo blanco, no como carácter azul, para que la
+      estrella quede recortada dentro del cuadro y no abra un hueco negro.
+      No se usó `★`: `unicodedata.east_asian_width` lo clasifica **A** (Ambiguous) y
+      muchos terminales lo pintan a doble ancho; `✦` (U+2726) es **N**, ancho 1 seguro.
+      Verificada la alineación: las dos filas del pecho miden 15 columnas igual que antes.
 
 ### `fix_rebranding_wunen_buscapega_21072026` (corrección)
 - [ ] `wunen` → `buscapega` en los 22 archivos (contenedores, red, mount, rutas)
