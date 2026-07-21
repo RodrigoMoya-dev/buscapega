@@ -123,3 +123,49 @@ done
 > La credencial de Gitea ya está en el keychain de macOS, así que el push **no** debería
 > pedir contraseña. Si la pide, es que aún no se ha rotado/actualizado — ver
 > [[tecnico/credenciales-git]].
+
+---
+
+# Página de GitHub Pages — `feature_pagina_github_pages_21072026`
+
+Pedido: armar la página en `/docs` usando como base el estilo de
+`project-copacetic.github.io/copacetic/website/`.
+
+## Qué se tomó de la referencia
+Se extrajo el CSS real de la página (es Docusaurus) en vez de imitarla de memoria:
+hero centrado en columna con `gap: 1.5rem`, **título en `font-weight: 300`** (el rasgo
+más característico), grid de tarjetas `repeat(auto-fit, minmax(…, 1fr))` y tarjetas con
+gradiente sutil, borde de 1px y radio de 12px.
+
+## Qué es propio de Buscapega
+- **El robot ASCII del instalador es el protagonista del hero**, donde Copacetic pone su
+  logo. Es lo único que nadie más puede tener, y quien ya vio la terminal reconoce la
+  página al instante. Lleva la bandera chilena real (cantón azul con estrella, blanco, rojo)
+- Paleta de `grafica/palette.scss` + el rojo y azul de la bandera
+- La monoespaciada como voz de marca (marca, eyebrows, código): no es adorno, el producto
+  se instala y se usa desde la consola
+- Contenido real: los 12 portales con su marca de auto-postulación, el flujo de 4 pasos y
+  los 3 comandos de instalación
+
+## Decisiones tomadas al revisarla en el navegador
+| Problema visto | Corrección |
+|---|---|
+| 5 tarjetas en 4 columnas dejaban una huérfana | 6ª capacidad real (agregar portales validando el sitio) + `minmax(300px)` → 3+3 |
+| Los `h2` heredaban `line-height: 1.6` y quedaban muy separados | `line-height: 1.2` |
+| **En modo claro la franja blanca de la bandera y los ojos desaparecían** | El robot va sobre una placa de fondo oscuro **fija en ambos temas**; se lee igual siempre y refuerza la identidad de terminal |
+
+Numerar los pasos del flujo (PASO 01…04) se mantuvo porque **es una secuencia real** del
+proceso, no un adorno.
+
+## Comprobado
+- [x] Escritorio 1200px, móvil 390px, modo oscuro y modo claro (con una copia de prueba
+      con la paleta clara forzada, luego eliminada)
+- [x] Etiquetas balanceadas, 20.8 KB, **0 recursos externos** — carga sin depender de nadie
+- [x] `prefers-reduced-motion` respetado, `:focus-visible` visible, `aria-label` en el robot
+
+## Falta activar Pages (solo Rodrigo puede)
+1. https://github.com/RodrigoMoya-dev/buscapega/settings/pages
+2. Source: `Deploy from a branch` · Branch: `main` · carpeta `/docs` · Save
+3. En 1-3 minutos queda en `https://rodrigomoya-dev.github.io/buscapega/`
+
+Ver [[Creación de página github]].
