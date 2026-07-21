@@ -136,6 +136,19 @@ confirmar con Rodrigo cómo proceder (migrar / empezar limpio / mantener nombres
       Incluye ambos caminos paso a paso, `.nojekyll`, dominio propio con las IPs de
       Pages, tabla de problemas frecuentes y el recordatorio de `git push github main`
 
+### `fix_daily_referencia_presto_21072026` (corrección) — ✅ COMPLETADA
+Detectada al validar el merge a `main`: el rebranding automático había convertido
+`http://wunen.presto` en `http://buscapega.presto`, o sea **seguía apuntando a Presto**
+en el mensaje de notificación diaria que le llega al usuario.
+- [x] `setup/buscapega-daily.sh` usa `FRONTEND_URL`, por defecto `http://localhost:3000`
+      y sobrescribible por variable de entorno. Probadas ambas rutas de expansión
+
+**Referencias a Presto que quedan a propósito** (no las ve quien instala; describen
+herramientas internas que existen y funcionan — borrarlas dejaría la doc incorrecta):
+`CLAUDE.md`, `.claude/commands/autentica.md` (flag `--presto` de `setup_session.py`),
+`smoke-test.sh --presto` y un comentario histórico en `server.js:103`.
+**Confirmar con Rodrigo si también deben irse.**
+
 ## Cierre de sesión
 - [ ] Push de cada rama a `github` **y** a `origin` (gitea)
 - [ ] Merge a `main` sin `obsidian/`

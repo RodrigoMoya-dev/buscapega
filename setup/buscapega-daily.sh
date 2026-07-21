@@ -16,6 +16,10 @@
 
 BACKEND="http://localhost:8020"
 SCRAPER="http://localhost:8021"
+# URL de la web que se enlaza en la notificación. Antes estaba escrita a mano apuntando a
+# un servidor concreto; el proyecto corre en el equipo de quien lo instala, así que por
+# defecto es local y se puede sobrescribir con la variable de entorno FRONTEND_URL.
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
 NOTIFY="/home/rodrigo/scripts/notify_telegram.sh"
 LOG_DIR="/var/log/buscapega"
 LOG_FILE="$LOG_DIR/daily-$(date '+%Y%m%d_%H%M%S').log"
@@ -85,6 +89,6 @@ $NOTIFY "🤖 <b>Buscapega — Búsqueda diaria completada</b>
 📋 Ofertas pendientes en bandeja: <b>${PENDIENTES}</b>
 📅 $(date '+%d/%m/%Y %H:%M')
 
-Revisa las postulaciones en: http://buscapega.presto"
+Revisa las postulaciones en: ${FRONTEND_URL}"
 
 log "=== Buscapega Daily Run completado ==="
