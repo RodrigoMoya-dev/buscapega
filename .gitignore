@@ -50,8 +50,7 @@ docker/scraper/applicator/__pycache__/
 # Perfiles de navegadores adicionales
 setup/profiles/brave/
 setup/profiles/vivaldi/
-# Notas personales (solo Gitea — no publicar en GitHub)
-obsidian/
+obsidian/.obsidian/
 
 # Clones de pruebas locales (no versionar)
 /test/

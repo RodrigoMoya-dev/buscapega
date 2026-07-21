@@ -55,6 +55,18 @@ error() { echo -e "${RED}✗ ERROR:${RESET} $1"; exit 1; }
 ask()   { echo -e "${BOLD}$1${RESET}"; }
 sep()   { echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"; }
 
+# Error NO fatal (dato mal ingresado que se vuelve a preguntar). Antes esto usaba warn(),
+# igual que los avisos informativos: ambos salían en amarillo con "!" y no se distinguía a
+# primera vista que algo había fallado. Va en ROJO y con "✗", como error(), pero SIN exit:
+# el bucle de validación vuelve a preguntar.
+fail()  { echo -e "${RED}${BOLD}✗${RESET} ${RED}$1${RESET}"; }
+
+# Información del paso que viene (p. ej. "esto instala Chromium y puede demorar"). Antes se
+# imprimía en amarillo tenue y se perdía entre el ruido del build de Docker. Se marca con la
+# barra naranja de la marca: contrasta sobre fondo negro mucho mejor que el azul, y no se
+# confunde con el ▶ cian del paso ni con el ! amarillo de los avisos.
+nota()  { echo -e "  ${ORANGE}${BOLD}▐${RESET} ${BOLD}$1${RESET}"; }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Red de seguridad: mensaje claro si el instalador termina antes de completarse
 # ─────────────────────────────────────────────────────────────────────────────
@@ -251,6 +263,35 @@ if [[ -f "$STATE_FILE" ]]; then
   echo ""
 fi
 
+# ¿Hay datos ya ingresados de una ejecución anterior?
+# OJO: esto va SEPARADO del bloque de arriba a propósito. Antes la reutilización de
+# .install-config dependía de RESUME, y RESUME solo se activaba si existía STATE_FILE.
+# Pero STATE_FILE solo aparece cuando termina el primer paso COSTOSO: si el instalador
+# moría antes (p. ej. en el chequeo de puertos), quedaba un .install-config perfectamente
+# válido que nunca se leía, y el cuestionario completo se repetía desde cero.
+# Ahora los datos se reutilizan por sí solos, exista o no STATE_FILE, y se pueden cambiar
+# sin obligar a "empezar de cero" (que además borraría los builds ya hechos).
+USAR_CONFIG=false
+if [[ -f "$CONFIG_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$CONFIG_FILE"
+  ok "Encontré los datos que ingresaste antes:"
+  echo -e "    • Nombre:   ${CYAN}${USER_NAME:-(sin definir)}${RESET}"
+  echo -e "    • WhatsApp: ${CYAN}${WHATSAPP_PHONE:-(sin definir)}${RESET}"
+  echo -e "    • Correo:   ${CYAN}${GMAIL_USER:-(sin definir)}${RESET}"
+  echo -e "    • Puertos:  ${CYAN}web ${FRONTEND_PORT:-3000} / API ${BACKEND_PORT:-8000}${RESET}"
+  echo ""
+  read -r -p "  ¿Usar estos datos? (S/n, «n» los vuelve a preguntar) > " RESP_CFG
+  RESP_CFG_L=$(echo "$RESP_CFG" | tr '[:upper:]' '[:lower:]')
+  if [[ "$RESP_CFG_L" == "n" || "$RESP_CFG_L" == "no" ]]; then
+    ok "Se volverán a pedir los datos"
+  else
+    USAR_CONFIG=true
+    ok "Se reutilizan los datos anteriores"
+  fi
+  echo ""
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Validar estructura de carpetas obligatorias
 # ─────────────────────────────────────────────────────────────────────────────
@@ -417,21 +458,16 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Configuración interactiva
 # ─────────────────────────────────────────────────────────────────────────────
-# Al reanudar, si ya se guardó la configuración de una ejecución anterior, se reutiliza
-# tal cual y se omite todo el cuestionario. (Empezar de cero borra este archivo más
-# arriba, así que este bloque solo aplica cuando el usuario eligió continuar.)
-if $RESUME && [[ -f "$CONFIG_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$CONFIG_FILE"
+# Si el usuario aceptó reutilizar los datos guardados (paso 0), ya están cargados en las
+# variables y se omite todo el cuestionario. Si dijo que no, o no había .install-config,
+# se pregunta normalmente.
+if $USAR_CONFIG; then
   echo ""
   echo -e "${BOLD}Configuración inicial${RESET}"
   sep
-  ok "Reutilizando los datos de la instalación anterior (no se vuelven a pedir):"
-  echo -e "    • Nombre:   ${CYAN}${USER_NAME:-(sin definir)}${RESET}"
-  echo -e "    • WhatsApp: ${CYAN}${WHATSAPP_PHONE:-(sin definir)}${RESET}"
-  echo -e "    • Correo:   ${CYAN}${GMAIL_USER:-(sin definir)}${RESET}"
-  echo -e "    • Puertos:  ${CYAN}web ${FRONTEND_PORT:-3000} / API ${BACKEND_PORT:-8000}${RESET}"
-  echo -e "  ${CYAN}Para cambiarlos, reinicia el instalador y elige «empezar de cero».${RESET}"
+  ok "Se usan los datos que confirmaste más arriba — no se vuelven a pedir."
+  echo -e "  ${CYAN}Para cambiarlos: vuelve a ejecutar el instalador y responde «n»${RESET}"
+  echo -e "  ${CYAN}en «¿Usar estos datos?», o edítalos desde la web en Configuración.${RESET}"
   echo ""
 else
 echo ""
@@ -463,7 +499,7 @@ while true; do
   WHATSAPP_PHONE="${WHATSAPP_PHONE:-56912345678}"
   WHATSAPP_PHONE_CLEAN=$(echo "$WHATSAPP_PHONE" | tr -dc '0-9')
   if [[ ${#WHATSAPP_PHONE_CLEAN} -lt 10 ]]; then
-    warn "Teléfono inválido. Debe contener al menos 10 dígitos con código de país (ej: 56912345678)."
+    fail "Teléfono inválido. Debe contener al menos 10 dígitos con código de país (ej: 56912345678)."
   else
     WHATSAPP_PHONE="$WHATSAPP_PHONE_CLEAN"
     break
@@ -482,7 +518,7 @@ while true; do
   elif [[ "$GMAIL_USER" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
     break
   else
-    warn "Correo inválido. Usa el formato correo@dominio.com"
+    fail "Correo inválido. Usa el formato correo@dominio.com"
   fi
 done
 echo ""
@@ -634,7 +670,7 @@ if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
     if docker volume rm wunen_db_data >/dev/null 2>&1; then
       ok "Volumen eliminado — la base de datos se creará limpia con la nueva contraseña"
     else
-      warn "No se pudo eliminar el volumen (¿lo usa un contenedor en marcha?)."
+      fail "No se pudo eliminar el volumen (¿lo usa un contenedor en marcha?)."
       warn "Detén Buscapega y reintenta: cd \"$DOCKER_DIR\" && $COMPOSE_CMD down -v"
     fi
   else
@@ -654,8 +690,27 @@ check_port() {
       ok "Puerto ${port} (${name}) lo usa tu Buscapega actual — se recreará al reiniciar"
       return
     fi
-    warn "Puerto ${port} (${name}) ya está en uso:"
-    lsof -iTCP:"$port" -sTCP:LISTEN -n -P 2>/dev/null | tail -1
+    fail "Puerto ${port} (${name}) ya está en uso."
+    # Antes solo se volcaba la línea cruda de lsof, ilegible sin encabezado. Se extrae
+    # el proceso concreto: nombre, PID, usuario y —si es un contenedor— su nombre.
+    local pinfo pcmd ppid puser cont
+    pinfo=$(lsof -iTCP:"$port" -sTCP:LISTEN -n -P 2>/dev/null | awk 'NR==2 {print $1"|"$2"|"$3}')
+    if [[ -n "$pinfo" ]]; then
+      pcmd=${pinfo%%|*}; ppid=$(echo "$pinfo" | cut -d'|' -f2); puser=${pinfo##*|}
+      echo -e "    Lo ocupa: ${BOLD}${pcmd}${RESET} (PID ${BOLD}${ppid}${RESET}, usuario ${puser})"
+      # Si el puerto lo publica Docker, el PID es del proxy y no dice nada útil:
+      # se busca el contenedor que realmente lo expone.
+      cont=$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -E ":${port}->" | awk '{print $1}' | head -1 || true)
+      # if explícito en vez de `[[ ]] && echo`: ese idiom devuelve 1 cuando la condición es
+      # falsa y, si alguna vez queda como última línea de la función, `set -e` mataría el
+      # instalador en silencio (es el bug que se corrigió en la ronda 3).
+      if [[ -n "$cont" ]]; then
+        echo -e "    Contenedor Docker: ${BOLD}${cont}${RESET}"
+        echo -e "    Para liberarlo:  ${CYAN}kill ${ppid}${RESET}   o   ${CYAN}docker stop ${cont}${RESET}"
+      else
+        echo -e "    Para liberarlo:  ${CYAN}kill ${ppid}${RESET}"
+      fi
+    fi
     echo ""
     echo -e "  Opciones:"
     echo -e "  ${CYAN}a)${RESET} Detener el proceso que usa ese puerto"
@@ -689,7 +744,7 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 log "Construyendo e iniciando servicios Docker..."
-echo -e "${YELLOW}  La primera vez puede tardar 5-15 minutos según tu conexión.${RESET}"
+nota "La primera vez puede tardar 5-15 minutos según tu conexión."
 echo -e "${CYAN}  Verás el progreso de cada imagen a continuación:${RESET}"
 echo ""
 
@@ -713,7 +768,7 @@ ejecutar_build frontend "frontend (Next.js)"
 echo ""
 
 log "[5/5] Construyendo servicio WhatsApp (Node.js + Chromium)..."
-echo -e "${YELLOW}  Este paso instala Chromium y puede demorar más.${RESET}"
+nota "Este paso instala Chromium y puede demorar más."
 ejecutar_build whatsapp "servicio WhatsApp (Node.js + Chromium)"
 echo ""
 
@@ -797,7 +852,7 @@ if [[ "$SETUP_SESSIONS_L" == "s" || "$SETUP_SESSIONS_L" == "si" || "$SETUP_SESSI
       log "Preparando entorno virtual de Python (setup/.venv)..."
       if [[ ! -d "$VENV_DIR" ]]; then
         if ! python3 -m venv "$VENV_DIR" 2>/tmp/buscapega_venv_err.log; then
-          warn "No se pudo crear el venv. Detalle: $(tail -n 1 /tmp/buscapega_venv_err.log)"
+          fail "No se pudo crear el venv. Detalle: $(tail -n 1 /tmp/buscapega_venv_err.log)"
           warn "En Debian/Ubuntu instala: sudo apt install python3-venv"
           SETUP_DEPS_OK=false
         fi
@@ -866,8 +921,8 @@ PYEOF
         IDX=$((IDX + 1))
         echo ""
         log "[${IDX}/${TOTAL}] Autenticando portal: ${portal}"
-        echo -e "  ${YELLOW}Se abrirá el navegador — completa el login con Google y ciérralo cuando termines.${RESET}"
-        "$VENV_PY" setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || warn "No se pudo capturar sesión de ${portal}"
+        nota "Se abrirá el navegador — completa el login con Google y ciérralo cuando termines."
+        "$VENV_PY" setup_session.py "$portal" && ok "Sesión de ${portal} capturada" || fail "No se pudo capturar sesión de ${portal}"
       done
 
       echo ""
