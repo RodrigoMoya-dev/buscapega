@@ -68,6 +68,16 @@ Detectado al validar la sincronía local ↔ GitHub.
       pero `git status` no avisaba de desincronización)
 - [x] Documentar el hallazgo y la política en `obsidian/tecnico/credenciales-git.md`
 
+## Cierre de la rama
+- [x] Commit `d675b7d` + push a **github**
+- [ ] Push a **origin** (gitea) — **BLOQUEADO**: Presto no responde. Se envió WOL con
+      `wake_presto.sh` (magic packet enviado) y se sondeó el ping durante ~2 min sin
+      respuesta. Puede estar apagado a nivel físico o con WoL deshabilitado en BIOS.
+      Reintentar con: `git push origin fix_credenciales_expuestas_21072026`
+- [~] Merge a `main` — **no aplica**. El fix real fue sobre `.git/config`, que **no se
+      versiona**; los únicos archivos del commit son documentación en `obsidian/`, que
+      `main` excluye por diseño. Mergear produciría un commit vacío. Nada que llevar a `main`.
+
 ## Acciones que solo puede hacer Rodrigo (no automatizables)
 - [ ] **Rotar el token de GitHub** en https://github.com/settings/tokens (quedó visible
       en salidas de terminal; se considera quemado)
