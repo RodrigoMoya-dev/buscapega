@@ -163,7 +163,50 @@ herramientas internas que existen y funcionan — borrarlas dejaría la doc inco
 - [x] `main` subido a github y verificado por SHA
 - [x] Validaciones sobre `main`: `bash -n`, `compose config -q`, `node --check`,
       `tsc --noEmit` (exit 0) y `smoke-test --static` (2 OK · 0 fallidas)
-- [ ] Ejecutar `/prueba`
+- [x] Ejecutar `/prueba` — ver resultado abajo
+
+## Resultado de `/prueba` (21/07/2026)
+
+Clonado `main` fresco desde GitHub a `demo/buscapega` y verificado que es la última
+versión (`14bd9bf`, idéntico al `main` recién subido). El clon público **no** contiene
+`obsidian/`.
+
+### Validado funcionando
+| Qué | Resultado |
+|---|---|
+| Robot con estrella `✦` | ✅ se dibuja alineado |
+| `fail()` rojo vs `warn()` amarillo | ✅ "Teléfono inválido" sale en rojo, claramente distinto |
+| Detección de restos `wunen_*` | ✅ listó los 5 contenedores y 3 volúmenes; se respondió «n» y **se conservaron** |
+| `nota()` naranja | ✅ destaca sobre el fondo |
+| Puerto ocupado | ✅ "Lo ocupa: com.docke (PID 693)" + "Contenedor Docker: wunen_frontend" |
+| Trap de salida | ✅ "Instalación NO completada", nunca salida silenciosa |
+| **Reutilización de datos** | ✅ **el bug reportado está resuelto**: había `.install-config` sin `.install-state` (el caso exacto) y en la 2ª corrida reutilizó los datos en vez de repreguntar |
+| Python + Playwright | ✅ `setup-sessions.sh --lista` creó el venv, instaló Playwright y Chromium; Chromium lanza (149.0.7827.55) |
+
+> Nota sobre la validación de Python del comando: `python3 -c "import playwright"` **falla**
+> con el Python del sistema, y es correcto que falle. El proyecto usa `setup/.venv` a
+> propósito desde el fix de 26/06/2026. Lo que hay que validar es
+> `./configuraciones/setup-sessions.sh`, que sí funciona.
+
+### Problema encontrado y corregido — `fix_puerto_kill_docker_21072026`
+Con el puerto ocupado por un contenedor, el instalador sugería `kill 693`. **Ese PID es
+`com.docker.backend`, el proxy compartido de Docker Desktop**: se comprobó que el *mismo*
+PID sirve los 5 puertos (3000, 8000, 8001, 3001, 5432), así que matarlo **tumbaría Docker
+entero**, no el servicio.
+- [x] Si se identifica el contenedor → solo `docker stop <cont>`
+- [x] Si lo publica Docker pero no se identifica → `docker ps --filter publish=<puerto>`
+- [x] Solo en procesos normales se sugiere `kill <pid>`
+- [x] Al probarlo apareció un segundo detalle: `lsof` trunca COMMAND a 9 caracteres
+      (`com.docke`), así que el patrón `com.docker*` nunca casaba. Corregido a `com.dock*`
+
+### No ejecutado: build completo de Docker
+El build no se corrió porque **tu instalación actual está en marcha** (5 contenedores
+`wunen_*` con la BD, las cookies y la vinculación de WhatsApp) y **ocupa los 5 puertos**.
+Completar la instalación exigía detenerla y arriesgar tus datos. Los Dockerfiles no se
+tocaron en esta sesión y el build completo ya quedó validado en la ronda 2 del 20/07.
+
+**Para probar el ciclo completo hay que decidir antes qué hacer con los datos actuales**
+(ver el punto del rebranding: se optó por «empezar limpio»).
 
 ---
 
