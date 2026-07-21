@@ -79,6 +79,47 @@ cd buscapega-main && bash install.sh
 > (avisos fijos, portales filtrados, aviso de sesión de Google).
 
 ## Cierre
-- [ ] Push a `github` y merge a `main`
-- [ ] Push a `origin` (gitea) — **omitido**: Rodrigo no está en la red de Presto.
-      Prompt listo más abajo
+- [x] Push a `github` y merge a `main` → `95e2a46` (0 archivos de obsidian en `main`)
+- [x] `/prueba`: clonado `main` fresco desde GitHub y verificado que un solo **Enter**
+      omite el correo y avanza a los puertos. El bucle desapareció
+- [ ] Push a `origin` (gitea) — **omitido a propósito**: Rodrigo no está en la red de
+      Presto, el servidor es inalcanzable. Ver el prompt listo abajo
+
+---
+
+# 📌 PENDIENTE: subir todo a Gitea cuando Presto esté en línea
+
+Nada de esto está en Gitea todavía; **todo está en GitHub**. Al volver a la red de Presto,
+ejecutar desde la raíz del proyecto:
+
+```bash
+# 1. Comprobar que Presto responde (si no, despertarlo)
+nc -z -w3 192.168.100.6 80 || /Users/rodrigo/Proyectos/Moya.dev/sh/wake_presto.sh
+
+# 2. Subir las 11 ramas de la sesión del 21/07/2026 + main
+for b in \
+  fix_credenciales_expuestas_21072026 \
+  fix_instalador_ux_21072026 \
+  feature_instalador_robot_estrella_21072026 \
+  fix_rebranding_wunen_buscapega_21072026 \
+  feature_web_portales_21072026 \
+  feature_web_avisos_fijos_21072026 \
+  feature_manual_github_pages_21072026 \
+  fix_daily_referencia_presto_21072026 \
+  fix_puerto_kill_docker_21072026 \
+  fix_correo_opcional_21072026 \
+  main
+do
+  echo "→ $b"; git push origin "$b" || echo "  ✗ fallo en $b"
+done
+
+# 3. Verificar que quedaron iguales
+git fetch origin
+for b in main fix_correo_opcional_21072026; do
+  [ "$(git rev-parse $b)" = "$(git rev-parse origin/$b)" ] && echo "✓ $b" || echo "✗ $b"
+done
+```
+
+> La credencial de Gitea ya está en el keychain de macOS, así que el push **no** debería
+> pedir contraseña. Si la pide, es que aún no se ha rotado/actualizado — ver
+> [[tecnico/credenciales-git]].
