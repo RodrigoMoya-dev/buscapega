@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buscapega — Busca, evalúa y postula a ofertas de empleo por ti</title>
+<meta name="description" content="Buscapega revisa los portales de empleo, puntúa cada oferta contra tu perfil y postula automáticamente en los que lo permiten. Corre entero en tu equipo.">
+<meta name="color-scheme" content="dark light">
+
+<meta property="og:title" content="Buscapega — Automatización de búsqueda de empleo">
+<meta property="og:description" content="Revisa los portales, puntúa cada oferta contra tu perfil y postula por ti. Todo en tu equipo.">
+<meta property="og:type" content="website">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23297373'/><text y='.9em' x='50' text-anchor='middle' font-size='62'>🤖</text></svg>">
+
+<style>
+/* ── Identidad Buscapega ───────────────────────────────────────────────────
+   Paleta del proyecto (grafica/palette.scss) + rojo y azul de la bandera
+   chilena, los mismos valores que usa el robot del instalador. La página
+   hereda el aire de terminal del producto: la monoespaciada no es adorno,
+   es la voz de una herramienta que se instala y se usa desde la consola. */
+:root {
+  --pine:      #297373;
+  --pine-lift: #35908f;
+  --orange:    #c84c09;
+  --orange-lift:#e35c12;
+  --celadon:   #bcd8c1;
+  --blush:     #fad8d6;
+  --bordeaux:  #420217;
+  --cl-red:    #d52b1e;
+  --cl-blue:   #0039a6;
+
+  --bg:        #0a0e0f;
+  --bg-lift:   #10171a;
+  --surface-a: #101617;
+  --surface-b: #172023;
+  --line:      #24302f;
+  --fg:        #e6edec;
+  --fg-dim:    #9fb0ae;
+  --fg-faint:  #6d807e;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --maxw: 1180px;
+  --radius: 12px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:        #f7f9f8;
+    --bg-lift:   #eef3f1;
+    --surface-a: #ffffff;
+    --surface-b: #f2f6f4;
+    --line:      #d3dedb;
+    --fg:        #12201f;
+    --fg-dim:    #4a5c5a;
+    --fg-faint:  #71827f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: 1.25rem; }
+
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 4px; }
+
+/* ── Barra superior ─────────────────────────────────────────────────────── */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-in { display: flex; align-items: center; gap: 1.5rem; height: 60px; }
+.brand {
+  font-family: var(--mono); font-weight: 700; font-size: .95rem;
+  letter-spacing: .16em; text-decoration: none; white-space: nowrap;
+}
+.brand .dot { color: var(--orange); }
+.nav-links { display: flex; gap: 1.4rem; margin-left: auto; align-items: center; }
+.nav-links a {
+  font-size: .875rem; color: var(--fg-dim); text-decoration: none;
+  transition: color .15s ease;
+}
+.nav-links a:hover { color: var(--fg); }
+.nav-gh {
+  display: inline-flex; align-items: center; gap: .45rem;
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: .4rem .75rem; font-size: .8125rem;
+}
+.nav-gh:hover { border-color: var(--pine-lift); }
+@media (max-width: 720px) { .nav-links .hide-sm { display: none; } }
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+.hero {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.5rem; text-align: center;
+  padding: 4.5rem 1.25rem 3.5rem;
+  position: relative; overflow: hidden;
+}
+/* Halo muy tenue detrás del robot: da profundidad sin competir con el dibujo. */
+.hero::before {
+  content: ""; position: absolute; inset: -30% 0 auto 0; height: 70%;
+  background: radial-gradient(ellipse 50% 60% at 50% 50%, color-mix(in srgb, var(--pine) 22%, transparent), transparent 70%);
+  pointer-events: none;
+}
+.hero > * { position: relative; }
+
+/* EL ROBOT: la firma del proyecto. Es el mismo dibujo que saluda en el
+   instalador, con la bandera chilena en el pecho, así que quien ya vio la
+   terminal reconoce la página al instante. */
+.robot {
+  font-family: var(--mono);
+  font-size: clamp(.75rem, 2.6vw, 1.35rem);
+  line-height: 1.15;
+  margin: 0;
+  white-space: pre;
+  color: var(--celadon);
+  user-select: none;
+  /* Fondo oscuro FIJO en ambos temas, no decorativo: la franja blanca de la
+     bandera y los ojos son colores claros y sobre el fondo claro del tema
+     desaparecían. Sobre esta placa el robot se lee igual siempre, y de paso
+     queda donde de verdad vive: en una terminal. */
+  background: #0b1112;
+  border: 1px solid #1e2b2a;
+  border-radius: 14px;
+  padding: clamp(1rem, 3vw, 1.75rem) clamp(1.25rem, 4vw, 2.5rem);
+  box-shadow: 0 18px 40px -24px rgba(0,0,0,.7);
+}
+.robot .eye   { color: var(--celadon); }
+.robot .mouth { color: var(--blush); }
+.robot .arm   { color: var(--orange); }
+.robot .flag-red  { color: var(--cl-red); }
+.robot .flag-white{ color: var(--blush); }
+.robot .canton { background: var(--cl-blue); color: #fff; }
+
+/* Los ojos parpadean muy de vez en cuando: un guiño, no una animación. */
+@media (prefers-reduced-motion: no-preference) {
+  .robot .eye { animation: blink 7s infinite; }
+}
+@keyframes blink {
+  0%, 92%, 100% { opacity: 1; }
+  94%, 98%      { opacity: .15; }
+}
+
+.eyebrow {
+  font-family: var(--mono); font-size: .75rem; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.hero h1 {
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  max-width: 20ch;
+  margin: 0;
+}
+.hero h1 strong { font-weight: 600; color: var(--orange); }
+.hero p.lead {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  color: var(--fg-dim);
+  max-width: 60ch; margin: 0;
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-top: .5rem; }
+.btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .8rem 1.6rem; border-radius: 9px;
+  font-weight: 600; font-size: .95rem; text-decoration: none;
+  border: 1px solid transparent; transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary { background: var(--orange); color: #fff; }
+.btn-primary:hover { background: var(--orange-lift); }
+.btn-ghost { border-color: var(--line); color: var(--fg); }
+.btn-ghost:hover { border-color: var(--pine-lift); background: var(--surface-b); }
+
+.flag-note {
+  font-family: var(--mono); font-size: .78rem; color: var(--fg-faint);
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+.flag-note .bar { width: 3px; height: 1em; border-radius: 2px; }
+.flag-note .b1 { background: var(--cl-blue); }
+.flag-note .b2 { background: var(--cl-red); }
+
+/* ── Secciones ──────────────────────────────────────────────────────────── */
+section { padding-block: 4rem; }
+.section-head { max-width: 60ch; margin-bottom: 2.25rem; }
+.section-head h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: -.015em; margin: .4rem 0 .6rem;
+}
+.section-head p { color: var(--fg-dim); margin: 0; }
+
+/* ── Tarjetas de capacidades ────────────────────────────────────────────── */
+.grid {
+  display: grid; gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.card {
+  background: linear-gradient(180deg, var(--surface-a), var(--surface-b));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex; flex-direction: column; gap: .85rem;
+  transition: border-color .18s ease, transform .18s ease;
+}
+.card:hover { border-color: color-mix(in srgb, var(--pine-lift) 60%, var(--line)); transform: translateY(-2px); }
+.card .ico {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border-radius: 8px; background: color-mix(in srgb, var(--pine) 22%, transparent);
+  color: var(--celadon);
+}
+@media (prefers-color-scheme: light) { .card .ico { color: var(--pine); } }
+.card h3 { margin: 0; font-size: 1.02rem; font-weight: 600; }
+.card p { margin: 0; color: var(--fg-dim); font-size: .92rem; }
+
+/* ── Flujo (aquí numerar SÍ dice algo: es el orden real del proceso) ────── */
+.flow { display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.step { padding: 1.4rem 1.25rem; border-top: 2px solid var(--line); position: relative; }
+.step:first-child { border-top-color: var(--orange); }
+.step .n {
+  font-family: var(--mono); font-size: .75rem; color: var(--fg-faint);
+  letter-spacing: .12em;
+}
+.step h3 { margin: .5rem 0 .4rem; font-size: 1rem; font-weight: 600; }
+.step p { margin: 0; color: var(--fg-dim); font-size: .9rem; }
+
+/* ── Portales ───────────────────────────────────────────────────────────── */
+.portals { display: flex; flex-wrap: wrap; gap: .6rem; }
+.chip {
+  display: inline-flex; align-items: center; gap: .5rem;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: .45rem .9rem; font-size: .875rem;
+  background: var(--surface-a);
+}
+.chip .tick { color: var(--orange); font-size: .8rem; }
+.chip.plain { color: var(--fg-dim); }
+.legend { display: flex; flex-wrap: wrap; gap: 1.25rem; margin-top: 1.1rem; font-size: .82rem; color: var(--fg-faint); }
+.legend span { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* ── Instalación ────────────────────────────────────────────────────────── */
+.install-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+pre.code {
+  margin: 0; padding: 1.15rem 1.25rem;
+  background: var(--surface-a); border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--mono); font-size: .85rem; line-height: 1.75;
+  overflow-x: auto;
+}
+pre.code .c { color: var(--fg-faint); }
+pre.code .p { color: var(--orange); user-select: none; }
+.req { list-style: none; padding: 0; margin: 0; display: grid; gap: .7rem; }
+.req li { display: flex; gap: .65rem; color: var(--fg-dim); font-size: .92rem; }
+.req .ok { color: var(--pine-lift); flex-shrink: 0; }
+
+/* ── Pie ────────────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--line);
+  padding-block: 2.25rem;
+  color: var(--fg-faint); font-size: .85rem;
+}
+.foot-in { display: flex; flex-wrap: wrap; gap: 1rem 2rem; align-items: center; }
+.foot-in a { color: var(--fg-dim); text-decoration: none; }
+.foot-in a:hover { color: var(--fg); }
+.foot-right { margin-left: auto; display: flex; gap: 1.25rem; flex-wrap: wrap; }
+</style>
+</head>
+
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top">BUSCAPEGA<span class="dot">.</span></a>
+    <nav class="nav-links">
+      <a class="hide-sm" href="#capacidades">Qué hace</a>
+      <a class="hide-sm" href="#flujo">Cómo funciona</a>
+      <a class="hide-sm" href="#portales">Portales</a>
+      <a class="nav-gh" href="https://github.com/RodrigoMoya-dev/buscapega">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO ─ el robot del instalador, con la bandera en el pecho -->
+  <div class="hero">
+    <pre class="robot" role="img" aria-label="Robot de Buscapega con la bandera chilena en el pecho">         ╻
+      ╭──┴──╮
+      │ <span class="eye">o</span> <span class="eye">o</span> │
+      │  <span class="mouth">‿</span>  │
+     ╭┴─────┴╮
+    <span class="arm">█</span>┤ <span class="canton">✦ </span><span class="flag-white">▀▀▀</span> ├<span class="arm">█</span>
+    <span class="arm">█</span>┤ <span class="flag-red">▄▄▄▄▄</span> ├<span class="arm">█</span>
+     ╰─┬───┬─╯
+       ╹   ╹</pre>
+
+    <p class="eyebrow">Automatización de búsqueda de empleo</p>
+
+    <h1>Busca, evalúa y <strong>postula</strong> a ofertas de empleo por ti</h1>
+
+    <p class="lead">
+      Buscapega revisa los portales de empleo, puntúa cada oferta contra tu perfil
+      y postula automáticamente en los que lo permiten. Corre entero en tu equipo:
+      tus datos y tus sesiones no salen de ahí.
+    </p>
+
+    <div class="buttons">
+      <a class="btn btn-primary" href="#instalacion">Instalar</a>
+      <a class="btn btn-ghost" href="https://github.com/RodrigoMoya-dev/buscapega">Ver el código</a>
+    </div>
+
+    <p class="flag-note">
+      <span class="bar b1"></span><span class="bar b2"></span>
+      Hecho desde Chile
+    </p>
+  </div>
+
+  <!-- CAPACIDADES -->
+  <section id="capacidades" class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Qué hace</p>
+      <h2>El trabajo repetitivo de postular, hecho por ti</h2>
+      <p>Buscar la oferta, leerla, decidir si vale la pena y llenar el formulario. Buscapega se encarga de las cuatro cosas.</p>
+    </div>
+
+    <div class="grid">
+      <article class="card">
+        <span class="ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        </span>
+        <h3>Busca en varios portales</h3>
+        <p>Doce portales de Chile, España, LATAM e internacionales, en una sola pasada. Eliges cuáles entran en la búsqueda.</p>
+      </article>
+
+      <article class="card">
+        <span class="ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
+        </span>
+        <h3>Puntúa cada oferta</h3>
+        <p>Compara la oferta con tu perfil y le pone un puntaje, para que revises primero lo que de verdad encaja.</p>
+      </article>
+
+      <article class="card">
+        <span class="ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v13H7l-3 3z"/><path d="M8 10h8M8 13.5h5"/></svg>
+        </span>
+        <h3>Postula automáticamente</h3>
+        <p>En seis portales completa el formulario por ti, con la carta de presentación redactada para esa oferta.</p>
+      </article>
+
+      <article class="card">
+        <span class="ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5z"/></svg>
+        </span>
+        <h3>Te avisa por WhatsApp</h3>
+        <p>Un resumen diario con las postulaciones enviadas y lo que quedó esperando tu revisión.</p>
+      </article>
+
+      <article class="card">
+        <span class="ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
+        </span>
+        <h3>Todo en tu equipo</h3>
+        <p>Se instala con Docker en tu computador. Tu CV, tu perfil y tus sesiones de los portales se quedan ahí.</p>
+      </article>
+      <article class="card">
+        <span class="ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        <h3>Agrega los tuyos</h3>
+        <p>Pegas la dirección de otro portal y Buscapega revisa si puede leerlo y postular en él antes de sumarlo.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- FLUJO ─ numerado porque es una secuencia real, no adorno -->
+  <section id="flujo" class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Cómo funciona</p>
+      <h2>De la oferta publicada a la postulación enviada</h2>
+      <p>Cada día, sin que tengas que abrir un portal.</p>
+    </div>
+
+    <div class="flow">
+      <div class="step">
+        <div class="n">PASO 01</div>
+        <h3>Recolecta</h3>
+        <p>Recorre los portales activos y trae las ofertas nuevas.</p>
+      </div>
+      <div class="step">
+        <div class="n">PASO 02</div>
+        <h3>Evalúa</h3>
+        <p>Puntúa cada oferta contra tu perfil y descarta lo que no encaja.</p>
+      </div>
+      <div class="step">
+        <div class="n">PASO 03</div>
+        <h3>Revisas</h3>
+        <p>Las ofertas llegan a tu bandeja. Guardas o descartas con un clic.</p>
+      </div>
+      <div class="step">
+        <div class="n">PASO 04</div>
+        <h3>Postula</h3>
+        <p>En los portales compatibles envía la postulación y te avisa del resultado.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PORTALES -->
+  <section id="portales" class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Portales</p>
+      <h2>Doce portales, seis con postulación automática</h2>
+      <p>En el resto recibes la oferta evaluada y postulas tú. Puedes agregar otros validando su sitio desde la aplicación.</p>
+    </div>
+
+    <div class="portals">
+      <span class="chip"><span class="tick" aria-hidden="true">✦</span>FindJobIT</span>
+      <span class="chip"><span class="tick" aria-hidden="true">✦</span>Tecnoempleo</span>
+      <span class="chip"><span class="tick" aria-hidden="true">✦</span>ChileTrabajos</span>
+      <span class="chip"><span class="tick" aria-hidden="true">✦</span>Chumi-IT</span>
+      <span class="chip"><span class="tick" aria-hidden="true">✦</span>RemoteLatinos</span>
+      <span class="chip"><span class="tick" aria-hidden="true">✦</span>GetOnBrd</span>
+      <span class="chip plain">Torre.ai</span>
+      <span class="chip plain">InfoJobs</span>
+      <span class="chip plain">LaraJobs</span>
+      <span class="chip plain">FlexJobs</span>
+      <span class="chip plain">Remotive</span>
+      <span class="chip plain">RemoteOK</span>
+    </div>
+
+    <div class="legend">
+      <span><span class="tick" style="color:var(--orange)" aria-hidden="true">✦</span> Postula por ti</span>
+      <span>Sin marca: recibes la oferta y postulas tú</span>
+    </div>
+  </section>
+
+  <!-- INSTALACIÓN -->
+  <section id="instalacion" class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Instalación</p>
+      <h2>Tres comandos</h2>
+      <p>El instalador te pregunta lo necesario, levanta los servicios y te deja la dirección para entrar.</p>
+    </div>
+
+    <div class="install-grid">
+      <pre class="code"><span class="c"># 1. Traer el proyecto</span>
+<span class="p">$</span> git clone https://github.com/RodrigoMoya-dev/buscapega.git
+
+<span class="c"># 2. Entrar a la carpeta</span>
+<span class="p">$</span> cd buscapega
+
+<span class="c"># 3. Instalar</span>
+<span class="p">$</span> bash install.sh</pre>
+
+      <ul class="req">
+        <li><span class="ok" aria-hidden="true">✓</span><span><strong>Docker</strong> instalado y corriendo. Es todo lo obligatorio.</span></li>
+        <li><span class="ok" aria-hidden="true">✓</span><span>Los datos que te pida son opcionales salvo el nombre: puedes omitirlos con Enter y completarlos después desde la web.</span></li>
+        <li><span class="ok" aria-hidden="true">✓</span><span>La primera instalación tarda entre 5 y 15 minutos, según tu conexión.</span></li>
+        <li><span class="ok" aria-hidden="true">✓</span><span>Si algo falla, el instalador dice la causa y retoma donde quedó al reintentar.</span></li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>Buscapega · Proyecto personal de código abierto</span>
+    <span class="foot-right">
+      <a href="https://github.com/RodrigoMoya-dev/buscapega">Repositorio</a>
+      <a href="https://github.com/RodrigoMoya-dev/buscapega/issues">Reportar un problema</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
