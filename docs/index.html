@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buscapega — Automatización de búsqueda de empleo</title>
+  <style>
+    :root { --pine:#297373; --orange:#c84c09; --celadon:#bcd8c1; --blush:#fad8d6; }
+    * { box-sizing:border-box; }
+    body {
+      margin:0; padding:3rem 1.5rem;
+      font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+      background:#0b0f10; color:#e8eced; line-height:1.6;
+    }
+    main { max-width:44rem; margin:0 auto; }
+    h1 { color:var(--orange); font-size:clamp(2rem,6vw,3rem); margin:0 0 .5rem; }
+    .lead { color:var(--celadon); font-size:1.15rem; margin:0 0 2.5rem; }
+    a.cta {
+      display:inline-block; background:var(--pine); color:#fff;
+      padding:.75rem 1.5rem; border-radius:.5rem; text-decoration:none; font-weight:600;
+    }
+    a.cta:hover { background:#1f5a5a; }
+    footer { margin-top:4rem; color:#7d8a8b; font-size:.875rem; }
+  
+</style>
+</head>
+<body>
+  <main>
+    <h1>Buscapega</h1>
+    <p class="lead">Automatización de búsqueda de empleo. Hecho desde Chile.</p>
+    <p>
+      Busca ofertas en varios portales, las evalúa contra tu perfil y postula
+      automáticamente en los portales compatibles.
+    </p>
+    <p><a class="cta" href="https://github.com/RodrigoMoya-dev/buscapega">Ver en GitHub</a></p>
+    <footer>Proyecto personal · <span id="anio"></span></footer>
+  </main>
+  <script>document.getElementById("anio").textContent = new Date().getFullYear();</script>
+</body>
+</html>
