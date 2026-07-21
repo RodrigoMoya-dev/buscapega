@@ -106,11 +106,17 @@ confirmar con Rodrigo cómo proceder (migrar / empezar limpio / mantener nombres
       y `smoke-test.sh --presto`), que no ve quien instala — **confirmar con Rodrigo**
 - [x] Validado: `compose config -q`, `py_compile`, `node --check`, `bash -n` de todos los shells
 
-### `feature_web_portales_21072026` (mejora)
-- [ ] Ofertas: mostrar solo portales autenticados o que no requieran autenticación
-- [ ] Portales: aviso destacado cuando la sesión con Google no está iniciada
-- [ ] Portales: explicación bajo "Portales con autopostulación" (por qué registrar la
-      sesión: permite buscar y autopostular según los criterios)
+### `feature_web_portales_21072026` (mejora) — ✅ COMPLETADA
+- [x] Campo nuevo `requires_auth` en `GET /api/portals`, derivado de `session_key` (que no
+      se expone). Sin él la UI no distinguía "sin sesión" de "no necesita sesión"
+- [x] Ofertas: los checkboxes de Portal solo listan
+      `p.active && (!p.requires_auth || p.session_active)`
+- [x] Portales: aviso **rojo** con ícono cuando el portal exige sesión y no la tiene
+      ("no buscará ofertas ni podrá postular hasta que la registres"), por delante del
+      aviso ámbar de postulación manual
+- [x] Portales: recuadro explicativo al abrir "Portales con auto-postulación" — por qué
+      registrar la sesión y que queda solo en el equipo del usuario
+- [x] Validado con `tsc --noEmit` (exit 0, sin errores) y `py_compile`
 
 ### `feature_web_avisos_fijos_21072026` (mejora)
 - [ ] Los avisos (ej. el de mensaje de prueba de WhatsApp) quedan fijos y con botón de cierre

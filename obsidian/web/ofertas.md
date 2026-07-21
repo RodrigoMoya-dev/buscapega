@@ -45,3 +45,18 @@ Antes, "Buscar ofertas" disparaba el scraping y esperaba 5 s fijos sin feedback 
 - Portales sin auto-postulación: en vez de botón, el texto _"Esta oferta no fue posible
   postularla de forma automática, aunque puedes hacerlo usando una API KEY de Anthropic."_
   (el título de la tarjeta sigue enlazando a la oferta).
+
+## Cambios 21/07/2026 — filtro de portales
+
+Los checkboxes de **Portal** ya no listan todos los portales activos. Ahora se muestran
+solo los que de verdad pueden traer ofertas:
+
+```ts
+ps.filter((p) => p.active && (!p.requires_auth || p.session_active))
+```
+
+Es decir: portales **autenticados**, o que **no requieren autenticación**. Antes aparecían
+también los que exigen sesión sin tenerla capturada; filtrar por uno de ellos no devolvía
+nada y daba la impresión de que la búsqueda estaba rota.
+
+`requires_auth` es un campo nuevo de `GET /api/portals` — ver [[portales]].

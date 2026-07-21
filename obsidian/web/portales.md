@@ -115,3 +115,31 @@ Bajo el campo de URL: aviso de que con Claude Code se puede validar desde la ter
   nuevo campo `active`); banderas con tooltip; botón "Visitar"; diálogo persistente de
   registro de sesión con Google.
 - Backend: `list_portals` ahora devuelve `active`; nuevo endpoint `toggle_portal`.
+
+## Cambios 21/07/2026 — sesión de Google visible
+
+### Explicación bajo "Portales con auto-postulación"
+El acordeón abre con un recuadro que responde **por qué** hay que registrar la sesión:
+estos portales solo muestran ofertas y aceptan postulaciones si estás identificado, y con
+la sesión registrada Buscapega puede **buscar y postular automáticamente** según los
+criterios. Se recalca que la sesión queda **solo en el equipo del usuario**.
+
+Antes el botón "Registrar sesión con Google" parecía un trámite opcional y se saltaba.
+
+### Aviso destacado cuando falta la sesión
+`PortalRow` muestra un bloque **rojo** con ícono de alerta cuando
+`portal.requires_auth && !portal.session_active`:
+
+> **Sesión con Google no iniciada.** Este portal no buscará ofertas ni podrá postular
+> hasta que la registres con el botón de abajo.
+
+Va **antes** del aviso ámbar de "postulación manual" porque es la causa más común de
+"activé el portal y no llega nada".
+
+### Campo nuevo `requires_auth`
+`GET /api/portals` expone `requires_auth`, derivado de `session_key` (que **no** se envía
+al frontend). Sin ese dato la UI no podía distinguir *"no tiene sesión"* de *"no necesita
+sesión"*. Portales con `requires_auth: true`: FindJobIT, Tecnoempleo, ChileTrabajos,
+Chumi-IT, RemoteLatinos y GetOnBrd.
+
+Ver [[ofertas]].
