@@ -1,3 +1,44 @@
+Las siguientes tareas tienen que ver con la interfaz de la página de github: En el proyecto está en la carpeta /docs. 
+
+
+1. ¿Puedes cambiarle los estilos de color y usar la paleta entregada? 
+2. Lo mismo ocurre con el bot que aparece ¿Puedes usar el bot entregado? 
+	1. Ambos (Estilo e imagen del bot) están en /Users/rodrigo/Proyectos/Moya.dev/Proyectos internos/buscapega/grafica. 
+	2. ¿Puedes darle un efecto de movimineto al bot, así como si flotara en el aire? 
+3. El texto de "Buscar la oferta, leerla.." utiliza todo el ancho de la página. Adjunto evidencia. 
+4. ![[Pasted image 20260721221246.png]]
+
+
+	En los pasos, también usar el ancho de la página para el título. Además, los textos debieran ser los siguientes (Adjunto evidencia): 
+	![[Pasted image 20260721221405.png]]
+
+
+A continuación van los textos de las páginas. 
+
+ * PASO 01
+####  Recolecta
+
+Recorre los portales activos de forma autónoma y trae las ofertas nuevas.
+
+* PASO 02
+#### Filtra 
+
+Evalua cada oferta con tu perfil y revisa sólo las que se adaptan. 
+
+* PASO 03 
+#### Autopostula
+
+Si el portal reportado lo permite, genera automáticamente la postulación, enviando correo con los datos. 
+
+* PASO 04
+#### Postula manualmente 
+
+* Si no es posible autopostular, igual te llegará el aviso a whatsapp indicando porqué no se pudo postular. 
+
+
+* Una vez terminado, revisa todos los temas pendientes aquí abajo, y todo lo que está listo anda tachandolo. 
+
+---- 
 ### Instalador 
 
 * Al momento de anotar el correo, lo quise evitar pero no me deja. Entonces ¿Es obligatorio u opcional? 
@@ -169,3 +210,28 @@ proceso, no un adorno.
 3. En 1-3 minutos queda en `https://rodrigomoya-dev.github.io/buscapega/`
 
 Ver [[Creación de página github]].
+
+---
+
+# PLAN DE TRABAJO — sesión 21/07/2026 (ronda 3): gráfica de la página
+
+Rama: `feature_pagina_github_pages_21072026` (se continúa la misma, es la misma página).
+
+## Tareas
+- [ ] **1. Paleta entregada** — aplicar `grafica/palette.scss` de verdad (hoy el fondo es
+      un gris-verdoso neutro que no sale de ahí). Bordeaux como base oscura, blush como
+      texto, naranja y pino como acentos, celadon en los iconos. Modo claro con el blush
+      aclarado y el bordeaux como tinta
+- [ ] **2. El bot entregado** — reemplazar el robot ASCII del hero por
+      `grafica/logobuscapega.jpg`. El archivo trae el damero de "transparencia" pintado
+      encima (es JPG), hay que recortarlo a PNG con alfa real
+- [ ] **3. Flotación del bot** — animarlo como si flotara, con sombra que acompaña.
+      Respetando `prefers-reduced-motion`
+- [ ] **4. Ancho completo en los encabezados** — hoy `.section-head` está limitado a
+      `60ch` y el título/bajada quedan en media página mientras las tarjetas van a todo
+      el ancho. Se quita el tope
+- [ ] **5. Textos nuevos del flujo** — PASO 01 Recolecta / 02 Filtra / 03 Autopostula /
+      04 Postula manualmente, con los textos entregados
+- [ ] **6. Revisar en el navegador** (escritorio y móvil, oscuro y claro)
+- [ ] **7. Documentar en obsidian y subir a GitHub + merge a main**
+- [ ] **8. Gitea** — solo si Presto responde
