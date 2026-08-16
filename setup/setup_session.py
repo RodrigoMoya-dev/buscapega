@@ -23,6 +23,7 @@ disponibles para el contenedor local de Buscapega automáticamente.
   100% local en el equipo de quien lo instala.
 """
 
+import os
 import sys
 import json
 import subprocess
@@ -42,9 +43,10 @@ TIMEOUT_LOGIN = 5 * 60 * 1000  # 5 minutos para completar el login
 SCRAPER_CONTAINER = "buscapega_scraper"
 SCRAPER_COOKIES_DIR = "/app/cookies"
 
-# Sincronización opcional al servidor Presto (uso interno del desarrollador).
+# Sincronización opcional al servidor de despliegue (uso interno del desarrollador).
 # NO se usa en instalaciones locales: Buscapega funciona 100% local.
-PRESTO_COOKIES_PATH = "rodrigo@presto:~/docker/buscapega/cookies/"
+# Configurable por variable de entorno; el valor por defecto es un placeholder.
+PRESTO_COOKIES_PATH = os.getenv("PRESTO_COOKIES_PATH", "usuario@servidor:~/docker/buscapega/cookies/")
 
 BROWSERS = {
     "chrome": {"channel": "chrome", "exe": None},

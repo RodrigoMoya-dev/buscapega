@@ -24,13 +24,10 @@ from .cover_letter import generate as generate_cover_letter
 # ── Configuración ─────────────────────────────────────────────────────────────
 GMAIL_USER = os.getenv("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
-GMAIL_FROM_NAME = os.getenv("GMAIL_FROM_NAME", "Nombre Apellido")
+GMAIL_FROM_NAME = os.getenv("GMAIL_FROM_NAME", "")
 WHATSAPP_URL = os.getenv("WHATSAPP_URL", "http://whatsapp:3001")
 # Google Apps Script webhook para enviar emails vía Gmail API (evita bloqueo de SMTP)
-GAS_WEBHOOK_URL = os.getenv(
-    "GAS_WEBHOOK_URL",
-    "https://script.google.com/macros/s/AKfycbzHCRUehm8BUj8_BpVi_ikdeB0xnXbJhKVhClVxjgfwc4jYj-3gzAYiOi-OgqK2DcLwfw/exec"
-)
+GAS_WEBHOOK_URL = os.getenv("GAS_WEBHOOK_URL", "")
 
 BASE_URL = "https://www.findjobit.com"
 SESSION_FILE = Path("/app/cookies/findjobit_session.json")
@@ -41,9 +38,10 @@ CV_ES = CV_DIR / "cv_es.pdf"
 CV_EN = CV_DIR / "cv_en.pdf"
 CV_FALLBACK = CV_DIR / "cv.pdf"
 
-# URLs públicas del CV (se incluyen como link en emails en lugar de adjuntar el archivo)
-CV_URL_ES = "https://ejemplo.com/cv/cv_es.pdf"
-CV_URL_EN = "https://ejemplo.com/cv/cv_en.pdf"
+# URLs públicas del CV (se incluyen como link en emails en lugar de adjuntar el archivo).
+# Se configuran por variable de entorno; vacías por defecto.
+CV_URL_ES = os.getenv("CV_URL_ES", "")
+CV_URL_EN = os.getenv("CV_URL_EN", "")
 
 APPLICANT_NAME = GMAIL_FROM_NAME
 

@@ -39,7 +39,7 @@ playwright install chromium
 ./configuraciones/setup-sessions.sh --lista          # list portals and session status (root wrapper, cds into setup/)
 ./configuraciones/setup-sessions.sh getonbrd         # capture session for a portal
 ```
-After capturing, the script auto-rsync's cookies to `rodrigo@presto:~/docker/buscapega/cookies/`.
+After capturing, the script auto-rsync's cookies to the deploy server (configurable via the `PRESTO_COOKIES_PATH` env var, e.g. `usuario@servidor:~/docker/buscapega/cookies/`).
 
 **WhatsApp QR linking**: `./configuraciones/vincular-whatsapp.sh [host] [port]` from the project root (self-contained, just curls the whatsapp service).
 

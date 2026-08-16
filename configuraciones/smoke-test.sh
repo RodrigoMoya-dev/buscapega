@@ -18,7 +18,7 @@
 #   ./configuraciones/smoke-test.sh                 # local (puertos por defecto)
 #   ./configuraciones/smoke-test.sh --presto        # presto (frontend 3020, backend 8020, scraper 8021)
 #   ./configuraciones/smoke-test.sh --static        # solo fase estática (sin servicios)
-#   HOST=192.168.100.6 ./configuraciones/smoke-test.sh   # host remoto con puertos por defecto
+#   HOST=192.168.1.100 ./configuraciones/smoke-test.sh   # host remoto con puertos por defecto
 #
 # Variables de entorno (sobre-escriben los defaults):
 #   HOST, BACKEND_PORT, SCRAPER_PORT, FRONTEND_PORT
@@ -49,7 +49,7 @@ STATIC_ONLY=0
 for arg in "$@"; do
   case "$arg" in
     --presto)
-      HOST="${HOST_PRESTO:-192.168.100.6}"
+      HOST="${HOST_PRESTO:-presto.local}"
       BACKEND_PORT=8020; SCRAPER_PORT=8021; FRONTEND_PORT=3020 ;;
     --static) STATIC_ONLY=1 ;;
     -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;

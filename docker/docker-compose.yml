@@ -55,7 +55,7 @@ services:
       WHATSAPP_URL: http://whatsapp:3001
       GMAIL_USER: ${GMAIL_USER:-}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD:-}
-      GMAIL_FROM_NAME: ${GMAIL_FROM_NAME:-Nombre Apellido}
+      GMAIL_FROM_NAME: ${GMAIL_FROM_NAME:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PYTHONUNBUFFERED: "1"
     volumes:

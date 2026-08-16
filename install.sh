@@ -483,7 +483,7 @@ echo "Necesitamos algunos datos para configurar el sistema."
 echo "Presiona Enter para usar el valor por defecto (entre corchetes)."
 echo ""
 
-ask "→ Tu nombre (se usará para saludarte en la web, ej: Rodrigo):"
+ask "→ Tu nombre (se usará para saludarte en la web, ej: Ana):"
 read -r -p "  > " USER_NAME
 [[ -z "$USER_NAME" ]] && warn "Sin nombre — podrás agregarlo luego en la web (Configuración) o en documentos/settings.json."
 echo ""

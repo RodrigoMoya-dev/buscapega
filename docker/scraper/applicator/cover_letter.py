@@ -111,5 +111,5 @@ def _fallback_letter(offer: dict) -> str:
         f"y experiencia intermedia en Docker, VueJS y Java/Spring Boot.\n\n"
         f"Trabajo en modalidad remota desde Chile (UTC-3) y tengo nivel de inglés B2. "
         f"Quedo a disposición para una conversación.\n\n"
-        f"Saludos cordiales,\nNombre Apellido"
+        f"Saludos cordiales,\n{os.getenv('GMAIL_FROM_NAME', '')}".rstrip()
     )

@@ -11,7 +11,7 @@
 #   6. Notificar por Telegram con resumen
 #
 # Crontab sugerido (9:30am, Domingo-Viernes):
-#   30 9 * * 0-5 /home/rodrigo/scripts/cron_wrapper.sh "Buscapega Daily" "/home/rodrigo/scripts/buscapega-daily.sh"
+#   30 9 * * 0-5 /home/usuario/scripts/cron_wrapper.sh "Buscapega Daily" "/home/usuario/scripts/buscapega-daily.sh"
 # =============================================================================
 
 BACKEND="http://localhost:8020"
@@ -20,7 +20,7 @@ SCRAPER="http://localhost:8021"
 # un servidor concreto; el proyecto corre en el equipo de quien lo instala, así que por
 # defecto es local y se puede sobrescribir con la variable de entorno FRONTEND_URL.
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
-NOTIFY="/home/rodrigo/scripts/notify_telegram.sh"
+NOTIFY="${NOTIFY_SCRIPT:-/home/usuario/scripts/notify_telegram.sh}"
 LOG_DIR="/var/log/buscapega"
 LOG_FILE="$LOG_DIR/daily-$(date '+%Y%m%d_%H%M%S').log"
 MIN_SCORE=40          # score mínimo para auto-postular (0-100)
