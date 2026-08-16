@@ -1,5 +1,5 @@
 #!/bin/bash
-# Sincroniza main → rama public → GitHub (excluye obsidian/)
+# Sincroniza main → rama public → GitHub (excluye documentación privada)
 set -e
 
 CURRENT=$(git branch --show-current)
@@ -8,7 +8,7 @@ echo "Sincronizando GitHub..."
 
 git checkout public
 git merge main --no-edit
-git rm --cached -r obsidian/ 2>/dev/null || true
+git rm --cached -r obsidian/ buscapega/ grafica/ 2>/dev/null || true
 git commit --amend --no-edit
 git push github public:main
 

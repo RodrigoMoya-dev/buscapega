@@ -100,7 +100,7 @@ PENDIENTE → GUARDADA | DESCARTADA | POSTULANDO → POSTULADA | PARCIAL | FALLI
 ### Important Details
 
 - `technologies` on `Offer` is stored as a JSON string (not JSONB): always `JSON.parse()` / `json.dumps()` when reading or writing
-- The evaluator reads the candidate profile from `/buscapega/perfil.md` inside the container. The `docker/docker-compose.yml` mounts the project root at `/buscapega:ro`, so `perfil.md` must exist at the project root (not inside `obsidian/`). Edit `obsidian/persona/perfil.md` and copy/symlink to root to update the evaluator's profile
+- The evaluator reads the candidate profile from `/buscapega/perfil.md` inside the container. The `docker/docker-compose.yml` mounts the repo root at `/buscapega:ro`, so `perfil.md` must exist at the repo root. The editable source lives in the local docs vault at `../buscapega/persona/perfil.md` (folder `buscapega/`, sibling of the repo, outside version control). Edit it there and copy it to the repo root as `perfil.md` to update the evaluator's profile
 - Auto-apply portals (supported): Tecnoempleo, Chumi-IT, ChileTrabajos, RemoteLatinos, GetOnBrd, Torre.ai, InfoJobs
 - Portals without auto-apply: LaraJobs, FlexJobs, Remotive, RemoteOK — use "Marcar como postulado" manually
 - n8n webhook URL is set via `N8N_WEBHOOK_URL` env var (default: `http://localhost:5678/webhook/buscapega-apply-result`)

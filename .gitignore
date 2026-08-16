@@ -50,8 +50,12 @@ docker/scraper/applicator/__pycache__/
 # Perfiles de navegadores adicionales
 setup/profiles/brave/
 setup/profiles/vivaldi/
-# Notas personales (solo Gitea — no publicar en GitHub)
+# Documentación y material privado (viven FUERA del repo, como carpetas hermanas).
+# Se listan por seguridad, por si se copiaran dentro del árbol del repo.
 obsidian/
+/buscapega
+/grafica
+/perfil.md
 
 # Clones de pruebas locales (no versionar)
 /test/

@@ -44,7 +44,7 @@ Cuando se invoque este comando con una URL:
    Automatizable: <Sí / No>
    ```
 
-4. Si el portal es automatizable, sugiere agregarlo al archivo `obsidian/persona/portales de trabajo.md`.
+4. Si el portal es automatizable, sugiere agregarlo al archivo `../buscapega/persona/portales de trabajo.md`.
 
 5. Si el portal ya existe en `portales de trabajo.md`, informa que ya está registrado.
 
