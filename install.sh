@@ -157,8 +157,8 @@ diagnosticar_error() {
   elif grep -qiE "no space left on device|disk quota exceeded|write error: no space" "$logfile"; then
     echo -e "${RED}  CAUSA: te quedaste sin ESPACIO EN DISCO.${RESET}"
     echo -e "    ${BOLD}Cómo liberar espacio de Docker:${RESET}"
-    echo -e "      ${CYAN}docker system df${RESET}         # ver cuánto ocupa Docker"
-    echo -e "      ${CYAN}docker system prune -a${RESET}   # borra imágenes/cachés sin usar"
+    echo -e "      ${CYAN}$ENGINE system df${RESET}         # ver cuánto ocupa Docker"
+    echo -e "      ${CYAN}$ENGINE system prune -a${RESET}   # borra imágenes/cachés sin usar"
     echo -e "    Docker Desktop además tiene un límite propio de disco en"
     echo -e "    Settings → Resources → Disk image size."
 
@@ -172,7 +172,7 @@ diagnosticar_error() {
   elif grep -qiE "permission denied|operation not permitted|eacces" "$logfile"; then
     echo -e "${RED}  CAUSA: problema de PERMISOS.${RESET}"
     echo -e "    ${BOLD}Qué revisar:${RESET}"
-    echo -e "      • Que tu usuario pueda usar Docker:  ${CYAN}docker ps${RESET}"
+    echo -e "      • Que tu usuario pueda usar Docker:  ${CYAN}$ENGINE ps${RESET}"
     echo -e "      • En Linux, que estés en el grupo docker:"
     echo -e "        ${CYAN}sudo usermod -aG docker \$USER${RESET}  (y vuelve a iniciar sesión)"
     echo -e "      • Que tengas permiso de escritura en ${CYAN}${SCRIPT_DIR}${RESET}"
@@ -188,10 +188,10 @@ diagnosticar_error() {
     echo -e "    si dos builds corrieron a la vez sobre el mismo Docker)."
     echo -e "    ${BOLD}Cómo repararlo (de menos a más agresivo):${RESET}"
     echo -e "      ${CYAN}1.${RESET} Limpiar la caché de compilación:"
-    echo -e "         ${CYAN}docker builder prune -af${RESET}"
+    echo -e "         ${CYAN}$ENGINE builder prune -af${RESET}"
     echo -e "      ${CYAN}2.${RESET} Si sigue: reinicia Docker Desktop (Quit y vuelve a abrir) y reintenta."
     echo -e "      ${CYAN}3.${RESET} Si aún persiste: limpieza profunda ${YELLOW}(borra imágenes sin usar)${RESET}:"
-    echo -e "         ${CYAN}docker system prune -af${RESET}"
+    echo -e "         ${CYAN}$ENGINE system prune -af${RESET}"
     echo -e "    ${GREEN}Luego vuelve a ejecutar el instalador: retomará donde quedó.${RESET}"
 
   else
@@ -400,27 +400,60 @@ echo ""
 # ─────────────────────────────────────────────────────────────────────────────
 log "Verificando prerrequisitos del sistema..."
 
-if ! command -v docker &> /dev/null; then
-  error "Docker no está instalado. Instálalo desde https://docs.docker.com/get-docker/"
+# ── Motor de contenedores: Podman (preferido) o Docker ───────────────────────
+# Buscapega corre igual sobre ambos: el docker-compose.yml es el mismo y Podman
+# expone una CLI compatible (ps, volume, info, stop, rm...). Se prefiere Podman por
+# ser daemonless/rootless, más liviano y multiplataforma, con Docker de alternativa.
+# Se puede forzar uno con la variable de entorno ENGINE:  ENGINE=docker ./install.sh
+if [[ -n "${ENGINE:-}" ]]; then
+  ENGINE_CANDIDATOS=("$ENGINE")
+else
+  ENGINE_CANDIDATOS=(podman docker)
 fi
+ENGINE=""
+for _c in "${ENGINE_CANDIDATOS[@]}"; do
+  if command -v "$_c" &> /dev/null; then ENGINE="$_c"; break; fi
+done
+if [[ -z "$ENGINE" ]]; then
+  error "No se encontró un motor de contenedores. Instala Podman (https://podman.io/) o Docker (https://docs.docker.com/get-docker/)."
+fi
+if [[ "$ENGINE" == "podman" ]]; then ENGINE_LABEL="Podman"; else ENGINE_LABEL="Docker"; fi
 
-if docker compose version &> /dev/null 2>&1; then
-  COMPOSE_CMD="docker compose"
+# Compose: se prefiere el del propio motor y se cae a las variantes disponibles.
+if [[ "$ENGINE" == "podman" ]] && command -v podman-compose &> /dev/null; then
+  COMPOSE_CMD="podman-compose"
+elif [[ "$ENGINE" == "podman" ]] && podman compose version &> /dev/null 2>&1; then
+  COMPOSE_CMD="podman compose"
+elif $ENGINE compose version &> /dev/null 2>&1; then
+  COMPOSE_CMD="$ENGINE compose"
 elif command -v docker-compose &> /dev/null; then
   COMPOSE_CMD="docker-compose"
+elif command -v podman-compose &> /dev/null; then
+  COMPOSE_CMD="podman-compose"
 else
-  error "Docker Compose no está disponible. Actualiza Docker Desktop o instala docker-compose."
+  error "No hay Compose disponible para $ENGINE_LABEL.
+  Podman: instala podman-compose (pip install podman-compose) o usa 'podman compose'.
+  Docker: actualiza Docker Desktop o instala docker-compose."
 fi
 
-ok "Docker disponible: $(docker --version | head -1)"
+ok "$ENGINE_LABEL disponible: $($ENGINE --version | head -1)"
+ok "Compose: $COMPOSE_CMD"
 
-# El binario existe, pero el daemon puede estar apagado (Docker Desktop cerrado).
-# Sin daemon, los 'docker compose build/up' fallan más adelante con errores confusos.
-if ! docker info &> /dev/null 2>&1; then
-  error "Docker está instalado pero el daemon no responde.
+# El binario existe, pero el motor puede no responder:
+#  - Docker: daemon apagado (Docker Desktop cerrado).
+#  - Podman en macOS/Windows: la máquina no está iniciada (podman machine start).
+# Sin motor activo, los 'compose build/up' fallan más adelante con errores confusos.
+if ! $ENGINE info &> /dev/null 2>&1; then
+  if [[ "$ENGINE" == "podman" ]]; then
+    error "Podman está instalado pero no responde.
+  En macOS/Windows inicia la máquina:  podman machine init  (una sola vez)  &&  podman machine start
+  En Linux (rootless) revisa:  systemctl --user status podman.socket"
+  else
+    error "Docker está instalado pero el daemon no responde.
   Inicia Docker Desktop (o el servicio docker) y vuelve a ejecutar install.sh."
+  fi
 fi
-ok "Docker daemon activo"
+ok "$ENGINE_LABEL activo"
 
 # ── Recursos del sistema ─────────────────────────────────────────────────────
 # Se comprueban ANTES de empezar: un build que muere a los 10 minutos por falta de
@@ -434,7 +467,7 @@ ESPACIO_LIBRE_GB=$(df -Pk "$SCRIPT_DIR" 2>/dev/null | awk 'NR==2 {printf "%d", $
 if [[ -n "${ESPACIO_LIBRE_GB:-}" ]] && [[ "$ESPACIO_LIBRE_GB" =~ ^[0-9]+$ ]]; then
   if [[ $ESPACIO_LIBRE_GB -lt 5 ]]; then
     warn "Solo quedan ${ESPACIO_LIBRE_GB} GB libres en disco. Las imágenes ocupan ~6 GB."
-    warn "Libera espacio (${CYAN}docker system prune -a${RESET}) o el build fallará a mitad de camino."
+    warn "Libera espacio (${CYAN}$ENGINE system prune -a${RESET}) o el build fallará a mitad de camino."
     read -r -p "  ¿Continuar de todas formas? (s/N) > " SEGUIR_DISCO
     SEGUIR_DISCO_L=$(echo "$SEGUIR_DISCO" | tr '[:upper:]' '[:lower:]')
     [[ "$SEGUIR_DISCO_L" != "s" && "$SEGUIR_DISCO_L" != "si" && "$SEGUIR_DISCO_L" != "y" ]] && \
@@ -446,17 +479,26 @@ if [[ -n "${ESPACIO_LIBRE_GB:-}" ]] && [[ "$ESPACIO_LIBRE_GB" =~ ^[0-9]+$ ]]; th
   fi
 fi
 
-# Memoria asignada a Docker. Con menos de 2 GB el build de frontend/WhatsApp suele
+# Memoria asignada al motor. Con menos de 2 GB el build de frontend/WhatsApp suele
 # morir por OOM (exit 137), que se ve como un fallo inexplicable.
-DOCKER_MEM_BYTES=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo "")
-if [[ -n "$DOCKER_MEM_BYTES" ]] && [[ "$DOCKER_MEM_BYTES" =~ ^[0-9]+$ ]]; then
-  DOCKER_MEM_GB=$((DOCKER_MEM_BYTES / 1024 / 1024 / 1024))
-  if [[ $DOCKER_MEM_GB -lt 2 ]]; then
-    warn "Docker tiene solo ${DOCKER_MEM_GB} GB de memoria asignada."
+# El template de `info` difiere: Docker expone {{.MemTotal}}; Podman {{.Host.MemTotal}}.
+if [[ "$ENGINE" == "podman" ]]; then
+  ENGINE_MEM_BYTES=$($ENGINE info --format '{{.Host.MemTotal}}' 2>/dev/null || echo "")
+else
+  ENGINE_MEM_BYTES=$($ENGINE info --format '{{.MemTotal}}' 2>/dev/null || echo "")
+fi
+if [[ -n "$ENGINE_MEM_BYTES" ]] && [[ "$ENGINE_MEM_BYTES" =~ ^[0-9]+$ ]]; then
+  ENGINE_MEM_GB=$((ENGINE_MEM_BYTES / 1024 / 1024 / 1024))
+  if [[ $ENGINE_MEM_GB -lt 2 ]]; then
+    warn "$ENGINE_LABEL tiene solo ${ENGINE_MEM_GB} GB de memoria asignada."
     warn "El build de frontend/WhatsApp puede morir por falta de memoria (exit 137)."
-    warn "Súbela en Docker Desktop → Settings → Resources → Memory (4 GB recomendado)."
+    if [[ "$ENGINE" == "podman" ]]; then
+      warn "Súbela recreando la máquina:  podman machine stop && podman machine set --memory 4096 && podman machine start"
+    else
+      warn "Súbela en Docker Desktop → Settings → Resources → Memory (4 GB recomendado)."
+    fi
   else
-    ok "Memoria disponible para Docker: ${DOCKER_MEM_GB} GB"
+    ok "Memoria disponible para $ENGINE_LABEL: ${ENGINE_MEM_GB} GB"
   fi
 fi
 
@@ -654,8 +696,8 @@ log "Verificando disponibilidad de puertos..."
 # limpiarlos. Los volúmenes viejos contienen la base de datos, las cookies de sesión y la
 # vinculación de WhatsApp anteriores; con el cambio de nombre ya no se leen, y se parte
 # limpio (decisión tomada al planificar el rebranding).
-LEGADO_CONT=$(docker ps -a --filter "name=wunen_" --format "{{.Names}}" 2>/dev/null || true)
-LEGADO_VOL=$(docker volume ls --format '{{.Name}}' 2>/dev/null | grep -E '^wunen_' || true)
+LEGADO_CONT=$($ENGINE ps -a --filter "name=wunen_" --format "{{.Names}}" 2>/dev/null || true)
+LEGADO_VOL=$($ENGINE volume ls --format '{{.Name}}' 2>/dev/null | grep -E '^wunen_' || true)
 if [[ -n "$LEGADO_CONT" || -n "$LEGADO_VOL" ]]; then
   warn "Encontré restos de la versión anterior del proyecto (se llamaba «wunen»):"
   # `|| true`: sin él, un `[[ ]] && …` falso devuelve 1 y bajo `set -e` puede cortar el
@@ -672,21 +714,21 @@ if [[ -n "$LEGADO_CONT" || -n "$LEGADO_VOL" ]]; then
   LIMPIAR_LEGADO_L=$(echo "$LIMPIAR_LEGADO" | tr '[:upper:]' '[:lower:]')
   if [[ "$LIMPIAR_LEGADO_L" == "s" || "$LIMPIAR_LEGADO_L" == "si" || "$LIMPIAR_LEGADO_L" == "y" ]]; then
     if [[ -n "$LEGADO_CONT" ]]; then
-      echo "$LEGADO_CONT" | xargs -r docker rm -f >/dev/null 2>&1 || true
+      echo "$LEGADO_CONT" | xargs -r $ENGINE rm -f >/dev/null 2>&1 || true
       ok "Contenedores «wunen» eliminados"
     fi
     if [[ -n "$LEGADO_VOL" ]]; then
       # Si algún volumen sigue en uso, docker se niega: se informa en vez de fallar.
-      if echo "$LEGADO_VOL" | xargs -r docker volume rm >/dev/null 2>&1; then
+      if echo "$LEGADO_VOL" | xargs -r $ENGINE volume rm >/dev/null 2>&1; then
         ok "Volúmenes «wunen» eliminados"
       else
         fail "Algún volumen «wunen» no se pudo eliminar (¿lo usa un contenedor en marcha?)."
-        warn "Puedes borrarlos luego con: docker volume rm \$(docker volume ls -q -f name=wunen_)"
+        warn "Puedes borrarlos luego con: $ENGINE volume rm \$($ENGINE volume ls -q -f name=wunen_)"
       fi
     fi
   else
     warn "Se conservan. Ocuparán espacio y sus puertos pueden chocar con los nuevos."
-    warn "Para borrarlos después: docker rm -f \$(docker ps -aq -f name=wunen_)"
+    warn "Para borrarlos después: $ENGINE rm -f \$($ENGINE ps -aq -f name=wunen_)"
   fi
   echo ""
 fi
@@ -694,7 +736,7 @@ fi
 # Detectar una instalación previa de Buscapega (contenedores ya creados o corriendo).
 # Sirve para no asustar con falsos "puerto en uso" cuando el puerto lo ocupa el
 # propio Buscapega: en ese caso es una reinstalación y 'compose up -d' lo recrea.
-BUSCAPEGA_EXISTING=$(docker ps -a --filter "name=buscapega_" --format "{{.Names}}" 2>/dev/null || true)
+BUSCAPEGA_EXISTING=$($ENGINE ps -a --filter "name=buscapega_" --format "{{.Names}}" 2>/dev/null || true)
 if [[ -n "$BUSCAPEGA_EXISTING" ]]; then
   warn "Detecté una instalación previa de Buscapega (contenedores existentes):"
   echo "$BUSCAPEGA_EXISTING" | sed 's/^/      • /'
@@ -710,7 +752,7 @@ fi
 # failed". Sin el .env original esa contraseña es irrecuperable: hay que resetear el
 # volumen o restaurar el .env. (Si el .env preexistía, su contraseña se reutiliza arriba y
 # no hay conflicto, así que no preguntamos.)
-DB_VOLUME_HUERFANO=$(docker volume ls --format '{{.Name}}' 2>/dev/null | grep -Fx "buscapega_db_data" || true)
+DB_VOLUME_HUERFANO=$($ENGINE volume ls --format '{{.Name}}' 2>/dev/null | grep -Fx "buscapega_db_data" || true)
 if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
   warn "Detecté un volumen de base de datos de una instalación anterior (buscapega_db_data)"
   echo -e "  pero no hay un ${CYAN}docker/.env${RESET} que conserve su contraseña. La contraseña nueva"
@@ -722,7 +764,7 @@ if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
   RESET_DB_L=$(echo "$RESET_DB" | tr '[:upper:]' '[:lower:]')
   if [[ "$RESET_DB_L" == "s" || "$RESET_DB_L" == "si" || "$RESET_DB_L" == "y" ]]; then
     log "Eliminando volumen buscapega_db_data..."
-    if docker volume rm buscapega_db_data >/dev/null 2>&1; then
+    if $ENGINE volume rm buscapega_db_data >/dev/null 2>&1; then
       ok "Volumen eliminado — la base de datos se creará limpia con la nueva contraseña"
     else
       fail "No se pudo eliminar el volumen (¿lo usa un contenedor en marcha?)."
@@ -741,7 +783,7 @@ check_port() {
   if lsof -iTCP:"$port" -sTCP:LISTEN -n -P &>/dev/null 2>&1; then
     # ¿El puerto lo ocupa un contenedor de Buscapega ya corriendo? Entonces es una
     # reinstalación, no un conflicto real: 'compose up -d' recreará el contenedor.
-    if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^buscapega_.*:${port}->"; then
+    if $ENGINE ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^buscapega_.*:${port}->"; then
       ok "Puerto ${port} (${name}) lo usa tu Buscapega actual — se recreará al reiniciar"
       return
     fi
@@ -755,7 +797,7 @@ check_port() {
       echo -e "    Lo ocupa: ${BOLD}${pcmd}${RESET} (PID ${BOLD}${ppid}${RESET}, usuario ${puser})"
       # Si el puerto lo publica Docker, el PID es del proxy y no dice nada útil:
       # se busca el contenedor que realmente lo expone.
-      cont=$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -E ":${port}->" | awk '{print $1}' | head -1 || true)
+      cont=$($ENGINE ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -E ":${port}->" | awk '{print $1}' | head -1 || true)
       # if explícito en vez de `[[ ]] && echo`: ese idiom devuelve 1 cuando la condición es
       # falsa y, si alguna vez queda como última línea de la función, `set -e` mataría el
       # instalador en silencio (es el bug que se corrigió en la ronda 3).
@@ -765,14 +807,14 @@ check_port() {
         # contenedores: matarlo tumbaría Docker entero, no solo este servicio. Lo correcto
         # es detener el contenedor concreto.
         echo -e "    Contenedor Docker: ${BOLD}${cont}${RESET}"
-        echo -e "    Para liberarlo:  ${CYAN}docker stop ${cont}${RESET}"
+        echo -e "    Para liberarlo:  ${CYAN}$ENGINE stop ${cont}${RESET}"
       # `com.dock*` y no `com.docker*`: lsof trunca la columna COMMAND a 9 caracteres, así
       # que "com.docker.backend" llega como "com.docke" y el patrón más largo nunca casaría.
       elif [[ "$pcmd" == com.dock* || "$pcmd" == docker* || "$pcmd" == Docker* ]]; then
         # Lo publica Docker pero no se pudo resolver qué contenedor (p. ej. lo expone un
         # compose ajeno). Tampoco aquí sirve matar el PID.
         echo -e "    Lo publica Docker, pero no pude identificar el contenedor."
-        echo -e "    Búscalo con:     ${CYAN}docker ps --filter publish=${port}${RESET}"
+        echo -e "    Búscalo con:     ${CYAN}$ENGINE ps --filter publish=${port}${RESET}"
       else
         echo -e "    Para liberarlo:  ${CYAN}kill ${ppid}${RESET}"
       fi
@@ -1064,8 +1106,8 @@ echo -e "    Se pidió en este instalador. Para cambiarlo más tarde:"
 echo -e "    ${CYAN}./configuraciones/setup-gmail.sh${RESET}"
 echo ""
 echo -e "  ${BOLD}Comandos útiles:${RESET}"
-echo -e "    cd docker && docker compose logs -f"
-echo -e "    cd docker && docker compose down"
+echo -e "    cd docker && $COMPOSE_CMD logs -f"
+echo -e "    cd docker && $COMPOSE_CMD down"
 echo -e "    ./configuraciones/setup-sessions.sh --lista          # estado de sesiones de portales"
 echo -e "    ./configuraciones/vincular-whatsapp.sh                     # vincular WhatsApp"
 echo ""
