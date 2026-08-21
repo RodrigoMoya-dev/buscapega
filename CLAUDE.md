@@ -46,6 +46,18 @@ After capturing, the script auto-rsync's cookies to the deploy server (configura
 **API docs** (when backend is running): http://localhost:8000/docs  
 **Frontend**: http://localhost:3000
 
+## Installer (`install.sh` + `installer-web/`)
+
+`install.sh` has three modes (single source of truth for all file generation and the build):
+
+- **web** (default): launches a small Python-stdlib HTTP server (`installer-web/server.py`), prints a tokenized URL (both a `localhost` link and, if available, a LAN-IP link), and serves a WordPress-style wizard. On submit it runs `install.sh --apply` and streams its output to the browser via SSE. Works on any machine — a laptop accessed via localhost, or a headless server accessed from another machine over the network.
+- **`--cli`**: the classic interactive terminal wizard.
+- **`--apply`**: non-interactive mode used by the web installer. Reads answers from `BUSCAPEGA_*` env vars (`BUSCAPEGA_USER_NAME`, `BUSCAPEGA_WHATSAPP_PHONE`, `BUSCAPEGA_FRONTEND_PORT`, etc.), sets `NONINTERACTIVE=true`, and every `read` prompt falls back to a safe default (keep data / abort on conflicts / skip GUI session capture).
+
+Container engine is **agnostic**: prefers Podman, falls back to Docker (`ENGINE=podman|docker` forces one). The web installer port is `BUSCAPEGA_WEB_PORT` (default 8090). The web layer never reimplements install logic — it only collects answers and shells out to `install.sh --apply`.
+
+**Host resolution is machine-agnostic.** `NEXT_PUBLIC_API_URL` is baked as `http://localhost:<backend_port>` but the frontend (`lib/api.ts` → `resolveApiBase()` / exported `API_BASE`) swaps in `window.location.hostname` at runtime, so the app reaches the API via whatever host the browser used (localhost, LAN IP, or domain) with no baked IP and no rebuild if the IP changes. All pages using the API are `"use client"`, so this always runs in the browser.
+
 ## Architecture
 
 ### Services

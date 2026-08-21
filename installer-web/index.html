@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instalador de Buscapega</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="robot" aria-hidden="true">
+        <div class="r-antenna"></div>
+        <div class="r-head"><span class="eye"></span><span class="eye"></span></div>
+        <div class="r-body"><span class="flag"></span></div>
+        <div class="r-legs"><span></span><span></span></div>
+      </div>
+      <h1>Buscapega</h1>
+      <p class="tagline">Instalador · Automatización de búsqueda de empleo</p>
+      <p class="chile"><span class="cl-blue">▌</span> Hecho desde Chile: <span class="cl-red">Si es chileno, es bueno</span> <span class="cl-blue">▐</span></p>
+    </header>
+
+    <ol class="steps" id="stepbar">
+      <li data-step="1" class="active">Bienvenida</li>
+      <li data-step="2">Configuración</li>
+      <li data-step="3">Instalación</li>
+      <li data-step="4">Listo</li>
+    </ol>
+
+    <!-- Paso 1: Bienvenida -->
+    <section class="card step" data-step="1">
+      <h2>Bienvenido</h2>
+      <p>Este asistente configura Buscapega y levanta los servicios en este servidor.
+         Solo tienes que responder unos datos; el resto es automático.</p>
+      <div class="env" id="envbox">
+        <div class="env-row"><span>Motor de contenedores</span><b id="env-engine">detectando…</b></div>
+        <div class="env-row"><span>Este servidor (IP)</span><b id="env-ip">detectando…</b></div>
+      </div>
+      <p class="hint">Todo lo que ingreses lo podrás cambiar después desde la sección
+         <b>Configuración</b> de la app.</p>
+      <div class="actions">
+        <button class="btn primary" data-goto="2">Comenzar →</button>
+      </div>
+    </section>
+
+    <!-- Paso 2: Configuración -->
+    <section class="card step hidden" data-step="2">
+      <h2>Configuración</h2>
+      <form id="cfg">
+        <label>
+          <span class="lbl">Tu nombre <em>(para saludarte en la app)</em></span>
+          <input type="text" name="user_name" placeholder="Ej: Ana" autocomplete="off">
+        </label>
+
+        <label>
+          <span class="lbl">Anthropic API Key <em>(opcional)</em></span>
+          <input type="password" name="anthropic_api_key" placeholder="sk-ant-… (déjalo vacío si no la tienes)" autocomplete="off">
+          <small>Sin ella la evaluación de ofertas funciona igual con puntaje por palabras clave.</small>
+        </label>
+
+        <label>
+          <span class="lbl">Teléfono para WhatsApp <em>(sin el +, con código de país)</em></span>
+          <input type="text" name="whatsapp_phone" placeholder="56912345678" inputmode="numeric" autocomplete="off">
+          <small>Aquí solo se guarda el número. La vinculación se hace luego escaneando un QR.</small>
+          <span class="err" data-for="whatsapp_phone"></span>
+        </label>
+
+        <label>
+          <span class="lbl">Correo Gmail para postulaciones <em>(opcional)</em></span>
+          <input type="email" name="gmail_user" placeholder="correo@gmail.com" autocomplete="off">
+          <span class="err" data-for="gmail_user"></span>
+        </label>
+
+        <label id="gmailpw-wrap" class="hidden">
+          <span class="lbl">Contraseña de aplicación Gmail <em>(opcional, 16 caracteres)</em></span>
+          <input type="password" name="gmail_app_password" placeholder="16 caracteres, sin espacios" autocomplete="off">
+          <small>Se genera en <b>myaccount.google.com/apppasswords</b>. Puedes agregarla después.</small>
+        </label>
+
+        <div class="ports">
+          <label>
+            <span class="lbl">Puerto de la interfaz web</span>
+            <input type="number" name="frontend_port" value="3000" min="1" max="65535">
+          </label>
+          <label>
+            <span class="lbl">Puerto del API backend</span>
+            <input type="number" name="backend_port" value="8000" min="1" max="65535">
+          </label>
+        </div>
+      </form>
+      <div class="actions">
+        <button class="btn ghost" data-goto="1">← Atrás</button>
+        <button class="btn primary" id="startBtn">Instalar Buscapega →</button>
+      </div>
+    </section>
+
+    <!-- Paso 3: Instalación -->
+    <section class="card step hidden" data-step="3">
+      <h2>Instalando…</h2>
+      <p class="hint" id="installhint">Construyendo imágenes y levantando servicios.
+         La primera vez puede tardar entre 5 y 15 minutos. No cierres esta pestaña.</p>
+      <div class="console" id="console" aria-live="polite"></div>
+    </section>
+
+    <!-- Paso 4: Listo -->
+    <section class="card step hidden" data-step="4">
+      <h2 id="doneTitle">¡Instalación completada!</h2>
+      <p id="doneMsg">Buscapega ya está corriendo en este servidor.</p>
+      <a class="btn primary big" id="openApp" href="#" target="_blank" rel="noopener">Abrir Buscapega →</a>
+      <div class="next">
+        <h3>Próximos pasos</h3>
+        <ul>
+          <li>Completa tu <b>CV y perfil</b> en la sección «Acerca de mí».</li>
+          <li>Vincula <b>WhatsApp</b> escaneando el QR: <code>./configuraciones/vincular-whatsapp.sh</code></li>
+          <li>Captura las <b>sesiones de portales</b>: <code>./configuraciones/setup-sessions.sh --lista</code></li>
+        </ul>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="finishBtn">Finalizar y cerrar el instalador</button>
+      </div>
+    </section>
+
+    <footer class="foot">Instalador web de Buscapega · corre localmente en tu servidor</footer>
+  </div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

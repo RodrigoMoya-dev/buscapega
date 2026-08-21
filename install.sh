@@ -112,6 +112,127 @@ LOG_DIR="$SCRIPT_DIR/.install-logs"
 CONFIG_FILE="$SCRIPT_DIR/.install-config"
 RESUME=false
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Modo de ejecución: web (por defecto) · cli · apply
+# ─────────────────────────────────────────────────────────────────────────────
+# - web   : levanta el instalador web (estilo WordPress) y entrega una URL para
+#           configurar todo desde el navegador. Es el comportamiento por defecto.
+# - cli   : asistente clásico por la terminal (--cli).
+# - apply : modo NO interactivo que hace el trabajo real (generar .env, construir,
+#           levantar servicios). Lo dispara el instalador web y lee las respuestas
+#           de variables de entorno BUSCAPEGA_* en vez de preguntarlas.
+MODO="web"
+NONINTERACTIVE=false
+WEB_PORT="${BUSCAPEGA_WEB_PORT:-8090}"
+
+mostrar_ayuda() {
+  cat <<'AYUDA'
+Uso: install.sh [opción]
+
+  (sin opción)   Levanta el INSTALADOR WEB y te da una URL para configurarlo
+                 desde el navegador. Es la forma recomendada, ideal en servidores
+                 sin escritorio (accedes desde otro equipo de la red).
+  --cli          Usa el asistente clásico por la terminal.
+  --web          Fuerza el instalador web (es el comportamiento por defecto).
+  --apply        Modo no interactivo: instala leyendo las respuestas de las
+                 variables de entorno BUSCAPEGA_* (lo usa el instalador web).
+  -h, --help     Muestra esta ayuda.
+
+Variables útiles:
+  ENGINE=podman|docker     Fuerza el motor de contenedores.
+  BUSCAPEGA_WEB_PORT=8090  Puerto del instalador web.
+AYUDA
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --cli)             MODO="cli" ;;
+    --web)             MODO="web" ;;
+    --apply)           MODO="apply"; NONINTERACTIVE=true ;;
+    --non-interactive) NONINTERACTIVE=true ;;
+    -h|--help)         mostrar_ayuda; REACHED_END=true; exit 0 ;;
+    *)                 echo -e "${YELLOW}!${RESET} Opción desconocida: $arg (se ignora)" ;;
+  esac
+done
+
+# IP de la interfaz por la que sale el tráfico, para publicar la URL en la LAN.
+# Se intenta con varias herramientas porque el instalador corre en Linux (servidor)
+# y en macOS. Cae a 127.0.0.1 si nada responde.
+detectar_ip() {
+  local ip=""
+  if command -v ip &>/dev/null; then
+    ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+  fi
+  if [[ -z "$ip" ]] && command -v route &>/dev/null && command -v ipconfig &>/dev/null; then
+    local dev
+    dev=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}')
+    [[ -n "$dev" ]] && ip=$(ipconfig getifaddr "$dev" 2>/dev/null || true)
+  fi
+  if [[ -z "$ip" ]] && command -v hostname &>/dev/null; then
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  fi
+  [[ -z "$ip" ]] && ip="127.0.0.1"
+  echo "$ip"
+}
+
+# Token aleatorio para proteger el acceso al instalador web (va en la URL).
+# `head -c 20` cierra el pipe y `tr` recibe SIGPIPE (exit != 0). Con `|| echo …`
+# directo, el fallback se CONCATENABA al valor aleatorio (mismo bug ya documentado
+# para POSTGRES_PASSWORD): se captura a variable con `|| true` y se valida vacío.
+generar_token() {
+  local t
+  t="$(LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 20 || true)"
+  [[ -z "$t" ]] && t="buscapega$(date +%s)"
+  echo "$t"
+}
+
+# Levanta el instalador web. Si falta Python 3 o el servidor, retorna 1 para que
+# el llamador caiga al asistente por terminal.
+lanzar_instalador_web() {
+  local server="$SCRIPT_DIR/installer-web/server.py"
+  if ! command -v python3 &>/dev/null; then
+    warn "El instalador web necesita Python 3 y no lo encontré → uso el asistente por terminal."
+    return 1
+  fi
+  if [[ ! -f "$server" ]]; then
+    warn "No encontré installer-web/server.py → uso el asistente por terminal."
+    return 1
+  fi
+
+  # Detección liviana del motor SOLO para mostrarlo en la bienvenida del web
+  # (la detección real, con todos sus chequeos, la hace el modo --apply).
+  local eng=""
+  if [[ -n "${ENGINE:-}" ]]; then
+    eng="$ENGINE"
+  else
+    local c
+    for c in podman docker; do
+      if command -v "$c" &>/dev/null; then eng="$c"; break; fi
+    done
+  fi
+  local eng_label=""
+  case "$eng" in
+    podman) eng_label="Podman" ;;
+    docker) eng_label="Docker" ;;
+    *)      eng_label="no detectado" ;;
+  esac
+
+  local ip token
+  ip=$(detectar_ip)
+  token=$(generar_token)
+
+  # Al lanzar el web NO aplica el trap de "instalación incompleta": el trabajo real
+  # ocurrirá después, cuando el navegador dispare install.sh --apply.
+  REACHED_END=true
+  BUSCAPEGA_SCRIPT_DIR="$SCRIPT_DIR" \
+  BUSCAPEGA_WEB_PORT="$WEB_PORT" \
+  BUSCAPEGA_WEB_TOKEN="$token" \
+  BUSCAPEGA_LAN_IP="$ip" \
+  BUSCAPEGA_ENGINE="$eng" \
+  BUSCAPEGA_ENGINE_LABEL="$eng_label" \
+    exec python3 "$server"
+}
+
 paso_hecho()   { [[ -f "$STATE_FILE" ]] && grep -qxF "$1" "$STATE_FILE"; }
 marcar_paso()  { echo "$1" >> "$STATE_FILE"; }
 # Se salta el paso solo si está marcado Y el usuario aceptó reanudar.
@@ -247,6 +368,19 @@ ejecutar_build() {
 print_header
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Modo WEB (por defecto): levanta el instalador web y termina aquí.
+# ─────────────────────────────────────────────────────────────────────────────
+# Todo lo que sigue (cuestionario, generación de .env, build, up) corre en el modo
+# --apply, que dispara el propio instalador web desde el navegador. Si no hay
+# Python 3 se cae automáticamente al asistente por terminal (MODO=cli).
+if [[ "$MODO" == "web" ]]; then
+  echo -e "  ${BOLD}Iniciando el instalador web…${RESET}"
+  echo -e "  ${CYAN}(¿prefieres la terminal? corta con Ctrl-C y ejecuta:  ./install.sh --cli)${RESET}"
+  echo ""
+  lanzar_instalador_web || MODO="cli"
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 0. ¿Hay una instalación a medio terminar?
 # ─────────────────────────────────────────────────────────────────────────────
 if [[ -f "$STATE_FILE" ]]; then
@@ -256,7 +390,11 @@ if [[ -f "$STATE_FILE" ]]; then
   echo ""
   echo -e "  ${CYAN}a)${RESET} Continuar desde donde quedó (no repite los builds ya hechos)"
   echo -e "  ${CYAN}b)${RESET} Empezar de cero (reconstruye todo)"
-  read -r -p "  ¿Continuar desde donde quedó? (S/n) > " RESP_RESUME
+  if $NONINTERACTIVE; then
+    RESP_RESUME="s"; nota "Modo automático: se reanuda desde donde quedó."
+  else
+    read -r -p "  ¿Continuar desde donde quedó? (S/n) > " RESP_RESUME
+  fi
   RESP_RESUME_L=$(echo "$RESP_RESUME" | tr '[:upper:]' '[:lower:]')
   if [[ "$RESP_RESUME_L" == "n" || "$RESP_RESUME_L" == "no" ]]; then
     rm -f "$STATE_FILE" "$CONFIG_FILE"
@@ -277,7 +415,7 @@ fi
 # Ahora los datos se reutilizan por sí solos, exista o no STATE_FILE, y se pueden cambiar
 # sin obligar a "empezar de cero" (que además borraría los builds ya hechos).
 USAR_CONFIG=false
-if [[ -f "$CONFIG_FILE" ]]; then
+if [[ "$MODO" != "apply" ]] && [[ -f "$CONFIG_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$CONFIG_FILE"
   ok "Encontré los datos que ingresaste antes:"
@@ -294,6 +432,27 @@ if [[ -f "$CONFIG_FILE" ]]; then
     USAR_CONFIG=true
     ok "Se reutilizan los datos anteriores"
   fi
+  echo ""
+fi
+
+# ── Modo --apply: las respuestas llegan por variables de entorno BUSCAPEGA_* ──
+# Las envía el instalador web. Se cargan aquí y se marca USAR_CONFIG=true para
+# saltar todo el cuestionario interactivo de más abajo. Se aplican las mismas
+# normalizaciones que hace el cuestionario (teléfono solo dígitos, contraseña de
+# Gmail sin espacios) para que el .env quede idéntico.
+if [[ "$MODO" == "apply" ]]; then
+  USER_NAME="${BUSCAPEGA_USER_NAME:-}"
+  ANTHROPIC_API_KEY="${BUSCAPEGA_ANTHROPIC_API_KEY:-}"
+  WHATSAPP_PHONE=$(echo "${BUSCAPEGA_WHATSAPP_PHONE:-56912345678}" | tr -dc '0-9')
+  [[ -z "$WHATSAPP_PHONE" ]] && WHATSAPP_PHONE="56912345678"
+  GMAIL_USER="${BUSCAPEGA_GMAIL_USER:-}"
+  GMAIL_APP_PASSWORD="${BUSCAPEGA_GMAIL_APP_PASSWORD:-}"
+  GMAIL_APP_PASSWORD="${GMAIL_APP_PASSWORD// /}"
+  FRONTEND_PORT="${BUSCAPEGA_FRONTEND_PORT:-3000}"
+  BACKEND_PORT="${BUSCAPEGA_BACKEND_PORT:-8000}"
+  USAR_CONFIG=true
+  guardar_config
+  ok "Datos recibidos desde el instalador web — no se preguntará nada por terminal."
   echo ""
 fi
 
@@ -406,8 +565,10 @@ log "Verificando prerrequisitos del sistema..."
 # ser daemonless/rootless, más liviano y multiplataforma, con Docker de alternativa.
 # Se puede forzar uno con la variable de entorno ENGINE:  ENGINE=docker ./install.sh
 if [[ -n "${ENGINE:-}" ]]; then
+  ENGINE_FORZADO="$ENGINE"
   ENGINE_CANDIDATOS=("$ENGINE")
 else
+  ENGINE_FORZADO=""
   ENGINE_CANDIDATOS=(podman docker)
 fi
 ENGINE=""
@@ -418,6 +579,19 @@ if [[ -z "$ENGINE" ]]; then
   error "No se encontró un motor de contenedores. Instala Podman (https://podman.io/) o Docker (https://docs.docker.com/get-docker/)."
 fi
 if [[ "$ENGINE" == "podman" ]]; then ENGINE_LABEL="Podman"; else ENGINE_LABEL="Docker"; fi
+
+# Explica por qué se eligió este motor, para que no sorprenda ver "Docker" cuando
+# el instalador dice preferir Podman: casi siempre es porque Podman no está instalado.
+if [[ -n "$ENGINE_FORZADO" ]]; then
+  nota "Motor forzado por la variable ENGINE=$ENGINE_FORZADO → usando $ENGINE_LABEL."
+elif [[ "$ENGINE" == "docker" ]]; then
+  warn "Se prefiere Podman, pero no se encontró en este equipo → usando Docker."
+  echo -e "  ${CYAN}Docker funciona perfecto${RESET} (el docker-compose.yml es el mismo)."
+  echo -e "  Si prefieres Podman: instálalo (${CYAN}https://podman.io/${RESET}) y reejecuta,"
+  echo -e "  o fuérzalo con:  ${CYAN}ENGINE=podman ./install.sh${RESET}"
+else
+  nota "Podman detectado → usándolo como motor preferido."
+fi
 
 # Compose: se prefiere el del propio motor y se cae a las variantes disponibles.
 if [[ "$ENGINE" == "podman" ]] && command -v podman-compose &> /dev/null; then
@@ -468,6 +642,9 @@ if [[ -n "${ESPACIO_LIBRE_GB:-}" ]] && [[ "$ESPACIO_LIBRE_GB" =~ ^[0-9]+$ ]]; th
   if [[ $ESPACIO_LIBRE_GB -lt 5 ]]; then
     warn "Solo quedan ${ESPACIO_LIBRE_GB} GB libres en disco. Las imágenes ocupan ~6 GB."
     warn "Libera espacio (${CYAN}$ENGINE system prune -a${RESET}) o el build fallará a mitad de camino."
+    if $NONINTERACTIVE; then
+      error "Espacio insuficiente en disco (${ESPACIO_LIBRE_GB} GB). Libera espacio y reintenta desde el instalador web."
+    fi
     read -r -p "  ¿Continuar de todas formas? (s/N) > " SEGUIR_DISCO
     SEGUIR_DISCO_L=$(echo "$SEGUIR_DISCO" | tr '[:upper:]' '[:lower:]')
     [[ "$SEGUIR_DISCO_L" != "s" && "$SEGUIR_DISCO_L" != "si" && "$SEGUIR_DISCO_L" != "y" ]] && \
@@ -710,7 +887,11 @@ if [[ -n "$LEGADO_CONT" || -n "$LEGADO_VOL" ]]; then
   nota "la vinculación de WhatsApp ANTERIORES. Al borrarlos habrá que volver a capturar"
   nota "las sesiones y a escanear el QR de WhatsApp."
   echo ""
-  read -r -p "  ¿Eliminar los restos de «wunen»? (s/N) > " LIMPIAR_LEGADO
+  if $NONINTERACTIVE; then
+    LIMPIAR_LEGADO="n"; nota "Modo automático: se CONSERVAN los restos de «wunen» (no se borra nada)."
+  else
+    read -r -p "  ¿Eliminar los restos de «wunen»? (s/N) > " LIMPIAR_LEGADO
+  fi
   LIMPIAR_LEGADO_L=$(echo "$LIMPIAR_LEGADO" | tr '[:upper:]' '[:lower:]')
   if [[ "$LIMPIAR_LEGADO_L" == "s" || "$LIMPIAR_LEGADO_L" == "si" || "$LIMPIAR_LEGADO_L" == "y" ]]; then
     if [[ -n "$LEGADO_CONT" ]]; then
@@ -760,7 +941,11 @@ if [[ -n "$DB_VOLUME_HUERFANO" && "$ENV_PREEXISTING" == "false" ]]; then
   echo ""
   echo -e "  ${CYAN}a)${RESET} Resetear la base de datos (borra ofertas/datos previos del volumen)"
   echo -e "  ${CYAN}b)${RESET} Conservar el volumen (deberás restaurar el docker/.env original a mano)"
-  read -r -p "  ¿Resetear la base de datos para una instalación limpia? (s/N) > " RESET_DB
+  if $NONINTERACTIVE; then
+    RESET_DB="n"; nota "Modo automático: se CONSERVA la base de datos existente (no se resetea)."
+  else
+    read -r -p "  ¿Resetear la base de datos para una instalación limpia? (s/N) > " RESET_DB
+  fi
   RESET_DB_L=$(echo "$RESET_DB" | tr '[:upper:]' '[:lower:]')
   if [[ "$RESET_DB_L" == "s" || "$RESET_DB_L" == "si" || "$RESET_DB_L" == "y" ]]; then
     log "Eliminando volumen buscapega_db_data..."
@@ -824,6 +1009,12 @@ check_port() {
     echo -e "  ${CYAN}a)${RESET} Detener el proceso que usa ese puerto"
     echo -e "  ${CYAN}b)${RESET} Editar docker/docker-compose.yml y cambiar el puerto del host"
     echo -e "  ${CYAN}c)${RESET} Continuar igual (puede fallar el servicio ${name})"
+    if $NONINTERACTIVE; then
+      # En modo automático no seguimos con un puerto ocupado: sería una instalación
+      # rota y silenciosa. Se aborta con un mensaje claro para que el usuario elija
+      # otro puerto en el instalador web y reintente.
+      error "El puerto ${port} (${name}) está ocupado. Elige otro puerto en el instalador web (o libera ese) y reintenta."
+    fi
     read -r -p "  ¿Continuar de todas formas? (s/N) > " FORCE_PORT
     FORCE_PORT_L=$(echo "$FORCE_PORT" | tr '[:upper:]' '[:lower:]')
     # OJO: NO usar `[[ cond ]] && error` como última línea de la función. Cuando el usuario
@@ -935,7 +1126,13 @@ sep
 echo ""
 ask "¿Deseas configurar ahora las sesiones de los portales con auto-postulación? (s/N)"
 echo -e "  ${CYAN}Esto abrirá un navegador por cada portal para que puedas hacer login con Google.${RESET}"
-read -r -p "  > " SETUP_SESSIONS
+if $NONINTERACTIVE; then
+  # Requiere abrir navegadores gráficos: imposible desde el instalador web (servidor
+  # sin escritorio). Se omite y se recuerda cómo hacerlo después.
+  SETUP_SESSIONS="n"; nota "Modo automático: la captura de sesiones se hace aparte (abre navegadores)."
+else
+  read -r -p "  > " SETUP_SESSIONS
+fi
 echo ""
 
 SETUP_SESSIONS_L=$(echo "$SETUP_SESSIONS" | tr '[:upper:]' '[:lower:]')

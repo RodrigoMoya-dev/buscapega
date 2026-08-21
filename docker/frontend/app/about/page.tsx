@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { getProfile, saveProfile, uploadCvPdf, cvPdfExists } from "@/lib/api";
+import { getProfile, saveProfile, uploadCvPdf, cvPdfExists, API_BASE } from "@/lib/api";
 
 const LANG_LEVELS = ["Nativo", "C2", "C1", "B2", "B1", "A2", "A1"];
 const LANG_LEVEL_DESCRIPTIONS: Record<string, string> = {
@@ -379,7 +379,7 @@ function CvPdfUpload({ lang, hasFile, onUploaded }: { lang: "es" | "en"; hasFile
         </label>
         {hasFile && (
           <a
-            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/cv/${lang}/pdf`}
+            href={`${API_BASE}/api/cv/${lang}/pdf`}
             target="_blank"
             rel="noreferrer"
             download={downloadName}
