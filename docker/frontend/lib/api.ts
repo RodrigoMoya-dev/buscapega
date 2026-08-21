@@ -1,4 +1,23 @@
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Base del API resuelta en tiempo de ejecución. NEXT_PUBLIC_API_URL se hornea en el
+// build, pero solo aporta el PUERTO (y el protocolo) del backend: el HOST se toma del
+// navegador (window.location) para que Buscapega funcione igual sin importar cómo se
+// acceda —por localhost, por la IP del equipo en la red, o por un dominio— y sin tener
+// que hornear una IP fija ni reconstruir si esa IP cambia. En SSR (sin window) se usa
+// el valor horneado como respaldo.
+function resolveApiBase(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  if (typeof window === "undefined") return configured;
+  try {
+    const u = new URL(configured);
+    u.hostname = window.location.hostname; // sigue al host con el que se abrió el frontend
+    return u.origin;
+  } catch {
+    return configured;
+  }
+}
+
+export const API_BASE = resolveApiBase();
+const API = API_BASE;
 
 export interface Offer {
   id: number;

@@ -12,11 +12,11 @@ Buscapega es un sistema self-hosted de automatización para búsqueda y postulac
 
 ## Requisitos previos
 
-- [Docker Desktop](https://docs.docker.com/get-docker/) (incluye Docker Compose)
-- Python 3.9+ y `pip` (solo para la configuración de sesiones de portales)
+- Un motor de contenedores: **[Podman](https://podman.io/)** (preferido) o **[Docker](https://docs.docker.com/get-docker/)** — Buscapega corre igual sobre cualquiera de los dos
+- Python 3.9+ (para el instalador web y la configuración de sesiones de portales)
 - Una [Anthropic API Key](https://console.anthropic.com/) *(opcional)* — sin ella el sistema usa un evaluador local por palabras clave
 
-## Instalación rápida
+## Instalación rápida (instalador web)
 
 ```bash
 git clone https://github.com/RodrigoMoya-dev/buscapega.git
@@ -24,14 +24,40 @@ cd buscapega
 ./install.sh
 ```
 
-El instalador hará lo siguiente:
-1. Verificar que Docker esté disponible
-2. Pedirte tu API key y configuración de notificaciones
-3. Generar el archivo `docker/.env`
-4. Construir e iniciar todos los servicios
-5. Opcionalmente guiarte para configurar las sesiones de portales
+Por defecto, `install.sh` levanta un **instalador web** (estilo WordPress) y te
+imprime en la terminal una o dos URL, por ejemplo:
 
-Una vez finalizado, abre **http://localhost:3000** en tu navegador.
+```
+Abre una de estas URL en tu navegador:
+
+  • En este mismo equipo:   http://localhost:8090/?token=AbC123...
+  • Desde otro equipo:      http://192.168.1.50:8090/?token=AbC123...
+```
+
+Sirve en cualquier escenario: si instalas en tu propio computador usas el enlace de
+`localhost`; si instalas en otra máquina (un servidor, otro PC, incluso **sin
+escritorio**) entras desde tu navegador con el enlace de la IP. El asistente te guía por:
+
+1. Detección del motor de contenedores (Podman/Docker)
+2. Un formulario con tu nombre, API key (opcional), teléfono y puertos
+3. Generación de `docker/.env` y `documentos/settings.json`
+4. Construcción e inicio de todos los servicios, **con los logs en vivo** en la misma pantalla
+5. Un botón para abrir Buscapega al terminar
+
+> El `token` de la URL protege el acceso: solo quien tenga ese enlace puede usar
+> el instalador mientras corre. Puedes cambiar el puerto con `BUSCAPEGA_WEB_PORT=8099 ./install.sh`.
+
+### ¿Prefieres la terminal?
+
+```bash
+./install.sh --cli     # asistente clásico por línea de comandos
+./install.sh --help    # todas las opciones
+```
+
+Una vez finalizado, abre Buscapega en tu navegador. Funciona por el mismo host con
+el que entres —`http://localhost:3000` en tu propia máquina, o `http://<IP-del-equipo>:3000`
+desde otro— **sin depender de una IP fija**: el frontend detecta el host automáticamente,
+así que aunque la IP del equipo cambie (DHCP) sigue funcionando sin reconstruir nada.
 
 ## Instalación manual
 
